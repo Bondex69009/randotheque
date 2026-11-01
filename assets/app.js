@@ -436,17 +436,12 @@
       <div><dt>Dénivelé cumulé</dt><dd>${nf0.format(dp)} <small>m</small></dd></div>
       <div><dt>Sorties de</dt><dd>${years[0]} <small>à</small> ${years[years.length - 1]}</dd></div>`;
     const when = '';
-    // Dernière synchronisation (date et heure de Paris) et lien vers la tâche GitHub de ce dépôt
+    // Dernière synchronisation avec le blog (date et heure de Paris)
     if (DATA.blog && DATA.blog.scrapedAt) {
       const at = new Date(DATA.blog.scrapedAt);
       const day = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Europe/Paris' }).format(at);
       const hour = new Intl.DateTimeFormat('fr-FR', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Paris' }).format(at);
       $('#sync-status').textContent = `Dernière synchronisation avec le blog : le ${day} à ${hour.replace(':', 'h')}.`;
-    }
-    if (/\.github\.io$/.test(location.hostname)) {
-      const owner = location.hostname.split('.')[0];
-      const repo = location.pathname.split('/').filter(Boolean)[0];
-      if (repo) $('#sync-link').href = `https://github.com/${owner}/${repo}/actions/workflows/mise-a-jour.yml`;
     }
     const model = DATA.ibpModel ? ` IBP estimé calé sur ${DATA.ibpModel.samples} randos du blog (écart moyen ±${nf1.format(DATA.ibpModel.mae)}).` : '';
     $('#footer-info').textContent = `Données générées le ${fmtDate(DATA.generatedAt.slice(0, 10))}.${when}${model}`;
