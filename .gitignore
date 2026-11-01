@@ -1,0 +1,14 @@
+# Fichiers locaux
+.DS_Store
+node_modules/
+.claude/
+.admin-token
+gpx/.corbeille/
+.cache/blog/dry-run.json
+
+# Fichiers générés par « npm run build » (recréés à chaque mise à jour)
+data/randos.js
+data/randos.json
+data/admin.json
+data/tracks/
+_site/
