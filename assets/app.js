@@ -510,6 +510,231 @@
     });
   }
 
+  // ------------------------------------------------------------ Envoi du GPX à IBP index
+  // On reproduit le formulaire d'ibpindex.com : le GPX est envoyé et l'analyse s'ouvre dans un nouvel onglet.
+  const IBP_PAGE = 'https://www.ibpindex.com/ibpindex/analyser.php?LAN=fr';
+  const IBP_UPLOAD = 'https://www.ibpindex.com/ibpindex/ibp_de_formulario.php?LAN=fr&REM=ffr';
+  const gpxCache = new Map();
+  function prefetchGpx(r) {
+    if (!gpxCache.has(r.id)) {
+      gpxCache.set(r.id, fetch(encodeURI(r.file))
+        .then((res) => { if (!res.ok) throw new Error('GPX introuvable'); return res.blob(); })
+        .then((blob) => { gpxCache.set(r.id, blob); return blob; })
+        .catch((e) => { gpxCache.delete(r.id); throw e; }));
+    }
+    return gpxCache.get(r.id);
+  }
+  function submitToIbp(r, blob) {
+    const dt = new DataTransfer();
+    dt.items.add(new File([blob], r.file.split('/').pop(), { type: 'application/gpx+xml' }));
+    const form = document.createElement('form');
+    form.method = 'post';
+    form.enctype = 'multipart/form-data';
+    form.action = IBP_UPLOAD;
+    form.target = '_blank';
+    form.rel = 'noopener';
+    form.hidden = true;
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.name = 'fichero';
+    input.files = dt.files;
+    form.appendChild(input);
+    document.body.appendChild(form);
+    form.submit();
+    form.remove();
+  }
+  async function sendToIbp(r) {
+    const cached = gpxCache.get(r.id);
+    try {
+      // GPX déjà préchargé : envoi immédiat, pendant le clic (aucun blocage de fenêtre)
+      if (cached instanceof Blob) submitToIbp(r, cached);
+      else submitToIbp(r, await prefetchGpx(r));
+    } catch {
+      window.open(IBP_PAGE, '_blank', 'noopener'); // repli : la page d'IBP, pour choisir le fichier à la main
+    }
+  }
+  // Préchargement du GPX dès qu'on approche du bouton
+  ['pointerover', 'focusin', 'touchstart'].forEach((type) => document.addEventListener(type, (e) => {
+    const b = e.target.closest && e.target.closest('[data-ibp]');
+    if (b) prefetchGpx(byId.get(b.dataset.ibp)).catch(() => {});
+  }, { passive: true }));
+
+  // ------------------------------------------------------------ Export de la fiche en image PNG
+  // Dessin sur canvas (1920 px de large), sur le modèle de la carte d'analyse IBP du club.
+  const PNG = {
+    bg: '#080d09', card: '#0c130e', cardLine: '#1a271d', tile: '#101912', tileLine: '#1c2b20',
+    text: '#eef5ef', muted: '#8fa293', soft: '#9aa89c', green: '#3fbf6a', dot: '#22c55e', track: '#1f2a22',
+    up: '#e11d2e', flat: '#34d27a', down: '#4f8ff7',
+    levels: {
+      vert: ['#3ddc84', 'Très facile'], bleu: ['#4f8ff7', 'Facile'], jaune: ['#f5a524', 'Peu difficile'],
+      rouge: ['#ef4444', 'Difficile'], noir: ['#e5e7eb', 'Très difficile'],
+    },
+  };
+  const SANS = '"IBM Plex Sans", "Plus Jakarta Sans", system-ui, sans-serif';
+  const MONO = '"IBM Plex Mono", ui-monospace, Menlo, monospace';
+  const EMOJI = '"Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif';
+  const hms = (sec) => {
+    const s = Math.round(sec), h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), x = s % 60;
+    return `${h}:${String(m).padStart(2, '0')}:${String(x).padStart(2, '0')}`;
+  };
+  const ddmmyyyy = (d) => { const [y, m, j] = d.slice(0, 10).split('-'); return `${j}/${m}/${y}`; };
+  const slug = (s) => norm(s).replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 60) || 'rando';
+
+  function rrect(ctx, x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  }
+  function text(ctx, str, x, y, { font, color, align = 'left', spacing = 0, maxWidth } = {}) {
+    ctx.font = font; ctx.fillStyle = color; ctx.textAlign = align; ctx.textBaseline = 'alphabetic';
+    if ('letterSpacing' in ctx) ctx.letterSpacing = `${spacing}px`;
+    let s = String(str);
+    if (maxWidth && ctx.measureText(s).width > maxWidth) {
+      while (s.length > 1 && ctx.measureText(s + '…').width > maxWidth) s = s.slice(0, -1);
+      s += '…';
+    }
+    ctx.fillText(s, x, y);
+    const w = ctx.measureText(s).width;
+    if ('letterSpacing' in ctx) ctx.letterSpacing = '0px';
+    return w;
+  }
+  // Valeur en gras suivie de son unité en petit (ex. « 16.14 km »)
+  function valueUnit(ctx, value, unit, x, y, { size, color = PNG.text, unitSize = 9.5 }) {
+    const w = text(ctx, value, x, y, { font: `700 ${size}px ${SANS}`, color });
+    if (unit) text(ctx, unit, x + w + 3, y, { font: `400 ${unitSize}px ${MONO}`, color: PNG.muted });
+  }
+
+  async function drawPngCard(r) {
+    await Promise.all([
+      `700 17px ${SANS}`, `600 10px ${SANS}`, `400 11px ${SANS}`, `400 11px ${MONO}`, `600 11px ${MONO}`,
+    ].map((f) => document.fonts.load(f).catch(() => {})));
+    const S = 2, W = 960, H = 611, X = 32, Y = 32, CW = 896, CH = 547;
+    const canvas = document.createElement('canvas');
+    canvas.width = W * S; canvas.height = H * S;
+    const ctx = canvas.getContext('2d');
+    ctx.scale(S, S);
+    ctx.fillStyle = PNG.bg; ctx.fillRect(0, 0, W, H);
+    ctx.save(); ctx.translate(X, Y);
+
+    // Carte
+    rrect(ctx, 0.5, 0.5, CW - 1, CH - 1, 20); ctx.fillStyle = PNG.card; ctx.fill();
+    ctx.strokeStyle = PNG.cardLine; ctx.lineWidth = 1; ctx.stroke();
+    const hline = (y) => { ctx.fillStyle = PNG.cardLine; ctx.fillRect(1, y, CW - 2, 1); };
+
+    // En-tête
+    text(ctx, '🏔️', 29, 46, { font: `26px ${EMOJI}`, color: PNG.text });
+    text(ctx, r.name, 66.5, 31.5, { font: `700 17px ${SANS}`, color: PNG.text, maxWidth: 560 });
+    text(ctx, '📅', 66, 49, { font: `11px ${EMOJI}`, color: PNG.text });
+    text(ctx, ddmmyyyy(r.date), 83, 49, { font: `400 11px ${MONO}`, color: PNG.muted });
+    text(ctx, 'Les Godillots Ailés · Caissargues', 866.5, 31, { font: `700 12px ${SANS}`, color: PNG.text, align: 'right' });
+    text(ctx, 'godillotsailes.blogspot.com', 866.5, 48, { font: `400 10.5px ${MONO}`, color: PNG.green, align: 'right' });
+    hline(67);
+
+    // Indice IBP
+    const [lvlColor, lvlLabel] = PNG.levels[r.level] || ['#8fa293', 'Non évaluée'];
+    rrect(ctx, 29, 88, 206.5, 87.5, 14);
+    ctx.fillStyle = PNG.card; ctx.fill();
+    ctx.globalAlpha = 0.13; ctx.fillStyle = lvlColor; ctx.fill(); ctx.globalAlpha = 1;
+    ctx.globalAlpha = 0.55; ctx.strokeStyle = lvlColor; ctx.lineWidth = 1.5; ctx.stroke(); ctx.globalAlpha = 1;
+    const ibpTxt = r.ibp == null ? '?' : String(r.ibp);
+    const ibpSize = ibpTxt.length > 2 ? 34 : 42;
+    const ibpW = text(ctx, ibpTxt, 50, 148, { font: `700 ${ibpSize}px ${SANS}`, color: lvlColor });
+    const lx = Math.max(120, 50 + ibpW + 14), lw = 29 + 206.5 - 12 - lx;
+    text(ctx, 'HKG', lx, 116.5, { font: `400 10px ${MONO}`, color: PNG.muted, spacing: 0.5 });
+    text(ctx, lvlLabel, lx, 138, { font: `700 16px ${SANS}`, color: lvlColor, maxWidth: lw });
+    text(ctx, r.ibpEstimated ? 'Indice IBP estimé' : 'Indice IBP', lx, 155, { font: `400 11px ${SANS}`, color: PNG.soft, maxWidth: lw });
+
+    // Source de l'indice (à la place de la « fiabilité », propre à ibpindex.com)
+    const src = {
+      blog: ['Publié sur le blog', 1, PNG.flat], manuel: ['Saisi par le club', 1, PNG.flat],
+      fichier: ['Saisi par le club', 1, PNG.flat], estime: ['Estimé · ±2', 0.6, '#f5a524'],
+    }[r.ibpSource] || ['Non évalué', 0, PNG.muted];
+    const srcW = text(ctx, "Source de l'indice", 260, 136, { font: `400 11px ${SANS}`, color: PNG.soft });
+    const bx = 260 + srcW + 10;
+    rrect(ctx, bx, 132.5, 129, 5, 2.5); ctx.fillStyle = PNG.track; ctx.fill();
+    if (src[1]) { rrect(ctx, bx, 132.5, 129 * src[1], 5, 2.5); ctx.fillStyle = src[2]; ctx.fill(); }
+    text(ctx, src[0], bx + 129 + 10, 136.5, { font: `600 11px ${MONO}`, color: src[2] });
+    hline(196.5);
+
+    // Tuiles de statistiques
+    const tile = (x, y, w, h) => {
+      rrect(ctx, x + 0.5, y + 0.5, w - 1, h - 1, 11); ctx.fillStyle = PNG.tile; ctx.fill();
+      ctx.strokeStyle = PNG.tileLine; ctx.lineWidth = 1; ctx.stroke();
+    };
+    const small = (x, y, emoji, label, value, unit, valueY) => {
+      tile(x, y, 160.5, 87);
+      text(ctx, emoji, x + 15, y + 27, { font: `13px ${EMOJI}`, color: PNG.text });
+      text(ctx, label, x + 15, y + 48, { font: `600 9.5px ${SANS}`, color: PNG.muted, spacing: 1.2, maxWidth: 140 });
+      valueUnit(ctx, value, unit, x + 15, y + valueY, { size: 18 });
+    };
+    const cols = [29, 198, 367, 536, 705];
+    const f2 = (n) => (n == null ? '—' : n.toFixed(2));
+    const f0 = (n) => (n == null ? '—' : String(Math.round(n)));
+    small(cols[0], 215.5, '📏', 'DISTANCE TOTALE', f2(r.distanceKm), 'km', 68);
+    small(cols[1], 215.5, '⬆️', 'DÉNIVELÉE POSITIVE', f0(r.dplus), 'm', 68);
+    small(cols[2], 215.5, '⬇️', 'DÉNIVELÉE NÉGATIVE', f0(r.dminus), 'm', 68);
+    small(cols[3], 215.5, '🔼', 'ALTITUDE MAXIMALE', f0(r.altMax), 'm', 68);
+    small(cols[4], 215.5, '🔽', 'ALTITUDE MINIMALE', f0(r.altMin), 'm', 68);
+    const rec = r.recorded && r.recorded.totalSec ? r.recorded : null;
+    const v = (km, sec) => (sec > 0 ? (km / (sec / 3600)).toFixed(1) : '—');
+    if (rec) {
+      small(cols[0], 311.5, '⏱️', 'TEMPS TOTAL', `${hms(rec.totalSec)} h`, '', 67);
+      small(cols[1], 311.5, '🏃', 'TEMPS MOUVEMENT', `${hms(rec.movingSec)} h`, '', 67);
+      small(cols[2], 311.5, '☕', 'TEMPS DE PAUSE', `${hms(rec.pauseSec)} h`, '', 67);
+      small(cols[3], 311.5, '💨', 'VITESSE MOY. TOTALE', v(r.distanceKm, rec.totalSec), 'km/h', 67);
+      small(cols[4], 311.5, '⚡', 'VITESSE MOY. MVT', v(r.distanceKm, rec.movingSec), 'km/h', 67);
+    } else {
+      small(cols[0], 311.5, '⏱️', 'TEMPS ESTIMÉ', `${hms(r.durationMin * 60)} h`, '', 67);
+      small(cols[1], 311.5, '🏃', 'TEMPS MOUVEMENT', '—', '', 67);
+      small(cols[2], 311.5, '☕', 'TEMPS DE PAUSE', '—', '', 67);
+      small(cols[3], 311.5, '💨', 'VITESSE MOY. TOTALE', '—', '', 67);
+      small(cols[4], 311.5, '⚡', 'VITESSE MOY. MVT', '—', '', 67);
+    }
+
+    // Montée / plat / descente
+    const sl = r.slopes || { upKm: 0, flatKm: 0, downKm: 0 };
+    const tot = sl.upKm + sl.flatKm + sl.downKm || 1;
+    [[29, 'MONTÉE', sl.upKm, PNG.up], [311.5, 'PLAT', sl.flatKm, PNG.flat], [593, 'DESCENTE', sl.downKm, PNG.down]]
+      .forEach(([x, label, km, color]) => {
+        const y = 408.5, w = 273, pct = km / tot;
+        tile(x, y, w, 88);
+        text(ctx, label, x + 17, y + 25, { font: `600 9.5px ${SANS}`, color: PNG.muted, spacing: 1.2 });
+        text(ctx, `${(pct * 100).toFixed(1)}%`, x + w - 17, y + 25, { font: `400 10.5px ${MONO}`, color: PNG.muted, align: 'right' });
+        valueUnit(ctx, km.toFixed(2), 'km', x + 17, y + 59, { size: 22, color, unitSize: 10 });
+        rrect(ctx, x + 17, y + 70, w - 34, 4, 2); ctx.fillStyle = PNG.track; ctx.fill();
+        if (pct > 0) { rrect(ctx, x + 17, y + 70, Math.max(4, (w - 34) * pct), 4, 2); ctx.fillStyle = color; ctx.fill(); }
+      });
+
+    // Pied
+    hline(517.5);
+    ctx.beginPath(); ctx.arc(31.5, 532, 3.5, 0, Math.PI * 2); ctx.fillStyle = PNG.dot; ctx.fill();
+    text(ctx, 'Les Godillots Ailés', 40, 535.5, { font: `400 10.5px ${MONO}`, color: PNG.muted });
+    text(ctx, `Généré le ${ddmmyyyy(new Date().toISOString())}`, CW / 2, 535.5, { font: `400 10.5px ${MONO}`, color: PNG.muted, align: 'center' });
+    text(ctx, 'Caissargues · godillotsailes.blogspot.com', 866.5, 535.5, { font: `400 10.5px ${MONO}`, color: PNG.muted, align: 'right' });
+    ctx.restore();
+    return canvas;
+  }
+
+  async function exportPng(r, btn) {
+    if (!r) return;
+    const label = btn ? btn.innerHTML : '';
+    if (btn) { btn.disabled = true; btn.textContent = 'Création de l\'image…'; }
+    try {
+      const canvas = await drawPngCard(r);
+      const blob = await new Promise((res) => canvas.toBlob(res, 'image/png'));
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `${r.date}-${slug(r.name)}.png`;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+    } finally {
+      if (btn) { btn.disabled = false; btn.innerHTML = label; }
+    }
+  }
+  window.__rtDrawPngCard = (id) => drawPngCard(byId.get(id)); // pour contrôle visuel
+
   // ------------------------------------------------------------ Fiche détaillée
   const dialog = $('#detail');
   let detailMap = null, cursorMarker = null;
@@ -594,8 +819,10 @@
           </div>
           <div class="actions">
             <a class="btn btn--primary btn--block" href="${encodeURI(r.file)}" download="${esc(fileName)}">${icon('download')}Télécharger le GPX</a>
+            <button type="button" class="btn btn--outline btn--block" data-png="${r.id}">${icon('image')}Exporter la fiche en image (PNG)</button>
             ${blog ? `<a class="btn btn--outline btn--block" href="${esc(blog.url)}" target="_blank" rel="noopener">${icon('external')}Voir l'article sur le blog</a>` : ''}
-            <a class="btn btn--ghost btn--block" href="https://www.ibpindex.com/ibpindex/analyser.php" target="_blank" rel="noopener">Analyser la trace sur ibpindex.com</a>
+            <a class="btn btn--ghost btn--block" href="${IBP_PAGE}" target="_blank" rel="noopener" data-ibp="${r.id}">Analyser la trace sur ibpindex.com</a>
+            <p class="actions__hint">Le fichier GPX est envoyé à ibpindex.com, qui affiche son analyse dans un nouvel onglet.</p>
           </div>
           ${blog ? `
           <section class="panel" aria-labelledby="blog-title">
@@ -775,6 +1002,10 @@
   $('[data-action="reset"]').addEventListener('click', resetAll);
 
   document.addEventListener('click', (e) => {
+    const png = e.target.closest('[data-png]');
+    if (png) { exportPng(byId.get(png.dataset.png), png); return; }
+    const ibp = e.target.closest('[data-ibp]');
+    if (ibp) { e.preventDefault(); sendToIbp(byId.get(ibp.dataset.ibp)); return; }
     const anim = e.target.closest('[data-anim]');
     if (anim) {
       state.anims = new Set([anim.dataset.anim]);

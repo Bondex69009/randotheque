@@ -16,7 +16,7 @@ import {
 } from './lib/util.mjs';
 import {
   parseGpx, flatten, elevationStats, estimateDurationMin, recordedDuration,
-  simplifyTo, profile, bbox, haversine,
+  simplifyTo, profile, bbox, haversine, slopeBreakdown,
 } from './lib/gpx.mjs';
 
 const TRACKS_DIR = path.join(DATA_DIR, 'tracks');
@@ -62,7 +62,14 @@ async function reverseGeocode(lat, lon) {
 
 // Altitudes manquantes : service altimétrique de l'IGN (France uniquement).
 const eleCache = readJSON(ELE_CACHE_FILE, {});
-async function fillElevation(pts, cacheKey) {
+// Le service IGN refuse les rafales de requêtes : on les envoie une par une.
+let ignQueue = Promise.resolve();
+function fillElevation(pts, cacheKey) {
+  const run = ignQueue.then(() => fillElevationNow(pts, cacheKey));
+  ignQueue = run.catch(() => {});
+  return run;
+}
+async function fillElevationNow(pts, cacheKey) {
   const sample = simplifyTo(pts, 600, 3);
   if (eleCache[cacheKey]) {
     const z = eleCache[cacheKey];
@@ -236,6 +243,7 @@ async function main() {
         eleSource: ele ? eleSource : null,
         durationMin: estimateDurationMin(distanceKm, ele ? ele.dplus : 0, ele ? ele.dminus : 0),
         recorded: rec,
+        slopes: ele ? slopeBreakdown(pts) : null,
         ibp: ibpOfficial,
         ibpSource: ibpOfficial ? (sidecar && sidecar.ibp ? 'fichier' : 'blog') : null,
         ibpEstimated: false,

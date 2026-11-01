@@ -119,6 +119,10 @@ export function flatten(segments) {
 export function elevationStats(pts, threshold = 3) {
   const withEle = pts.filter((p) => p.ele != null && Number.isFinite(p.ele));
   if (withEle.length < Math.max(2, pts.length * 0.6)) return null;
+  // Altitude identique sur tout le parcours (0 m ou 30 m partout) : valeur fictive, à ignorer.
+  let lo = Infinity, hi = -Infinity;
+  for (const p of withEle) { if (p.ele < lo) lo = p.ele; if (p.ele > hi) hi = p.ele; }
+  if (hi - lo < 0.5 && pts[pts.length - 1].d > 1000) return null;
   // Lissage par fenêtre glissante sur ~60 m
   const smooth = withEle.map((p, i) => {
     let s = 0, n = 0;
@@ -151,18 +155,60 @@ export function estimateDurationMin(km, dplus = 0, dminus = 0) {
 }
 
 // Durée réellement enregistrée (si la trace contient des horodatages).
+// Pause = vitesse lissée sur 2 minutes inférieure à 1 km/h : réglage calé sur les analyses
+// d'IBP index (écart de quelques minutes sur des sorties de 3 à 6 heures).
 export function recordedDuration(pts) {
   const t = pts.filter((p) => p.time);
   if (t.length < pts.length * 0.8 || t.length < 10) return null;
-  const total = (t[t.length - 1].time - t[0].time) / 60000;
-  if (!(total > 5 && total < 60 * 24 * 3)) return null;
-  let moving = 0;
+  const totalSec = (t[t.length - 1].time - t[0].time) / 1000;
+  if (!(totalSec > 300 && totalSec < 3 * 86400)) return null;
+  const W = 120, V = 1;
+  let pauseSec = 0, a = 0, b = 0;
   for (let i = 1; i < t.length; i++) {
     const dt = (t[i].time - t[i - 1].time) / 1000;
-    const v = haversine(t[i - 1], t[i]) / (dt || 1);
-    if (dt > 0 && dt < 600 && v > 0.3) moving += dt;
+    if (dt <= 0) continue;
+    while (a < i && (t[i].time - t[a].time) / 1000 > W / 2) a++;
+    if (b < i) b = i;
+    while (b < t.length - 1 && (t[b].time - t[i].time) / 1000 < W / 2) b++;
+    const span = (t[b].time - t[Math.max(0, a - 1)].time) / 1000 || 1;
+    const v = ((t[b].d - t[Math.max(0, a - 1)].d) / span) * 3.6;
+    if (v < V) pauseSec += dt;
   }
-  return { start: new Date(t[0].time).toISOString(), totalMin: Math.round(total), movingMin: Math.round(moving / 60) };
+  const movingSec = Math.max(0, totalSec - pauseSec);
+  return {
+    start: new Date(t[0].time).toISOString(),
+    totalSec: Math.round(totalSec), movingSec: Math.round(movingSec), pauseSec: Math.round(pauseSec),
+    totalMin: Math.round(totalSec / 60), movingMin: Math.round(movingSec / 60),
+  };
+}
+
+// Répartition montée / plat / descente (km), à la manière d'IBP index :
+// tronçons de 10 m, altitude lissée sur 60 m, « plat » entre -1,25 % et +1,25 %.
+export function slopeBreakdown(pts) {
+  const p = pts.filter((x) => x.ele != null);
+  if (p.length < 2) return null;
+  const total = p[p.length - 1].d;
+  const step = 10, half = 3, thr = 1.25;
+  let j = 0;
+  const eleAt = (d) => {
+    while (j < p.length - 2 && p[j + 1].d < d) j++;
+    const a = p[j], b = p[j + 1];
+    return b.d === a.d ? a.ele : a.ele + ((b.ele - a.ele) * (d - a.d)) / (b.d - a.d);
+  };
+  const n = Math.floor(total / step);
+  if (n < 2) return null;
+  const raw = Array.from({ length: n + 1 }, (_, i) => eleAt(i * step));
+  const e = raw.map((_, i) => {
+    let s = 0, c = 0;
+    for (let k = Math.max(0, i - half); k <= Math.min(n, i + half); k++) { s += raw[k]; c++; }
+    return s / c;
+  });
+  let up = 0, flat = total - n * step, down = 0;
+  for (let i = 1; i <= n; i++) {
+    const g = ((e[i] - e[i - 1]) / step) * 100;
+    if (g >= thr) up += step; else if (g <= -thr) down += step; else flat += step;
+  }
+  return { upKm: +(up / 1000).toFixed(2), flatKm: +(flat / 1000).toFixed(2), downKm: +(down / 1000).toFixed(2) };
 }
 
 // Douglas-Peucker (en mètres, projection locale équirectangulaire).

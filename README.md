@@ -96,6 +96,20 @@ Les animateurs s'écrivent comme sur le blog (« Bruno - Jean », « Guy et Pier
 - **Niveau** : Vert ≤ 25 (très facile), Bleu ≤ 50 (facile), Jaune ≤ 75 (moyen), Rouge ≤ 100 (difficile), Noir au-delà.
 - **Commune / département** : déduits du point de départ via geo.api.gouv.fr.
 
+## Dans chaque fiche de rando
+
+- **Exporter la fiche en image (PNG)** : image de 1920 px façon « tableau de bord IBP » (indice, distances,
+  dénivelés, altitudes, temps total / en mouvement / de pause, vitesses, répartition montée / plat / descente).
+  La « fiabilité » d'IBP index n'étant pas publique, l'image indique à la place la source de l'indice (blog ou estimé).
+  Sans horodatage dans le GPX, le temps estimé remplace les temps réels.
+- **Analyser la trace sur ibpindex.com** : le GPX est envoyé automatiquement au formulaire d'IBP index,
+  qui ouvre son analyse complète dans un nouvel onglet.
+
+Réglages calés sur les analyses d'IBP index : pauses = vitesse lissée sur 2 min < 1 km/h ;
+montée / plat / descente = tronçons de 10 m, altitude lissée sur 60 m, plat entre −1,25 % et +1,25 %.
+Une altitude constante sur tout le parcours (0 m ou 30 m partout) est considérée comme absente
+et remplacée par celle du service altimétrique de l'IGN.
+
 ## Limites connues
 
 - Les GPX publiés avant 2017 sur l'ancien Dropbox public ne sont plus téléchargeables (liens morts) ;
