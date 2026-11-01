@@ -441,7 +441,7 @@
       const at = new Date(DATA.blog.scrapedAt);
       const day = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Europe/Paris' }).format(at);
       const hour = new Intl.DateTimeFormat('fr-FR', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Paris' }).format(at);
-      $('#sync-status').textContent = `Dernière synchronisation avec le blog : le ${day} à ${hour.replace(':', 'h')}.`;
+      $('#sync-status').textContent = `Mis à jour depuis le blog le ${day} à ${hour.replace(':', 'h')}`;
     }
     const model = DATA.ibpModel ? ` IBP estimé calé sur ${DATA.ibpModel.samples} randos du blog (écart moyen ±${nf1.format(DATA.ibpModel.mae)}).` : '';
     $('#footer-info').textContent = `Données générées le ${fmtDate(DATA.generatedAt.slice(0, 10))}.${when}${model}`;

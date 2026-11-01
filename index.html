@@ -14,7 +14,7 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=IBM+Plex+Sans:wght@400;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
   <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" crossorigin="">
-  <link rel="stylesheet" href="assets/style.css?v=14">
+  <link rel="stylesheet" href="assets/style.css?v=15">
 </head>
 <body>
   <a class="skip-link" href="#resultats">Aller aux résultats</a>
@@ -55,6 +55,7 @@
           <kbd class="search__kbd" aria-hidden="true">/</kbd>
         </form>
         <dl class="hero__stats" id="hero-stats" aria-live="polite"></dl>
+        <p class="sync"><svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg><span id="sync-status">Synchronisation avec le blog chaque nuit à 4h.</span></p>
       </div>
     </section>
 
@@ -128,9 +129,6 @@
   <footer class="site-footer">
     <div class="container site-footer__inner">
       <p>Historique des randos des <strong>Godillots Ailés</strong>, Association Caissarguaise de Randonnée Pédestre.</p>
-      <div class="sync">
-        <p class="sync__status"><svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg><span id="sync-status">Synchronisation avec le blog chaque nuit à 4h.</span></p>
-      </div>
       <p class="site-footer__small" id="footer-info"></p>
       <p class="site-footer__small">Temps estimés selon la norme DIN 33466 (4 km/h, 300 m/h en montée, 500 m/h en descente, pauses non comprises). IBP index : valeur publiée sur le blog, ou estimation (≈) pour les autres traces. Fonds de carte IGN et OpenStreetMap.</p>
     </div>
@@ -168,6 +166,6 @@
   <script src="data/randos.js" onerror="window.RANDOTHEQUE=null"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
   <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js" crossorigin=""></script>
-  <script src="assets/app.js?v=11"></script>
+  <script src="assets/app.js?v=12"></script>
 </body>
 </html>
