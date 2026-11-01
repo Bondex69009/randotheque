@@ -516,7 +516,9 @@
   const IBP_UPLOAD = 'https://www.ibpindex.com/ibpindex/ibp_de_formulario.php?LAN=fr&REM=ffr';
   const gpxCache = new Map();
   function prefetchGpx(r) {
-    if (!gpxCache.has(r.id)) {
+    const known = gpxCache.get(r.id);
+    if (known instanceof Blob) return Promise.resolve(known);
+    if (!known) {
       gpxCache.set(r.id, fetch(encodeURI(r.file))
         .then((res) => { if (!res.ok) throw new Error('GPX introuvable'); return res.blob(); })
         .then((blob) => { gpxCache.set(r.id, blob); return blob; })
