@@ -16,8 +16,8 @@ Vous pouvez aussi ouvrir directement `index.html` dans un navigateur.
 
 ## Mise en ligne automatique (GitHub Pages)
 
-Le site public est hébergé gratuitement sur GitHub Pages et **se met à jour tout seul chaque matin**
-(vers 5h30 l'hiver, 6h30 l'été) : la tâche `.github/workflows/mise-a-jour.yml` lit le blog,
+Le site public est hébergé gratuitement sur GitHub Pages et **se met à jour tout seul chaque nuit à 4h
+(heure de Paris, été comme hiver)** : la tâche `.github/workflows/mise-a-jour.yml` lit le blog,
 télécharge les nouveaux GPX, les enregistre dans le dépôt, régénère le site et le publie.
 Personne n'a besoin de se connecter.
 
@@ -28,6 +28,7 @@ Mise en place (une seule fois) :
 3. Onglet **Actions > Mise à jour quotidienne > Run workflow** pour la première publication.
 4. Le site est alors disponible sur `https://<compte>.github.io/randotheque/`.
 
+GitHub peut décaler de quelques minutes les tâches programmées lorsque ses serveurs sont chargés.
 Pour forcer une mise à jour sans attendre le lendemain : **Actions > Mise à jour quotidienne > Run workflow**.
 En cas d'échec, GitHub envoie un e-mail au propriétaire du dépôt.
 

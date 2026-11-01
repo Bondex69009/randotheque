@@ -4,7 +4,11 @@ name: Mise à jour quotidienne
 
 on:
   schedule:
-    - cron: '30 4 * * *'   # tous les jours à 4h30 UTC (5h30 en hiver, 6h30 en été)
+    # Objectif : 4h00 heure de Paris, toute l'année. GitHub raisonne en heure UTC
+    # (sans heure d'été) : on programme 2h et 3h UTC, et le job « heure » ne garde
+    # que le créneau qui tombe à 4h à Paris (2h UTC en été, 3h UTC en hiver).
+    - cron: '0 2 * * *'
+    - cron: '0 3 * * *'
   workflow_dispatch:        # bouton « Run workflow » pour lancer une mise à jour à la main
   push:
     branches: [main]
@@ -19,7 +23,29 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  heure:
+    runs-on: ubuntu-latest
+    outputs:
+      lancer: ${{ steps.verif.outputs.lancer }}
+    steps:
+      - id: verif
+        name: Vérifier qu'il est 4h à Paris
+        env:
+          CRENEAU: ${{ github.event.schedule }}
+        run: |
+          DECALAGE=$(TZ=Europe/Paris date +%z)   # +0200 en été, +0100 en hiver
+          if [ -z "$CRENEAU" ] \
+             || { [ "$CRENEAU" = "0 2 * * *" ] && [ "$DECALAGE" = "+0200" ]; } \
+             || { [ "$CRENEAU" = "0 3 * * *" ] && [ "$DECALAGE" = "+0100" ]; }; then
+            echo "lancer=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "Créneau $CRENEAU ignoré (décalage Paris $DECALAGE) : ce n'est pas 4h à Paris."
+            echo "lancer=false" >> "$GITHUB_OUTPUT"
+          fi
+
   mise-a-jour:
+    needs: heure
+    if: needs.heure.outputs.lancer == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     environment:
