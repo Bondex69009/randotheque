@@ -823,8 +823,8 @@
             <a class="btn btn--primary btn--block" href="${encodeURI(r.file)}" download="${esc(fileName)}">${icon('download')}Télécharger le GPX</a>
             <button type="button" class="btn btn--outline btn--block" data-png="${r.id}">${icon('image')}Exporter la fiche en image (PNG)</button>
             ${blog ? `<a class="btn btn--outline btn--block" href="${esc(blog.url)}" target="_blank" rel="noopener">${icon('external')}Voir l'article sur le blog</a>` : ''}
-            <a class="btn btn--ghost btn--block" href="${IBP_PAGE}" target="_blank" rel="noopener" data-ibp="${r.id}">Analyser la trace sur ibpindex.com</a>
-            <p class="actions__hint">Le fichier GPX est envoyé à ibpindex.com, qui affiche son analyse dans un nouvel onglet.</p>
+            <a class="btn btn--outline btn--block" href="${IBP_PAGE}" target="_blank" rel="noopener" data-ibp="${r.id}"
+               title="Le fichier GPX est envoyé à ibpindex.com, qui affiche son analyse dans un nouvel onglet">${icon('gauge')}Analyser la trace sur ibpindex.com</a>
           </div>
           ${blog ? `
           <section class="panel" aria-labelledby="blog-title">

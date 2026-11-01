@@ -602,7 +602,6 @@ h1, h2, h3 { line-height: var(--lh-tight); margin: 0; }
 .ibp-big--noir { background: var(--c-lvl-noir); color: var(--c-text); box-shadow: inset 0 0 0 2px var(--c-lvl-noir-border); }
 
 .actions { display: flex; flex-direction: column; gap: var(--space-2); }
-.actions__hint { margin: calc(-1 * var(--space-1)) 0 0; text-align: center; font-size: var(--fs-xs); color: var(--c-text-faint); line-height: var(--lh-snug); }
 .photo { border-radius: var(--radius-md); overflow: hidden; border: var(--border-w) solid var(--c-border); aspect-ratio: 16 / 9; background: var(--c-surface-2); }
 .photo img { width: 100%; height: 100%; object-fit: cover; }
 
