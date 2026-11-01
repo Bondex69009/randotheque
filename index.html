@@ -14,7 +14,7 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=IBM+Plex+Sans:wght@400;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
   <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" crossorigin="">
-  <link rel="stylesheet" href="assets/style.css?v=12">
+  <link rel="stylesheet" href="assets/style.css?v=13">
 </head>
 <body>
   <a class="skip-link" href="#resultats">Aller aux résultats</a>
@@ -128,6 +128,12 @@
   <footer class="site-footer">
     <div class="container site-footer__inner">
       <p>Historique des randos des <strong>Godillots Ailés</strong>, Association Caissarguaise de Randonnée Pédestre.</p>
+      <div class="sync">
+        <p class="sync__status"><svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg><span id="sync-status">Synchronisation avec le blog chaque nuit à 4h.</span></p>
+        <a class="btn btn--outline" id="sync-link" href="https://github.com/Bondex69009/randotheque/actions/workflows/mise-a-jour.yml" target="_blank" rel="noopener"
+           aria-describedby="sync-hint">Synchroniser avec le blog</a>
+        <p class="sync__hint" id="sync-hint">Réservé aux gestionnaires : ouvre GitHub, cliquez sur « Run workflow ». Le site est à jour 2 à 3 minutes plus tard.</p>
+      </div>
       <p class="site-footer__small" id="footer-info"></p>
       <p class="site-footer__small">Temps estimés selon la norme DIN 33466 (4 km/h, 300 m/h en montée, 500 m/h en descente, pauses non comprises). IBP index : valeur publiée sur le blog, ou estimation (≈) pour les autres traces. Fonds de carte IGN et OpenStreetMap.</p>
     </div>
@@ -153,6 +159,7 @@
     <symbol id="i-calendar" viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M4 10h16M9 3v4m6-4v4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
     <symbol id="i-loop" viewBox="0 0 24 24"><path d="M17 7a7 7 0 1 0 2 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M17 3v4h4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
     <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M4 12h14m-5-5 5 5-5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.3-5.7M20 4v5h-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
     <symbol id="i-chart" viewBox="0 0 24 24"><path d="M4 20V10m6 10V4m6 16v-7m4 7H3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
     <symbol id="i-image" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="9.5" cy="9.5" r="1.5" fill="currentColor"/><path d="m5 18 5-5 3 3 2-2 4 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></symbol>
     <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 4v11m0 0-4-4m4 4 4-4M5 19h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
@@ -164,6 +171,6 @@
   <script src="data/randos.js" onerror="window.RANDOTHEQUE=null"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
   <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js" crossorigin=""></script>
-  <script src="assets/app.js?v=9"></script>
+  <script src="assets/app.js?v=10"></script>
 </body>
 </html>

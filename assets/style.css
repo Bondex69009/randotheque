@@ -615,4 +615,12 @@ h1, h2, h3 { line-height: var(--lh-tight); margin: 0; }
 .site-footer { border-top: var(--border-w) solid var(--c-border); background: var(--c-bg-raised); padding-block: var(--space-8); color: var(--c-text-muted); font-size: var(--fs-sm); }
 .site-footer__inner > * { margin: 0 0 var(--space-2); max-width: 75ch; }
 .site-footer__small { font-size: var(--fs-xs); color: var(--c-text-faint); }
+.sync {
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-4);
+  margin: var(--space-4) 0; padding: var(--space-3) var(--space-4); max-width: 75ch;
+  border: var(--border-w) solid var(--c-border); border-radius: var(--radius-md); background: var(--c-surface);
+}
+.sync__status { display: flex; align-items: center; gap: var(--space-2); margin: 0; flex: 1 1 18rem; color: var(--c-text); font-size: var(--fs-sm); }
+.sync__status .icon { color: var(--c-accent); }
+.sync__hint { flex-basis: 100%; margin: 0; font-size: var(--fs-xs); color: var(--c-text-faint); line-height: var(--lh-snug); }
 .site-footer strong { color: var(--c-accent); }
