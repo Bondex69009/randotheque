@@ -73,8 +73,12 @@ jobs:
             echo "Rien de nouveau."
           else
             git commit -m "Mise à jour depuis le blog du $(date +%d/%m/%Y)"
-            git pull --rebase --autostash
-            git push
+            # Si le dépôt a bougé entre-temps, on garde nos fichiers fraîchement générés
+            # (« -X theirs » désigne, pendant un rebase, le commit qu'on rejoue : le nôtre).
+            for essai in 1 2 3; do
+              git pull --rebase -X theirs origin main && git push && break
+              echo "Nouvel essai d'enregistrement ($essai)…"; sleep 5
+            done
           fi
 
       - name: Préparer le site
