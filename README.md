@@ -1,6 +1,6 @@
-# Randothèque des Godillots Ailés
+# Randothèque
 
-Catalogue des randonnées du club (A.C.R.P. Caissargues), construit automatiquement à partir de fichiers GPX.
+Catalogue des randonnées, construit automatiquement à partir de fichiers GPX.
 Pour chaque rando : nom, distance, dénivelés, temps estimé, IBP index, carte, profil et métadonnées du fichier.
 
 ## Utilisation rapide
