@@ -32,6 +32,10 @@ GitHub peut décaler de quelques minutes les tâches programmées lorsque ses se
 Pour forcer une mise à jour sans attendre le lendemain : **Actions > Mise à jour quotidienne > Run workflow**.
 En cas d'échec, GitHub envoie un e-mail au propriétaire du dépôt.
 
+Le site n'est pas destiné aux moteurs de recherche : la page porte `<meta name="robots" content="noindex, nofollow">`
+et un `robots.txt` interdit l'exploration. Sur GitHub Pages, ce fichier n'est lu par les robots qu'à la racine
+du domaine (`https://<compte>.github.io/robots.txt`), c'est-à-dire dans un dépôt nommé `<compte>.github.io`.
+
 `npm run site` prépare localement le dossier `_site/` exactement comme il sera publié.
 L'interface d'administration n'est pas publiée en ligne (elle reste utilisable en local avec `npm run serve`).
 

@@ -17,6 +17,7 @@ if (!fs.existsSync(path.join(ROOT, 'data', 'randos.js'))) {
   process.exit(1);
 }
 copy('index.html', 'index.html');
+copy('robots.txt', 'robots.txt');
 copy('assets', 'assets', (src) => noHidden(src) && !/[\\/]admin\.(css|js)$/.test(src));
 copy('data/randos.js', 'data/randos.js');
 copy('data/tracks', 'data/tracks');
