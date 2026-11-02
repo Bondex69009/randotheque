@@ -4,11 +4,12 @@ name: Mise à jour quotidienne
 
 on:
   schedule:
-    # Objectif : 4h00 heure de Paris, toute l'année. GitHub raisonne en heure UTC
-    # (sans heure d'été) : on programme 2h et 3h UTC, et le job « heure » ne garde
-    # que le créneau qui tombe à 4h à Paris (2h UTC en été, 3h UTC en hiver).
-    - cron: '0 2 * * *'
-    - cron: '0 3 * * *'
+    # Objectif : 4h07 heure de Paris, toute l'année (pas à l'heure pile : c'est là que GitHub
+    # retarde ou abandonne le plus ses tâches programmées). Créneaux UTC qui couvrent l'été
+    # et l'hiver, plus des rattrapages : le job « heure » (scripts/should-sync.mjs) ne laisse
+    # passer que le premier créneau après 4h à Paris si le blog n'a pas déjà été synchronisé.
+    - cron: '7 2-5 * * *'
+    - cron: '37 5,6 * * *'
   workflow_dispatch:        # bouton « Run workflow » pour lancer une mise à jour à la main
   push:
     branches: [main]
@@ -28,20 +29,15 @@ jobs:
     outputs:
       lancer: ${{ steps.verif.outputs.lancer }}
     steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            scripts/should-sync.mjs
+            data/blog-catalog.json
+          sparse-checkout-cone-mode: false
       - id: verif
-        name: Vérifier qu'il est 4h à Paris
-        env:
-          CRENEAU: ${{ github.event.schedule }}
-        run: |
-          DECALAGE=$(TZ=Europe/Paris date +%z)   # +0200 en été, +0100 en hiver
-          if [ -z "$CRENEAU" ] \
-             || { [ "$CRENEAU" = "0 2 * * *" ] && [ "$DECALAGE" = "+0200" ]; } \
-             || { [ "$CRENEAU" = "0 3 * * *" ] && [ "$DECALAGE" = "+0100" ]; }; then
-            echo "lancer=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "Créneau $CRENEAU ignoré (décalage Paris $DECALAGE) : ce n'est pas 4h à Paris."
-            echo "lancer=false" >> "$GITHUB_OUTPUT"
-          fi
+        name: Faut-il synchroniser maintenant ?
+        run: echo "lancer=$(node scripts/should-sync.mjs)" >> "$GITHUB_OUTPUT"
 
   mise-a-jour:
     needs: heure
