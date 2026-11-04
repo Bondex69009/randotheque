@@ -41,19 +41,19 @@
     .value small { font-size: 15px; font-weight: 600; color: var(--muted); }
     .hint { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     /* Colonne latérale d'un blog (environ 200 à 340 px) : contenu empilé et centré, textes sur plusieurs lignes */
+    /* Colonne latérale d'un blog (environ 200 à 340 px) : version compacte et centrée, sans icône,
+       qui tient dans 128 px de haut (même si la hauteur de l'iframe n'est pas ajustée par le blog) */
     @media (max-width: 340px) {
-      .counter { flex-direction: column; text-align: center; gap: 8px; padding: 14px 12px; }
-      .icon { width: 40px; height: 40px; border-radius: 10px; }
-      .icon svg { width: 22px; height: 22px; }
+      body { padding: 2px; }
+      .counter { flex-direction: column; text-align: center; gap: 0; padding: 10px 10px 11px; border-radius: 14px; }
+      .icon, .hint-more { display: none; }
       .body { align-items: center; }
-      .label { letter-spacing: 0.05em; }
-      .value { font-size: 32px; }
-      .hint { white-space: normal; overflow: visible; }
+      .label { letter-spacing: 0.04em; }
+      .value { font-size: 32px; margin: 2px 0 1px; }
     }
     @media (max-width: 220px) {
-      .icon { display: none; }
       .value { font-size: 26px; }
-      .label { font-size: 10px; letter-spacing: 0.03em; }
+      .label { font-size: 10px; letter-spacing: 0.02em; }
     }
   </style>
 </head>
@@ -65,7 +65,7 @@
     <span class="body">
       <span class="label">Compteur global depuis 1977</span>
       <span class="value"><span id="km" aria-hidden="true">…</span> <small>km</small><span id="km-sr" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)"></span></span>
-      <span class="hint">Les Godillots Ailés · toutes les randos du club</span>
+      <span class="hint">Les Godillots Ailés<span class="hint-more"> · toutes les randos du club</span></span>
     </span>
   </a>
   <script src="data/compteur.js"></script>

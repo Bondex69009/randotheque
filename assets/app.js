@@ -735,7 +735,7 @@
     const base = embedBase();
     const src = `${base}compteur.html${theme === 'clair' ? '?theme=clair' : ''}`;
     const origin = new URL(base).origin;
-    return `<iframe id="ga-compteur" src="${src}" title="Compteur global des Godillots Ailés depuis 1977" width="100%" height="190" scrolling="no" loading="lazy" style="border:0;display:block;width:100%;max-width:420px;margin:0 auto;"></iframe>
+    return `<iframe id="ga-compteur" src="${src}" title="Compteur global des Godillots Ailés depuis 1977" width="100%" height="130" scrolling="no" loading="lazy" style="border:0;display:block;width:100%;max-width:420px;margin:0 auto;"></iframe>
 <script>window.addEventListener("message",function(e){if(e.origin==="${origin}"&&e.data&&e.data.gaCompteurHeight){document.getElementById("ga-compteur").style.height=e.data.gaCompteurHeight+"px";}});</script>`;
   }
   function paintEmbed() {
@@ -744,7 +744,7 @@
     $('#embed-code').value = code;
     // Aperçu : même iframe servie localement, à la largeur d'une colonne de blog et à pleine largeur
     const local = `compteur.html${theme === 'clair' ? '?theme=clair' : ''}`;
-    const frame = (id) => `<iframe id="${id}" src="${local}" title="Aperçu du compteur" height="190" scrolling="no" style="border:0;display:block;width:100%;"></iframe>`;
+    const frame = (id) => `<iframe id="${id}" src="${local}" title="Aperçu du compteur" height="130" scrolling="no" style="border:0;display:block;width:100%;"></iframe>`;
     $('#embed-preview').innerHTML = `
       <figure class="embed__pv embed__pv--narrow"><figcaption>Colonne du blog (250 px)</figcaption>${frame('pv-narrow')}</figure>
       <figure class="embed__pv"><figcaption>Pleine largeur</figcaption>${frame('pv-wide')}</figure>`;
