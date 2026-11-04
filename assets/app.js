@@ -622,9 +622,17 @@
     return [1, 1.2, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10].map((m) => m * p).find((m) => m >= v);
   };
   function evoChart(metric, rows, width) {
-    const W = Math.max(280, width), H = 150, L = 44, R = 4, T = 18, B = 22;
+    const W = Math.max(280, width), L = 44, R = 4, B = 22;
     const max = niceMax(Math.max(...rows.map((r) => r[metric.key])));
     const n = rows.length, slot = (W - L - R) / n, gap = Math.min(6, Math.max(2, slot * 0.18));
+    // Valeur sur chaque barre : en entier si la place le permet, sinon abrégée (« 25,9 k »), à la verticale si besoin
+    const CHAR = 6.3; // largeur moyenne d'un chiffre à 11 px
+    const short = (v) => (v >= 1000 ? `${nf1.format(v / 1000)} k` : nf0.format(v));
+    const widest = (f) => Math.max(...rows.map((r) => f(r[metric.key]).length)) * CHAR;
+    const labelFmt = widest(metric.fmt) <= slot - 2 ? metric.fmt : short;
+    const vertical = widest(labelFmt) > slot - 2;
+    const T = vertical ? Math.ceil(widest(labelFmt)) + 10 : 20;
+    const H = 132 + T;
     const bw = Math.max(2, slot - gap);
     const y = (v) => T + (1 - v / max) * (H - T - B);
     const base = H - B;
@@ -635,11 +643,14 @@
       const h = base - y(v), rad = Math.min(4, bw / 2, h);
       // barre arrondie en haut seulement, posée sur la ligne de base
       const d = v > 0 ? `M${x},${base}V${y(v) + rad}Q${x},${y(v)} ${x + rad},${y(v)}H${x + bw - rad}Q${x + bw},${y(v)} ${x + bw},${y(v) + rad}V${base}Z` : '';
-      const label = i % every === 0 || i === n - 1 ? `<text class="evo-axis" x="${x + bw / 2}" y="${H - 6}" text-anchor="middle">${slot < 26 && n > 8 ? `’${String(r.year).slice(2)}` : r.year}</text>` : '';
-      const peakLbl = r === peak && v > 0 ? `<text class="evo-peak" x="${x + bw / 2}" y="${y(v) - 5}" text-anchor="middle">${metric.fmt(v)}</text>` : '';
+      const label = (n - 1 - i) % every === 0 ? `<text class="evo-axis" x="${x + bw / 2}" y="${H - 6}" text-anchor="middle">${slot < 26 && n > 8 ? `’${String(r.year).slice(2)}` : r.year}</text>` : '';
+      const cx = x + bw / 2, ly = y(v) - 5;
+      const valLbl = `<text class="evo-val${r === peak && v > 0 ? ' evo-val--peak' : ''}"${vertical
+        ? ` x="${cx + 4}" y="${ly}" text-anchor="start" transform="rotate(-90 ${cx + 4} ${ly})"`
+        : ` x="${cx}" y="${ly}" text-anchor="middle"`}>${labelFmt(v)}</text>`;
       return `<g class="evo-col" data-year="${r.year}">
         <rect class="evo-hit" x="${L + i * slot}" y="${T}" width="${slot}" height="${base - T}"/>
-        ${d ? `<path class="evo-bar" d="${d}"/>` : ''}${peakLbl}${label}</g>`;
+        ${d ? `<path class="evo-bar" d="${d}"/>` : ''}${valLbl}${label}</g>`;
     }).join('');
     const ticks = [0, max / 2, max].map((t) => `<line class="evo-grid" x1="${L}" x2="${W - R}" y1="${y(t)}" y2="${y(t)}"/>
       <text class="evo-axis" x="${L - 6}" y="${y(t) + 4}" text-anchor="end">${t >= 10000 ? `${nf0.format(t / 1000)} k` : nf0.format(t)}</text>`).join('');

@@ -820,7 +820,9 @@ h1, h2, h3 { line-height: var(--lh-tight); margin: 0; }
 .evo__chart svg { display: block; overflow: visible; }
 .evo-grid { stroke: var(--c-border); stroke-width: 1; }
 .evo-axis { fill: var(--c-text-muted); font-size: 11px; font-variant-numeric: tabular-nums; }
-.evo-peak { fill: var(--c-text); font-size: 11px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.evo-val { fill: var(--c-text-muted); font-size: 11px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.evo-val--peak { fill: var(--c-text); font-weight: 800; }
+.evo-col.is-hover .evo-val { fill: var(--c-text); }
 .evo-bar { fill: var(--c-accent); opacity: 0.85; transition: opacity var(--dur-fast) var(--ease); }
 .evo-hit { fill: transparent; }
 .evo-col.is-hover .evo-hit { fill: rgb(255 255 255 / 0.05); }
