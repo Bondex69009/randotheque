@@ -542,7 +542,7 @@
       <span class="hero-total__body">
         <span class="hero-total__label">Compteur global depuis 1977</span>
         <span class="hero-total__value">${num('total')} <small>km</small></span>
-        <span class="hero-total__hint">Kilométrage arrêté au ${asOfLabel}, randos d'avant 2010 comprises</span>
+        <span class="hero-total__hint">Kilométrage au ${asOfLabel}, randos d'avant 2010 comprises</span>
       </span>
       <button type="button" class="hero-total__embed" id="open-embed" title="Code HTML pour afficher ce compteur sur un blog">
         ${icon('code')}<span>Intégrer</span>
