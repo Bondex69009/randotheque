@@ -18,6 +18,15 @@ if (!fs.existsSync(path.join(ROOT, 'data', 'randos.js'))) {
 }
 copy('index.html', 'index.html');
 copy('compteur.html', 'compteur.html');
+// Les données changent à chaque mise à jour : on ajoute un numéro de version à leur adresse
+// pour que les navigateurs (et le gadget du blog) ne réutilisent pas une ancienne copie en cache.
+const version = Date.now().toString(36);
+for (const [page, data] of [['index.html', 'data/randos.js'], ['compteur.html', 'data/compteur.js']]) {
+  const file = path.join(OUT, page);
+  const html = fs.readFileSync(file, 'utf8');
+  if (!html.includes(`src="${data}"`)) throw new Error(`${page} : balise ${data} introuvable`);
+  fs.writeFileSync(file, html.replace(`src="${data}"`, `src="${data}?v=${version}"`));
+}
 copy('data/compteur.js', 'data/compteur.js');
 copy('robots.txt', 'robots.txt');
 copy('assets', 'assets', (src) => noHidden(src) && !/[\\/]admin\.(css|js)$/.test(src));

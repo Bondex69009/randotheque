@@ -524,8 +524,15 @@
   const num = (key, initial = '0') => `<span class="num" data-stat="${key}" aria-hidden="true">${initial}</span><span class="visually-hidden" data-sr="${key}"></span>`;
 
   function renderHeroStats() {
-    // Compteur total du club (calculé par scripts/build.mjs, randos d'avant 2010 comprises)
-    const totalKm = DATA.total ? DATA.total.km : RANDOS.reduce((s, r) => s + r.distanceKm, 0);
+    // Compteur total du club (calculé par scripts/build.mjs, randos d'avant 2010 comprises).
+    // Secours, si les données sont anciennes : même règle (20 229 km au 03/11/2026 + randos suivantes).
+    let totalKm = DATA.total && DATA.total.km;
+    if (!totalKm) {
+      const ref = { km: 20229, date: '2026-11-03' };
+      const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Paris' }).format(new Date());
+      totalKm = ref.km + RANDOS.filter((r) => r.date > ref.date && r.date <= today && !(r.blog && r.blog.cancelled))
+        .reduce((s, r) => s + r.distanceKm, 0);
+    }
     $('#hero-total').innerHTML = `
       <span class="hero-total__icon" aria-hidden="true">${icon('distance')}</span>
       <span class="hero-total__body">
