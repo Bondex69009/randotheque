@@ -1266,7 +1266,9 @@
           ${blog ? `
           <section class="panel" aria-labelledby="blog-title">
             <h3 class="panel__title" id="blog-title">Sur le blog</h3>
-            ${blog.image ? `<div class="photo"><img src="${esc(blog.image)}" alt="Photo de la sortie ${esc(r.name)}" loading="lazy" width="640" height="360"></div>` : ''}
+            ${blog.image ? `<a class="photo photo--link" href="${esc(blog.url)}" target="_blank" rel="noopener" title="Lire l'article sur le blog (nouvel onglet)">
+              <img src="${esc(blog.image)}" alt="Photo de la sortie ${esc(r.name)} : lire l'article sur le blog" loading="lazy" width="640" height="360">
+              <span class="photo__cta" aria-hidden="true">${icon('external')}Lire l'article</span></a>` : ''}
             <dl class="meta-list" style="margin-top:var(--space-3)">
               <dt>Article</dt><dd><a href="${esc(blog.url)}" target="_blank" rel="noopener">${esc(blog.title)}</a></dd>
               ${r.animateurs ? `<dt>Animateurs</dt><dd>${animLinks(r)}</dd>` : ''}

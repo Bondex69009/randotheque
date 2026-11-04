@@ -641,6 +641,20 @@ h1, h2, h3 { line-height: var(--lh-tight); margin: 0; }
 .actions { display: flex; flex-direction: column; gap: var(--space-2); }
 .photo { border-radius: var(--radius-md); overflow: hidden; border: var(--border-w) solid var(--c-border); aspect-ratio: 16 / 9; background: var(--c-surface-2); }
 .photo img { width: 100%; height: 100%; object-fit: cover; }
+/* Photo cliquable : ouvre l'article du blog */
+.photo--link { position: relative; display: block; cursor: pointer; }
+.photo--link img { transition: transform var(--dur) var(--ease); }
+.photo--link:hover img { transform: scale(1.03); }
+.photo--link:hover { border-color: var(--c-accent-ring); }
+.photo--link:focus-visible { outline: 2px solid var(--c-accent); outline-offset: 2px; }
+.photo__cta {
+  position: absolute; right: var(--space-2); bottom: var(--space-2); display: inline-flex; align-items: center; gap: var(--space-1);
+  padding: var(--space-1) var(--space-3); border-radius: var(--radius-pill); background: rgb(11 15 10 / 0.8);
+  border: var(--border-w) solid var(--c-border-strong); color: var(--c-text); font-size: var(--fs-xs); font-weight: var(--fw-semibold);
+  backdrop-filter: blur(6px);
+}
+.photo__cta .icon { width: 0.875rem; height: 0.875rem; }
+.photo--link:hover .photo__cta { border-color: var(--c-accent); color: var(--c-accent); }
 
 .meta-list { display: grid; grid-template-columns: minmax(6.5rem, auto) minmax(0, 1fr); gap: var(--space-2) var(--space-4); margin: 0; font-size: var(--fs-sm); }
 .meta-list dt { color: var(--c-text-muted); }
