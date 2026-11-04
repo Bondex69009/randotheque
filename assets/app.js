@@ -525,12 +525,15 @@
   const num = (key, initial = '0') => `<span class="num" data-stat="${key}" aria-hidden="true">${initial}</span><span class="visually-hidden" data-sr="${key}"></span>`;
 
   function renderHeroStats() {
+    // Date d'arrêt du kilométrage (randos dont la date est passée), en toutes lettres
+    const asOf = (DATA.total && DATA.total.asOf) || new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Paris' }).format(new Date());
+    const asOfLabel = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date(`${asOf}T12:00:00`));
     // Compteur total du club (calculé par scripts/build.mjs, randos d'avant 2010 comprises).
     // Secours, si les données sont anciennes : même règle (20 229 km au 03/11/2026 + randos suivantes).
     let totalKm = DATA.total && DATA.total.km;
     if (!totalKm) {
       const ref = { km: 20229, date: '2026-11-03' };
-      const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Paris' }).format(new Date());
+      const today = asOf;
       totalKm = ref.km + RANDOS.filter((r) => r.date > ref.date && r.date <= today && !(r.blog && r.blog.cancelled))
         .reduce((s, r) => s + r.distanceKm, 0);
     }
@@ -539,7 +542,7 @@
       <span class="hero-total__body">
         <span class="hero-total__label">Compteur global depuis 1977</span>
         <span class="hero-total__value">${num('total')} <small>km</small></span>
-        <span class="hero-total__hint">toutes les randos du club, d'avant 2010 comprises</span>
+        <span class="hero-total__hint">Kilométrage arrêté au ${asOfLabel}, randos d'avant 2010 comprises</span>
       </span>
       <button type="button" class="hero-total__embed" id="open-embed" title="Code HTML pour afficher ce compteur sur un blog">
         ${icon('code')}<span>Intégrer</span>

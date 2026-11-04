@@ -43,7 +43,8 @@
     @media (max-width: 340px) {
       body { padding: 2px; }
       .counter { flex-direction: column; text-align: center; gap: 0; padding: 10px 10px 11px; border-radius: 14px; }
-      .icon, .hint-more { display: none; }
+      .icon, .hint-sep { display: none; }
+      .hint-date { display: block; }
       .body { align-items: center; }
       .label { letter-spacing: 0.04em; }
       .value { font-size: 32px; margin: 2px 0 1px; }
@@ -62,7 +63,7 @@
     <span class="body">
       <span class="label">Compteur global depuis 1977</span>
       <span class="value"><span id="km" aria-hidden="true">…</span> <small>km</small><span id="km-sr" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)"></span></span>
-      <span class="hint">Les Godillots Ailés<span class="hint-more"> · toutes les randos du club</span></span>
+      <span class="hint">Les Godillots Ailés<span class="hint-sep"> · </span><span class="hint-date" id="as-of"></span></span>
     </span>
   </div>
   <script src="data/compteur.js"></script>
@@ -75,6 +76,13 @@
       if (!data) { el.textContent = '–'; return; }
       const fmt = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 }).format;
       document.getElementById('km-sr').textContent = `${fmt(data.km)} km`;
+      // Kilométrage arrêté à la date de la dernière mise à jour (randos dont la date est passée)
+      const asOf = data.asOf || (data.generatedAt || '').slice(0, 10);
+      if (asOf) {
+        document.getElementById('as-of').textContent = `arrêté au ${new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date(`${asOf}T12:00:00`))}`;
+      } else {
+        document.querySelector('.hint-sep').remove();
+      }
       const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
       // Défilement du compteur quand il devient visible sur la page du blog
       const run = () => {

@@ -362,6 +362,7 @@ async function main() {
       .filter((r) => r.date > TOTAL_REF.date && r.date <= today && !(r.blog && r.blog.cancelled))
       .reduce((s, r) => s + r.distanceKm, 0)),
     ref: TOTAL_REF,
+    asOf: today, // kilométrage arrêté à cette date (heure de Paris)
   };
   const payload = {
     generatedAt: new Date().toISOString(),
@@ -378,7 +379,7 @@ async function main() {
   fs.writeFileSync(path.join(DATA_DIR, 'randos.js'), `window.RANDOTHEQUE=${JSON.stringify(payload)};`);
   // Données minuscules pour le compteur à intégrer sur un blog (compteur.html)
   fs.writeFileSync(path.join(DATA_DIR, 'compteur.js'),
-    `window.COMPTEUR=${JSON.stringify({ km: total.km, randos: visible.length, generatedAt: payload.generatedAt })};`);
+    `window.COMPTEUR=${JSON.stringify({ km: total.km, asOf: today, randos: visible.length, generatedAt: payload.generatedAt })};`);
   writeJSON(path.join(DATA_DIR, 'randos.json'), payload, false);
   writeJSON(GEO_CACHE_FILE, geoCache);
   writeJSON(ELE_CACHE_FILE, eleCache, false);
