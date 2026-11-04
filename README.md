@@ -120,6 +120,10 @@ Les animateurs s'écrivent comme sur le blog (« Bruno - Jean », « Guy et Pier
 - **Télécharger le GPX** : le fichier est proposé sous son **nom d'origine** sur le Google Drive du blog
   (ex. `Piste_2026-11-03-Parignargues-16h08.gpx`), avec son poids. Dans le dépôt, les fichiers gardent leur nom
   (`gpx/blog/AAAA-MM-JJ_nom.gpx`), qui ne change jamais.
+- **Itinéraire** : bouton Google Maps qui guide jusqu'au **parking** indiqué sur le blog (lien « Vue Parking »,
+  sinon arrivée de l'itinéraire « Route Google Maps », sinon coordonnées de l'article), à condition qu'il soit à
+  moins de 10 km du départ de la trace ; sinon jusqu'au **point de départ du GPX**. Les liens Google Maps courts
+  sont résolus une seule fois (`.cache/blog/maps-resolved.json`).
 - **Albums photos** : un bouton par album Google Photos lié dans l'article du blog (« Photos de Bruno »,
   « Le film »…), qui ouvre l'album dans un nouvel onglet. Les très anciens liens Picasa / Google+ ne
   fonctionnent plus et sont ignorés.

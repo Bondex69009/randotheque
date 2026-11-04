@@ -27,6 +27,8 @@ const FAILED_FILE = path.join(CACHE_DIR, 'blog', 'failed-downloads.json');
 // Heure de la dernière vérification (non versionnée : elle change à chaque passage)
 const LAST_CHECK_FILE = path.join(CACHE_DIR, 'blog', 'last-check.json');
 const MAX_AUDIO_BYTES = 60 * 1024 * 1024;
+// Liens Google Maps courts déjà résolus (goo.gl/maps, maps.app.goo.gl → lien complet), pour ne pas les redemander
+const MAPS_CACHE_FILE = path.join(CACHE_DIR, 'blog', 'maps-resolved.json');
 
 const MONTHS = ['janvier', 'fevrier', 'mars', 'avril', 'mai', 'juin', 'juillet', 'aout', 'septembre', 'octobre', 'novembre', 'decembre'];
 
@@ -188,6 +190,52 @@ function parseDeclared(segment) {
   return Object.keys(out).length ? out : null;
 }
 
+// ---------------------------------------------------------------- Accès : parking / itinéraire Google Maps
+const MAPS_RE = /google\.[a-z.]+\/maps|maps\.google\.|goo\.gl\/maps|maps\.app\.goo\.gl/i;
+// parking : « Vue Parking départ de la Rando » ; route : « Route Google Maps » (arrive en général au parking)
+function mapsKind(text) {
+  if (/caissargues|complexe|omnisport/i.test(text)) return null; // lieu de rassemblement du club
+  if (/parking|stationnement|d[ée]part/i.test(text)) return 'parking';
+  if (/route|itin[ée]raire|\bgm\b|g\.?\s?maps|google\s?maps|suivre/i.test(text)) return 'route';
+  return 'autre';
+}
+const dms = (d, m, s, h) => (+d + (+m || 0) / 60 + (+(s || '0').replace(',', '.') || 0) / 3600) * (/[SW]/i.test(h) ? -1 : 1);
+// Coordonnées « 44° 8'28.71"N 4°32'37.23"E »
+function parseDms(text) {
+  const m = (text || '').replace(/&#176;|%C2%B0/g, '°').replace(/%22/g, '"').replace(/%27|’/g, "'").replace(/\+/g, ' ')
+    .match(/(\d{1,2})°\s*(\d{1,2})['′]\s*([\d.,]+)?["″]?\s*([NS])[\s,]*(\d{1,3})°\s*(\d{1,2})['′]\s*([\d.,]+)?["″]?\s*([EOW])/i);
+  return m ? { lat: dms(m[1], m[2], m[3], m[4]), lon: dms(m[5], m[6], m[7], m[8].replace(/O/i, 'W')) } : null;
+}
+// Point visé par un lien Google Maps : repère d'un lieu, arrivée d'un itinéraire, position Street View…
+export function mapsPoint(url, text = '') {
+  let u = url;
+  try { u = decodeURIComponent(url); } catch { /* tel quel */ }
+  const ok = (lat, lon) => (Math.abs(lat) <= 90 && Math.abs(lon) <= 180 && (lat || lon) ? { lat: +(+lat).toFixed(6), lon: +(+lon).toFixed(6) } : null);
+  if (/\/maps\/dir\//.test(u) || /[?&](daddr|destination)=/.test(u)) {
+    const pairs = [...u.matchAll(/!1d(-?\d+\.\d+)!2d(-?\d+\.\d+)/g)];
+    if (pairs.length) { const p = pairs[pairs.length - 1]; return ok(p[2], p[1]); } // !1d = longitude, !2d = latitude
+    const d = u.match(/[?&](?:daddr|destination)=([^&]+)/);
+    if (d) {
+      const c = d[1].match(/(-?\d+\.\d+)\s*,\s*(-?\d+\.\d+)/);
+      if (c) return ok(c[1], c[2]);
+      return parseDms(d[1]);
+    }
+    const parts = u.split('/maps/dir/')[1];
+    if (parts) { const last = parts.split('/@')[0].split('/').filter(Boolean).pop(); if (last) return parseDms(last); }
+    return null;
+  }
+  const pins = [...u.matchAll(/!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/g)];
+  if (pins.length) { const p = pins[pins.length - 1]; return ok(p[1], p[2]); }
+  const place = u.match(/\/place\/([^/]+)/);
+  if (place) { const p = parseDms(place[1]); if (p) return p; const c = place[1].match(/^(-?\d+\.\d+),\s*(-?\d+\.\d+)/); if (c) return ok(c[1], c[2]); }
+  const q = u.match(/[?&](?:q|ll|query)=(-?\d+\.\d+),\s*(-?\d+\.\d+)/);
+  if (q) return ok(q[1], q[2]);
+  // @lat,lon : position Street View (« ,3a, ») ou vue zoomée (≤ 2 km, ou ≥ 15z)
+  const at = u.match(/@(-?\d+\.\d+),(-?\d+\.\d+),(?:(3a)|(\d+(?:\.\d+)?)m|(\d+(?:\.\d+)?)z)/);
+  if (at && (at[3] || (at[4] && +at[4] <= 2000) || (at[5] && +at[5] >= 15))) return ok(at[1], at[2]);
+  return parseDms(text);
+}
+
 // Albums Google Photos de l'article (les anciens liens Picasa / Google+ ne fonctionnent plus : ignorés)
 const ALBUM_RE = /^https?:\/\/(?:photos\.google\.com\/(?:u\/\d+\/)?share\/|photos\.app\.goo\.gl\/|goo\.gl\/photos\/)/i;
 // Intitulé du bouton à partir du texte du lien : « PHOTOS de Bruno. » → « Photos de Bruno », « René » → « Photos de René »
@@ -249,6 +297,11 @@ function parsePost(post, html) {
     if (!twin) albumList.push(a);
     else if (twin.label === 'Album photos') twin.label = a.label;
   }
+  // Liens Google Maps (parking, itinéraire) : les coordonnées sont calculées plus loin (liens courts à résoudre)
+  const mapsSeen = new Set();
+  const maps = links
+    .filter((l) => MAPS_RE.test(l.href) && mapsKind(l.text) && !mapsSeen.has(l.href) && mapsSeen.add(l.href))
+    .map((l) => ({ url: l.href.replace(/^\/\//, 'https://'), label: l.text.slice(0, 80), kind: mapsKind(l.text) }));
   const audioSeen = new Set();
   const audio = links
     .filter((l) => /\baudio\b/i.test(l.text) && /drive\.google|dropbox/.test(l.href))
@@ -293,6 +346,7 @@ function parsePost(post, html) {
       image,
       audio: audio.length ? audio : null,
       albums: albumList.length ? albumList.slice(0, 12) : null,
+      maps: maps.length ? maps.slice(0, 8) : null,
       post: { id: post.id, title: post.title, url: post.url, published: post.published },
     });
   });
@@ -425,6 +479,29 @@ async function main() {
     writeJSON(path.join(CACHE_DIR, 'blog', 'dry-run.json'), [...found.values()]);
     console.log('   (--dry : aperçu écrit dans .cache/blog/dry-run.json, rien téléchargé)');
     return;
+  }
+
+  // ---- Liens Google Maps : résolution des liens courts (une seule fois, mise en cache) et coordonnées
+  const mapsCache = readJSON(MAPS_CACHE_FILE, {});
+  const shortLinks = [...new Set([...found.values()].flatMap((it) => (it.maps || []).map((m) => m.url)))]
+    .filter((u) => /goo\.gl\/maps|maps\.app\.goo\.gl/i.test(u) && !(u in mapsCache));
+  if (shortLinks.length) {
+    console.log(`🗺️  Résolution de ${shortLinks.length} liens Google Maps courts…`);
+    await pool(shortLinks, 4, async (u) => {
+      try {
+        const res = await fetch(u, { redirect: 'manual', headers: { 'User-Agent': 'Mozilla/5.0 (compatible; Randotheque)' }, signal: AbortSignal.timeout(15000) });
+        mapsCache[u] = res.headers.get('location') || null;
+      } catch { /* réessayé au prochain passage */ }
+      await sleep(100);
+    });
+    writeJSON(MAPS_CACHE_FILE, mapsCache);
+  }
+  for (const it of found.values()) {
+    if (!it.maps) continue;
+    it.maps = it.maps.map((m) => {
+      const p = mapsPoint(mapsCache[m.url] || m.url, m.label);
+      return p ? { ...m, ...p } : m;
+    });
   }
 
   // ---- GPX : nouveaux liens, puis revérification de ceux de la première page

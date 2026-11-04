@@ -1174,6 +1174,18 @@
   }
   const stopAudio = () => { for (const a of $$('audio', dialog)) a.pause(); };
 
+  // Itinéraire Google Maps vers le parking du blog, sinon vers le départ de la trace GPX
+  function accessButton(r) {
+    const a = r.access || { lat: r.start[0], lon: r.start[1], source: 'gpx' };
+    const url = `https://www.google.com/maps/dir/?api=1&destination=${a.lat},${a.lon}&travelmode=driving`;
+    const label = a.source === 'gpx' ? 'Itinéraire vers le départ' : 'Itinéraire vers le parking';
+    const title = a.source === 'gpx'
+      ? 'Ouvre Google Maps jusqu\'au point de départ de la trace GPX'
+      : 'Ouvre Google Maps jusqu\'au parking indiqué sur le blog';
+    return `<a class="btn btn--route btn--block" href="${url}" target="_blank" rel="noopener" title="${title}">
+      ${icon('pin')}<span class="btn__label">${label}</span><span class="btn__meta">Google Maps</span>${icon('external', 'icon btn__ext')}</a>`;
+  }
+
   // Boutons vers les albums Google Photos de la sortie (intitulés numérotés s'ils se répètent)
   function albumButtons(r) {
     const list = (r.blog && r.blog.albums) || [];
@@ -1236,6 +1248,7 @@
               <dt>Altitudes</dt><dd>${r.eleSource === 'ign' ? 'Complétées par le service altimétrique IGN' : r.eleSource ? 'Issues du fichier GPX' : 'Absentes'}</dd>
               ${rec}
               <dt>Départ</dt><dd>${r.start[0].toFixed(5)}, ${r.start[1].toFixed(5)}</dd>
+              ${r.access && r.access.source !== 'gpx' ? `<dt>Parking</dt><dd>${r.access.lat.toFixed(5)}, ${r.access.lon.toFixed(5)} <small>(indiqué sur le blog)</small></dd>` : ''}
             </dl>
           </section>
         </div>
@@ -1259,6 +1272,7 @@
           </div>
           <div class="actions">
             <a class="btn btn--primary btn--block" href="${encodeURI(r.file)}" download="${esc(fileName)}">${icon('download')}Télécharger le GPX${r.fileSize ? ` <span class="btn__meta">(${fmtSize(r.fileSize)})</span>` : ''}</a>
+            ${accessButton(r)}
             ${albumButtons(r)}
             <button type="button" class="btn btn--outline btn--block" data-png="${r.id}">${icon('image')}Exporter la fiche en image (PNG)</button>
             ${blog ? `<a class="btn btn--outline btn--block" href="${esc(blog.url)}" target="_blank" rel="noopener">${icon('external')}Voir l'article sur le blog</a>` : ''}

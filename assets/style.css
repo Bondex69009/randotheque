@@ -868,3 +868,12 @@ h1, h2, h3 { line-height: var(--lh-tight); margin: 0; }
 .btn--photos:focus-visible { outline: 2px solid var(--c-cyan); outline-offset: 2px; }
 .btn--photos .btn__label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .btn--photos .btn__ext { width: 0.875rem; height: 0.875rem; opacity: 0.7; }
+
+/* ------------------------------------------------------------- Itinéraire Google Maps */
+.btn--route { color: var(--c-text); background: var(--c-surface-2); border: var(--border-w) solid var(--c-accent-ring); }
+.btn--route:hover { background: var(--c-accent-ghost); border-color: var(--c-accent); }
+.btn--route:focus-visible { outline: 2px solid var(--c-accent); outline-offset: 2px; }
+.btn--route > .icon:first-child { color: var(--c-accent); }
+.btn--route .btn__label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.btn--route .btn__meta { font-size: var(--fs-xs); }
+.btn--route .btn__ext { width: 0.875rem; height: 0.875rem; opacity: 0.7; }

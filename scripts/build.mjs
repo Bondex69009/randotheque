@@ -40,6 +40,19 @@ export const LEVELS = [
 ];
 const levelOf = (ibp) => (ibp == null ? null : LEVELS.find((l) => ibp <= l.max).id);
 
+// Point où se rendre pour la rando : parking indiqué sur le blog (lien « Vue Parking », sinon arrivée de
+// l'itinéraire, sinon coordonnées données dans l'article), s'il est à moins de 10 km du départ de la trace ;
+// sinon le point de départ du GPX.
+const ACCESS_MAX_M = 10000;
+function accessPoint(blog, start) {
+  const links = (blog && blog.maps) || [];
+  for (const kind of ['parking', 'route', 'autre']) {
+    const m = links.find((l) => l.kind === kind && l.lat != null && haversine({ lat: l.lat, lon: l.lon }, start) <= ACCESS_MAX_M);
+    if (m) return { lat: +m.lat.toFixed(5), lon: +m.lon.toFixed(5), source: kind === 'parking' || kind === 'route' ? 'parking' : 'blog' };
+  }
+  return { lat: +start.lat.toFixed(5), lon: +start.lon.toFixed(5), source: 'gpx' };
+}
+
 // ---------------------------------------------------------------- Services en ligne (avec cache)
 const geoCache = readJSON(GEO_CACHE_FILE, {});
 async function reverseGeocode(lat, lon) {
@@ -256,6 +269,7 @@ async function main() {
         loop,
         start: [+start.lat.toFixed(5), +start.lon.toFixed(5)],
         bbox: bbox(pts),
+        access: accessPoint(blog, start),
         commune: geo && geo.commune ? geo.commune : null,
         deptCode: (geo && geo.deptCode) || (blogDept && blogDept.deptCode) || null,
         deptName: (geo && geo.deptName) || (blogDept && blogDept.deptName) || null,
