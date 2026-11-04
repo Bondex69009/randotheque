@@ -186,6 +186,33 @@ function parseDeclared(segment) {
   return Object.keys(out).length ? out : null;
 }
 
+// Albums Google Photos de l'article (les anciens liens Picasa / Google+ ne fonctionnent plus : ignorés)
+const ALBUM_RE = /^https?:\/\/(?:photos\.google\.com\/(?:u\/\d+\/)?share\/|photos\.app\.goo\.gl\/|goo\.gl\/photos\/)/i;
+// Intitulé du bouton à partir du texte du lien : « PHOTOS de Bruno. » → « Photos de Bruno », « René » → « Photos de René »
+function albumLabel(text) {
+  let t = (text || '').replace(/\s+/g, ' ').replace(/[\s.…:]+$/, '').replace(/^[\s\-–:*]+/, '').trim();
+  if (!t || t.length < 3 || /\d{2}/.test(t) || /^(les |toutes les )?photos( ici)?$/i.test(t) || /^album/i.test(t)) return 'Album photos';
+  const STOP = new Set(['la', 'le', 'les', 'l', 'rando', 'reco', 'nos', 'et', 'du', 'des']);
+  // « BRUNO » → « Bruno », « gé » → « Gé » ; les initiales (« D », « Gr2 ») et les petits mots restent tels quels
+  const cap = (w) => (STOP.has(w.toLowerCase()) || /^[A-Z]\d?$|^GR?\d+$/i.test(w) ? (w.length > 2 ? w.toLowerCase() : w)
+    : w.charAt(0).toUpperCase() + w.slice(1).toLowerCase());
+  t = t.replace(/\b[\p{Lu}]{2,}\b/gu, (w) => (/^GR?\d*$/.test(w) ? w : w.toLowerCase()));
+  if (/^(le |la )?(film|diaporama|animation|vid[ée]o)/i.test(t)) return t.charAt(0).toUpperCase() + t.slice(1).toLowerCase();
+  if (/photo/i.test(t)) {
+    t = t.replace(/^(?:toutes\s+)?(?:les\s+)?photos\b/i, 'Photos')
+      .replace(/^Photos\s*-\s*(?=\d)/, 'Photos ')
+      .replace(/^Photos\s*[-:]?\s+(?!de\b|d['’]|du\b|des\b|gr?\d|\d)/i, 'Photos de ');
+  } else if (/^(?:d['’]\s*)?[\p{L}'’-]+(?: [\p{L}.'’-]+)?$/u.test(t) && t.length <= 20) {
+    t = `Photos de ${t.replace(/^d['’]\s*/i, '')}`; // juste un prénom (« Bruno D », « SYLVIE », « d'Alain »)
+  } else if (t.length > 40) {
+    return 'Album photos';
+  }
+  // Prénoms après « de » avec une majuscule ; « de Alain » → « d'Alain »
+  t = t.replace(/\b(de|et|&) ([\p{L}'’-]+)/gu, (m, de, w) => `${de} ${/^l['’]/i.test(w) ? w.toLowerCase() : cap(w)}`)
+    .replace(/\bde ([AEIOUYÉÈÊ])/g, "d'$1");
+  return t.charAt(0).toUpperCase() + t.slice(1);
+}
+
 function parsePost(post, html) {
   const body = extractBody(html);
   if (!body) return [];
@@ -209,6 +236,17 @@ function parsePost(post, html) {
   const departements = post.labels.filter((l) => l !== 'ANNULEE');
   const image = post.thumb ? post.thumb.replace(/\/s72-[^/]*\//, '/w640-h360-c/') : null;
   // Résumé audio (« RESUME - Audio 1'22" », lien Google Drive) : commun à toutes les traces de l'article
+  const albumSeen = new Set();
+  const albums = links
+    .filter((l) => ALBUM_RE.test(l.href) && !albumSeen.has(l.href) && albumSeen.add(l.href))
+    .map((l) => ({ url: l.href, label: albumLabel(l.text) }));
+  // Le même album peut être lié par une image puis par un texte : on garde l'intitulé le plus parlant
+  const albumList = [];
+  for (const a of albums) {
+    const twin = albumList.find((b) => b.url.split('?')[0] === a.url.split('?')[0]);
+    if (!twin) albumList.push(a);
+    else if (twin.label === 'Album photos') twin.label = a.label;
+  }
   const audioSeen = new Set();
   const audio = links
     .filter((l) => /\baudio\b/i.test(l.text) && /drive\.google|dropbox/.test(l.href))
@@ -252,6 +290,7 @@ function parsePost(post, html) {
       cancelled,
       image,
       audio: audio.length ? audio : null,
+      albums: albumList.length ? albumList.slice(0, 12) : null,
       post: { id: post.id, title: post.title, url: post.url, published: post.published },
     });
   });
@@ -365,6 +404,8 @@ async function main() {
     const merged = { ...old, ...Object.fromEntries(Object.entries(recent).filter(([, v]) => v != null)) };
     merged.outings = prev.outings;
     merged.front = prev.front || front;
+    const allAlbums = [...(recent.albums || []), ...(old.albums || [])];
+    merged.albums = allAlbums.length ? allAlbums.filter((a, i) => allAlbums.findIndex((b) => b.url === a.url) === i).slice(0, 12) : null;
     found.set(item.key, merged);
   }
   console.log(`   ${found.size} liens GPX distincts`);

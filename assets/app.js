@@ -1171,6 +1171,20 @@
   }
   const stopAudio = () => { for (const a of $$('audio', dialog)) a.pause(); };
 
+  // Boutons vers les albums Google Photos de la sortie (intitulés numérotés s'ils se répètent)
+  function albumButtons(r) {
+    const list = (r.blog && r.blog.albums) || [];
+    if (!list.length) return '';
+    const total = {}, seen = {};
+    for (const a of list) total[a.label] = (total[a.label] || 0) + 1;
+    return list.map((a) => {
+      seen[a.label] = (seen[a.label] || 0) + 1;
+      const label = total[a.label] > 1 ? `${a.label} ${seen[a.label]}` : a.label;
+      return `<a class="btn btn--photos btn--block" href="${esc(a.url)}" target="_blank" rel="noopener"
+        title="Ouvrir l'album dans Google Photos (nouvel onglet)">${icon('image')}<span class="btn__label">${esc(label)}</span>${icon('external', 'icon btn__ext')}</a>`;
+    }).join('');
+  }
+
   function detailHtml(r) {
     const lvl = r.level;
     const fileName = r.downloadName || r.file.split('/').pop(); // nom d'origine (Drive du blog)
@@ -1242,6 +1256,7 @@
           </div>
           <div class="actions">
             <a class="btn btn--primary btn--block" href="${encodeURI(r.file)}" download="${esc(fileName)}">${icon('download')}Télécharger le GPX${r.fileSize ? ` <span class="btn__meta">(${fmtSize(r.fileSize)})</span>` : ''}</a>
+            ${albumButtons(r)}
             <button type="button" class="btn btn--outline btn--block" data-png="${r.id}">${icon('image')}Exporter la fiche en image (PNG)</button>
             ${blog ? `<a class="btn btn--outline btn--block" href="${esc(blog.url)}" target="_blank" rel="noopener">${icon('external')}Voir l'article sur le blog</a>` : ''}
             <a class="btn btn--outline btn--block" href="${IBP_PAGE}" target="_blank" rel="noopener" data-ibp="${r.id}"

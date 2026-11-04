@@ -278,6 +278,7 @@ async function main() {
           image: blog.image,
           cancelled: blog.cancelled,
           gpxUrl: blog.sourceUrl,
+          albums: blog.albums || null,
           audio: (blog.audio || []).filter((a) => a.file && fs.existsSync(path.join(ROOT, 'audio', 'blog', a.file)))
             .map((a) => ({ file: `audio/blog/${a.file}`, label: a.label, seconds: a.seconds, url: a.sourceUrl })),
         } : null,
@@ -351,6 +352,7 @@ async function main() {
   for (const r of randos) {
     delete r.orig; delete r.edited;
     if (r.blog && !r.blog.audio.length) delete r.blog.audio;
+    if (r.blog && !r.blog.albums) delete r.blog.albums;
   }
   const visible = randos.filter((r) => !r.hidden);
 
