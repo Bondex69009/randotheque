@@ -530,8 +530,7 @@
     let totalKm = DATA.total && DATA.total.km;
     if (!totalKm) {
       const ref = { km: 20229, date: '2026-11-03' };
-      const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Paris' }).format(new Date());
-      totalKm = ref.km + RANDOS.filter((r) => r.date > ref.date && r.date <= today && !(r.blog && r.blog.cancelled))
+      totalKm = ref.km + RANDOS.filter((r) => r.date > ref.date && !(r.blog && r.blog.cancelled))
         .reduce((s, r) => s + r.distanceKm, 0);
     }
     $('#hero-total').innerHTML = `

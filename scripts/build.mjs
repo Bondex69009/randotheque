@@ -27,7 +27,7 @@ const OFFLINE = process.argv.includes('--offline');
 const OVERRIDES_FILE = path.join(DATA_DIR, 'overrides.json');
 const EDITABLE = ['name', 'date', 'description', 'animateurs', 'ibp', 'commune'];
 // Compteur total du club (randos d'avant 2010 comprises) : valeur de référence donnée par le club au
-// 3 novembre 2026, rando de ce jour incluse. Chaque rando suivante déjà faite et non annulée s'y ajoute.
+// 3 novembre 2026, rando de ce jour incluse. Chaque rando suivante s'y ajoute dès sa publication sur le blog (sauf si elle est annulée).
 const TOTAL_REF = { km: 20229, date: '2026-11-03' };
 
 // ---------------------------------------------------------------- Niveaux IBP (randonnée pédestre)
@@ -356,10 +356,9 @@ async function main() {
   }
   const visible = randos.filter((r) => !r.hidden);
 
-  const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Paris' }).format(new Date());
   const total = {
     km: Math.round(TOTAL_REF.km + visible
-      .filter((r) => r.date > TOTAL_REF.date && r.date <= today && !(r.blog && r.blog.cancelled))
+      .filter((r) => r.date > TOTAL_REF.date && !(r.blog && r.blog.cancelled))
       .reduce((s, r) => s + r.distanceKm, 0)),
     ref: TOTAL_REF,
   };
