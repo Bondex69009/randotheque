@@ -47,7 +47,7 @@ L'interface d'administration n'est pas publiée en ligne (elle reste utilisable 
 
 ## Compteur total et intégration sur le blog
 
-Le haut du site affiche le **compteur total du club** (randos d'avant 2010 comprises). Il part de la valeur
+Le haut du site affiche le **compteur global depuis 1977** (toutes les randos du club, d'avant 2010 comprises). Il part de la valeur
 donnée par le club, **20 229 km au 3 novembre 2026** (rando de ce jour incluse), et chaque rando suivante déjà
 faite et non annulée s'y ajoute. Pour changer la référence : `TOTAL_REF` dans `scripts/build.mjs`.
 

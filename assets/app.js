@@ -536,9 +536,9 @@
     $('#hero-total').innerHTML = `
       <span class="hero-total__icon" aria-hidden="true">${icon('distance')}</span>
       <span class="hero-total__body">
-        <span class="hero-total__label">Compteur total du club</span>
+        <span class="hero-total__label">Compteur global depuis 1977</span>
         <span class="hero-total__value">${num('total')} <small>km</small></span>
-        <span class="hero-total__hint">randos d'avant 2010 comprises</span>
+        <span class="hero-total__hint">toutes les randos du club, d'avant 2010 comprises</span>
       </span>
       <button type="button" class="hero-total__embed" id="open-embed" title="Code HTML pour afficher ce compteur sur un blog">
         ${icon('code')}<span>Intégrer</span>
@@ -597,7 +597,7 @@
     ? PUBLIC_URL : new URL('./', location.href).href);
   function embedCode(theme) {
     const src = `${embedBase()}compteur.html${theme === 'clair' ? '?theme=clair' : ''}`;
-    return `<iframe src="${src}" title="Compteur total des Godillots Ailés" width="100%" height="128" scrolling="no" loading="lazy" style="border:0;display:block;max-width:420px;margin:0 auto;"></iframe>`;
+    return `<iframe src="${src}" title="Compteur global des Godillots Ailés depuis 1977" width="100%" height="128" scrolling="no" loading="lazy" style="border:0;display:block;max-width:420px;margin:0 auto;"></iframe>`;
   }
   function paintEmbed() {
     const theme = ($('input[name="embed-theme"]:checked', embedDialog) || {}).value || 'sombre';
@@ -1257,11 +1257,197 @@
     }
   });
 
+  // ------------------------------------------------------------ Suggestions de recherche (autocomplétion)
+  // Liste déroulante sous le champ (villages, années, départements, animateurs, difficulté, audio, randos)
+  // et fin de mot proposée en grisé, acceptée avec Tab ou →.
+  const qInput = $('#q'), suggestBox = $('#q-suggest'), ghost = $('#q-ghost');
+  const countBy = (keyOf) => {
+    const m = new Map();
+    for (const r of RANDOS) for (const k of [].concat(keyOf(r))) m.set(k, (m.get(k) || 0) + 1);
+    return m;
+  };
+  const SUGGEST = (() => {
+    const yc = countBy(yearOf), dc = countBy((r) => r.deptName || 'Inconnu'), ac = countBy((r) => r.animateursList);
+    const lc = countBy((r) => r.level || 'na');
+    const audioN = RANDOS.filter((r) => r.blog && r.blog.audio).length;
+    const add = (key, val) => () => { state[key].add(val); };
+    const groups = {
+      communes: { title: 'Villages', icon: 'pin', limit: 5, items: communeEntries.filter((d) => d.name !== 'Inconnue')
+        .map((d) => ({ label: d.name, hint: d.code ? `(${d.code})` : '', n: d.n, apply: add('communes', d.name) })) },
+      years: { title: 'Années', icon: 'calendar', limit: 4, items: yearEntries
+        .map((d) => ({ label: d.name, n: yc.get(d.name), apply: add('years', d.name) })) },
+      depts: { title: 'Départements', icon: 'map', limit: 3, items: deptEntries.filter((d) => d.name !== 'Inconnu')
+        .map((d) => ({ label: d.name, hint: d.code, n: dc.get(d.name), apply: add('depts', d.name) })) },
+      anims: { title: 'Animateurs', icon: 'user', limit: 3, items: animEntries
+        .map((d) => ({ label: d.name, n: ac.get(d.name), apply: add('anims', d.name) })) },
+      levels: { title: 'Difficulté', icon: 'gauge', limit: 2, items: LEVELS
+        .map((l) => ({ label: l.label, hint: l.id, n: lc.get(l.id) || 0, apply: add('levels', l.id) })) },
+      extras: { title: 'Contenu', icon: 'audio', limit: 1, items: audioN
+        ? [{ label: 'Résumé audio', hint: 'audio', n: audioN, apply: add('extras', 'audio') }] : [] },
+      randos: { title: 'Randos', icon: 'distance', limit: 5, items: RANDOS
+        .map((r) => ({ label: r.name, hint: fmtDate(r.date), open: r.id })) },
+    };
+    for (const g of Object.values(groups)) for (const it of g.items) { it._n = norm(it.label); it._h = norm(it.hint || ''); }
+    return groups;
+  })();
+  let suggestions = [], activeIdx = -1;
+
+  // 0 : commence par la saisie · 1 : un mot commence par la saisie · 2 : contient · null : pas de correspondance
+  function scoreOf(it, tokens) {
+    const hay = `${it._n} ${it._h}`;
+    if (!tokens.every((t) => hay.includes(t))) return null;
+    const first = tokens.join(' ');
+    if (it._n.startsWith(first)) return 0;
+    if (new RegExp(`(^|[\\s\\-'’(])${first.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`).test(hay)) return 1;
+    return 2;
+  }
+  function highlight(label, tokens) {
+    const n = norm(label);
+    let out = '', pos = 0;
+    const t = tokens[0];
+    const i = t ? n.indexOf(t) : -1;
+    if (i < 0) return esc(label);
+    out = esc(label.slice(pos, i)) + `<mark>${esc(label.slice(i, i + t.length))}</mark>` + esc(label.slice(i + t.length));
+    return out;
+  }
+  function computeSuggestions() {
+    const raw = qInput.value.trim();
+    const tokens = norm(raw).split(/\s+/).filter(Boolean);
+    if (!tokens.length) {
+      // Champ vide : quelques raccourcis utiles
+      return [
+        { g: SUGGEST.years, items: SUGGEST.years.items.slice(0, 4) },
+        { g: SUGGEST.communes, items: SUGGEST.communes.items.slice(0, 5) },
+      ].map((x) => ({ ...x, tokens: [] }));
+    }
+    const digits = /^\d+$/.test(tokens.join(''));
+    const order = digits
+      ? ['years', 'depts', 'communes', 'randos']
+      : ['communes', 'randos', 'years', 'depts', 'anims', 'levels', 'extras'];
+    return order.map((k) => {
+      const g = SUGGEST[k];
+      const items = g.items.map((it) => ({ it, s: scoreOf(it, tokens) })).filter((x) => x.s != null)
+        .sort((a, b) => a.s - b.s
+          || (k === 'years' ? b.it.label.localeCompare(a.it.label) : (b.it.n || 0) - (a.it.n || 0)) // années : plus récentes d'abord
+          || a.it.label.localeCompare(b.it.label, 'fr'))
+        .slice(0, g.limit).map((x) => ({ ...x.it, _s: x.s }));
+      return { g, items, tokens };
+    }).filter((x) => x.items.length);
+  }
+  function renderSuggest() {
+    const groups = computeSuggestions();
+    suggestions = groups.flatMap((x) => x.items);
+    activeIdx = -1;
+    if (!suggestions.length || document.activeElement !== qInput) { closeSuggest(); return; }
+    let i = 0;
+    suggestBox.innerHTML = groups.map(({ g, items, tokens }) => `
+      <div class="suggest__group" role="group" aria-label="${g.title}">
+        <div class="suggest__head" aria-hidden="true">${icon(g.icon)}${g.title}</div>
+        ${items.map((it) => `
+        <div class="suggest__opt" role="option" id="q-opt-${i}" data-i="${i++}" aria-selected="false">
+          <span class="suggest__label">${highlight(it.label, tokens)}</span>
+          ${it.hint && !it.open ? `<span class="suggest__hint">${esc(it.hint)}</span>` : ''}
+          ${it.open ? `<span class="suggest__hint">${esc(it.hint)}</span>` : `<span class="suggest__n">${it.n} rando${it.n > 1 ? 's' : ''}</span>`}
+        </div>`).join('')}
+      </div>`).join('');
+    suggestBox.hidden = false;
+    qInput.setAttribute('aria-expanded', 'true');
+    paintGhost();
+  }
+  function closeSuggest() {
+    suggestBox.hidden = true;
+    suggestBox.innerHTML = '';
+    activeIdx = -1;
+    qInput.setAttribute('aria-expanded', 'false');
+    qInput.removeAttribute('aria-activedescendant');
+    paintGhost();
+  }
+  function setActive(i) {
+    activeIdx = i;
+    $$('.suggest__opt', suggestBox).forEach((el) => el.setAttribute('aria-selected', String(+el.dataset.i === i)));
+    const el = $(`#q-opt-${i}`);
+    if (el) { qInput.setAttribute('aria-activedescendant', el.id); el.scrollIntoView({ block: 'nearest' }); }
+    else qInput.removeAttribute('aria-activedescendant');
+  }
+  function chooseSuggestion(i) {
+    const it = suggestions[i];
+    if (!it) return;
+    closeSuggest();
+    if (it.open) { openDetail(it.open); return; }
+    // Filtre appliqué (puce visible au-dessus des résultats) et champ vidé
+    it.apply();
+    clearTimeout(qTimer);
+    qInput.value = '';
+    state.q = '';
+    syncFilterInputs();
+    update();
+    paintGhost();
+  }
+  // Fin de mot en grisé : meilleure suggestion qui commence par la saisie
+  function ghostTarget() {
+    const raw = qInput.value;
+    if (raw.trim().length < 2 || raw !== raw.trimStart() || document.activeElement !== qInput) return null;
+    if (qInput.selectionStart !== raw.length || qInput.scrollWidth > qInput.clientWidth) return null;
+    const n = norm(raw);
+    const best = suggestions.find((it) => it._n.startsWith(n) && it.label.length > raw.length);
+    return best ? best.label : null;
+  }
+  function paintGhost() {
+    const label = ghostTarget();
+    if (!label) { ghost.hidden = true; ghost.textContent = ''; return; }
+    const raw = qInput.value;
+    ghost.innerHTML = `<span class="search__ghost-typed">${esc(raw)}</span>${esc(label.slice(raw.length))}`;
+    ghost.hidden = false;
+  }
+  function acceptGhost() {
+    const label = ghostTarget();
+    if (!label) return false;
+    qInput.value = label;
+    qInput.dispatchEvent(new Event('input', { bubbles: true }));
+    return true;
+  }
+
+  qInput.addEventListener('focus', renderSuggest);
+  qInput.addEventListener('blur', () => setTimeout(() => { if (document.activeElement !== qInput) closeSuggest(); }, 100));
+  qInput.addEventListener('keydown', (e) => {
+    const open = !suggestBox.hidden;
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      if (!open) renderSuggest();
+      if (suggestions.length) setActive((activeIdx + 1) % suggestions.length);
+    } else if (e.key === 'ArrowUp' && open) {
+      e.preventDefault();
+      setActive(activeIdx <= 0 ? suggestions.length - 1 : activeIdx - 1);
+    } else if (e.key === 'Enter' && open && activeIdx >= 0) {
+      e.preventDefault();
+      chooseSuggestion(activeIdx);
+    } else if (e.key === 'Enter' && open) {
+      closeSuggest();
+    } else if (e.key === 'Escape' && open) {
+      e.preventDefault();
+      e.stopPropagation();
+      closeSuggest();
+    } else if ((e.key === 'Tab' && !e.shiftKey) || (e.key === 'ArrowRight' && qInput.selectionStart === qInput.value.length)) {
+      if (acceptGhost()) e.preventDefault();
+    }
+  });
+  qInput.addEventListener('keyup', (e) => { if (/^(ArrowLeft|ArrowRight|Home|End)$/.test(e.key)) paintGhost(); });
+  suggestBox.addEventListener('mousedown', (e) => e.preventDefault()); // garde le focus dans le champ
+  suggestBox.addEventListener('click', (e) => {
+    const opt = e.target.closest('.suggest__opt');
+    if (opt) chooseSuggestion(+opt.dataset.i);
+  });
+  suggestBox.addEventListener('mousemove', (e) => {
+    const opt = e.target.closest('.suggest__opt');
+    if (opt && +opt.dataset.i !== activeIdx) setActive(+opt.dataset.i);
+  });
+
   // ------------------------------------------------------------ Événements
   let qTimer;
   $('#q').addEventListener('input', (e) => {
     clearTimeout(qTimer);
     qTimer = setTimeout(() => { state.q = e.target.value.trim(); update(); }, 120);
+    renderSuggest();
   });
   $('#sort').addEventListener('change', (e) => { state.sort = e.target.value; update(); });
   $$('.segmented__btn').forEach((b) => b.addEventListener('click', () => {

@@ -14,7 +14,7 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=IBM+Plex+Sans:wght@400;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
   <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" crossorigin="">
-  <link rel="stylesheet" href="assets/style.css?v=20">
+  <link rel="stylesheet" href="assets/style.css?v=21">
 </head>
 <body>
   <a class="skip-link" href="#resultats">Aller aux résultats</a>
@@ -50,9 +50,14 @@
         <form class="search" role="search" onsubmit="return false">
           <label for="q" class="visually-hidden">Rechercher une randonnée</label>
           <svg class="icon search__icon" aria-hidden="true"><use href="#i-search"/></svg>
+          <span class="search__ghost" id="q-ghost" aria-hidden="true" hidden></span>
           <input id="q" class="search__input" type="search" autocomplete="off" spellcheck="false"
-                 placeholder="Village, lieu, animateur…">
+                 placeholder="Village, année, animateur, rando…"
+                 role="combobox" aria-autocomplete="both" aria-expanded="false" aria-controls="q-suggest"
+                 aria-describedby="q-help">
           <kbd class="search__kbd" aria-hidden="true">/</kbd>
+          <span class="visually-hidden" id="q-help">Des suggestions s'affichent pendant la saisie : flèches haut et bas pour les parcourir, Entrée pour choisir, Tab pour compléter le mot.</span>
+          <div class="suggest" id="q-suggest" role="listbox" aria-label="Suggestions" hidden></div>
         </form>
         <div class="hero__figures">
           <p class="hero-total" id="hero-total"></p>
@@ -206,6 +211,6 @@
   <script src="data/randos.js" onerror="window.RANDOTHEQUE=null"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
   <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js" crossorigin=""></script>
-  <script src="assets/app.js?v=17"></script>
+  <script src="assets/app.js?v=19"></script>
 </body>
 </html>
