@@ -117,6 +117,11 @@ Les animateurs s'écrivent comme sur le blog (« Bruno - Jean », « Guy et Pier
 
 ## Dans chaque fiche de rando
 
+- **Télécharger le GPX** : le fichier est proposé sous son **nom d'origine** sur le Google Drive du blog
+  (ex. `Piste_2026-11-03-Parignargues-16h08.gpx`), avec son poids. Dans le dépôt, les fichiers gardent leur nom
+  (`gpx/blog/AAAA-MM-JJ_nom.gpx`), qui ne change jamais.
+- **Évolution par année** : en cliquant sur les chiffres ou le compteur du haut de page, trois graphiques
+  (nombre de randos, kilomètres, dénivelé) et un tableau, calculés sur la sélection en cours.
 - **Résumé audio** : quand l'article du blog a un lien « RESUME - Audio », un lecteur (lecture/pause, avance,
   vitesse) apparaît dans la fiche ; les cartes concernées portent la mention « Audio » et le filtre
   « Contenu > Résumé audio » les regroupe.

@@ -235,6 +235,8 @@ async function main() {
         id,
         file: rel,
         fileSize: fs.statSync(file).size, // poids du fichier GPX, en octets
+        // nom proposé au téléchargement : celui du fichier d'origine sur le Drive du blog
+        downloadName: (blog && blog.originalName) || path.basename(file),
         source: blog ? 'blog' : 'perso',
         name,
         description,

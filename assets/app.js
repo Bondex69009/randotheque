@@ -336,7 +336,7 @@
       $(`#${key}-max`).value = state[key][1];
       paintRange(key);
     }
-    for (const btn of $$('.segmented__btn')) btn.setAttribute('aria-pressed', String(btn.dataset.view === state.view));
+    for (const btn of $$('.segmented__btn[data-view]')) btn.setAttribute('aria-pressed', String(btn.dataset.view === state.view));
   }
 
   function updateCounts() {
@@ -385,7 +385,8 @@
   function renderActiveFilters() {
     const tags = activeFilterTags();
     const box = $('#active-filters');
-    box.innerHTML = tags.map((t, i) => `<button type="button" class="tag-remove" data-i="${i}" aria-label="Retirer le filtre ${esc(t.label)}">${esc(t.label)} ${icon('close')}</button>`).join('');
+    box.innerHTML = tags.map((t, i) => `<button type="button" class="tag-remove" data-i="${i}" aria-label="Retirer le filtre ${esc(t.label)}">${esc(t.label)} ${icon('close')}</button>`).join('')
+      + (tags.length ? `<button type="button" class="btn btn--ghost btn--sm clear-all" data-action="reset">${icon('close')}Tout effacer</button>` : '');
     $$('.tag-remove', box).forEach((b) => b.addEventListener('click', () => {
       tags[+b.dataset.i].clear();
       syncFilterInputs();
@@ -590,6 +591,128 @@
     note.hidden = list.length === RANDOS.length;
   }
 
+  // ------------------------------------------------------------ Évolution par année (randos, km, D+)
+  // Trois petits graphiques en barres (un par mesure : échelles trop différentes pour un seul axe),
+  // calculés sur la sélection en cours. Infobulle au survol, vue tableau pour l'accessibilité.
+  const evoDialog = $('#evo');
+  const EVO_METRICS = [
+    { key: 'n', title: 'Nombre de randos', unit: '', fmt: (v) => nf0.format(v) },
+    { key: 'km', title: 'Kilomètres', unit: 'km', fmt: (v) => nf0.format(v) },
+    { key: 'dplus', title: 'Dénivelé positif', unit: 'm', fmt: (v) => nf0.format(v) },
+  ];
+  let evoRows = [];
+  function evoData(list) {
+    const by = new Map();
+    for (const r of list) {
+      const y = +yearOf(r);
+      const e = by.get(y) || { year: y, n: 0, km: 0, dplus: 0 };
+      e.n++; e.km += r.distanceKm; e.dplus += r.dplus || 0;
+      by.set(y, e);
+    }
+    if (!by.size) return [];
+    const ys = [...by.keys()];
+    const rows = [];
+    // Toutes les années de la période, y compris celles sans rando (barre vide) : l'axe du temps reste honnête
+    for (let y = Math.min(...ys); y <= Math.max(...ys); y++) rows.push(by.get(y) || { year: y, n: 0, km: 0, dplus: 0 });
+    return rows;
+  }
+  const niceMax = (v) => {
+    if (v <= 0) return 1;
+    const p = 10 ** Math.floor(Math.log10(v));
+    return [1, 1.2, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10].map((m) => m * p).find((m) => m >= v);
+  };
+  function evoChart(metric, rows, width) {
+    const W = Math.max(280, width), H = 150, L = 44, R = 4, T = 18, B = 22;
+    const max = niceMax(Math.max(...rows.map((r) => r[metric.key])));
+    const n = rows.length, slot = (W - L - R) / n, gap = Math.min(6, Math.max(2, slot * 0.18));
+    const bw = Math.max(2, slot - gap);
+    const y = (v) => T + (1 - v / max) * (H - T - B);
+    const base = H - B;
+    const every = slot >= 30 ? 1 : slot >= 16 ? 2 : slot >= 9 ? 3 : 5;
+    const peak = rows.reduce((a, b) => (b[metric.key] > a[metric.key] ? b : a), rows[0]);
+    const bars = rows.map((r, i) => {
+      const x = L + i * slot + gap / 2, v = r[metric.key];
+      const h = base - y(v), rad = Math.min(4, bw / 2, h);
+      // barre arrondie en haut seulement, posée sur la ligne de base
+      const d = v > 0 ? `M${x},${base}V${y(v) + rad}Q${x},${y(v)} ${x + rad},${y(v)}H${x + bw - rad}Q${x + bw},${y(v)} ${x + bw},${y(v) + rad}V${base}Z` : '';
+      const label = i % every === 0 || i === n - 1 ? `<text class="evo-axis" x="${x + bw / 2}" y="${H - 6}" text-anchor="middle">${slot < 26 && n > 8 ? `’${String(r.year).slice(2)}` : r.year}</text>` : '';
+      const peakLbl = r === peak && v > 0 ? `<text class="evo-peak" x="${x + bw / 2}" y="${y(v) - 5}" text-anchor="middle">${metric.fmt(v)}</text>` : '';
+      return `<g class="evo-col" data-year="${r.year}">
+        <rect class="evo-hit" x="${L + i * slot}" y="${T}" width="${slot}" height="${base - T}"/>
+        ${d ? `<path class="evo-bar" d="${d}"/>` : ''}${peakLbl}${label}</g>`;
+    }).join('');
+    const ticks = [0, max / 2, max].map((t) => `<line class="evo-grid" x1="${L}" x2="${W - R}" y1="${y(t)}" y2="${y(t)}"/>
+      <text class="evo-axis" x="${L - 6}" y="${y(t) + 4}" text-anchor="end">${t >= 10000 ? `${nf0.format(t / 1000)} k` : nf0.format(t)}</text>`).join('');
+    const total = rows.reduce((s, r) => s + r[metric.key], 0);
+    return `<section class="evo__chart">
+      <h3 class="evo__title">${metric.title}${metric.unit ? ` <small>(${metric.unit})</small>` : ''}
+        <span class="evo__total">Total : ${metric.fmt(total)}${metric.unit ? ` ${metric.unit}` : ''}</span></h3>
+      <svg viewBox="0 0 ${W} ${H}" width="100%" role="img"
+           aria-label="${metric.title} par année, de ${rows[0].year} à ${rows[n - 1].year}. Maximum en ${peak.year} : ${metric.fmt(peak[metric.key])}${metric.unit ? ` ${metric.unit}` : ''}.">
+        ${ticks}${bars}
+      </svg></section>`;
+  }
+  function renderEvo() {
+    const list = filtered;
+    evoRows = evoData(list);
+    const sel = list.length !== RANDOS.length;
+    $('#evo-sub').textContent = evoRows.length
+      ? `${sel ? 'Votre sélection' : 'Toutes les randos'} : ${nf0.format(list.length)} rando${list.length > 1 ? 's' : ''}, de ${evoRows[0].year} à ${evoRows[evoRows.length - 1].year}`
+        + (evoRows[evoRows.length - 1].year === new Date().getFullYear() ? ` (${new Date().getFullYear()} : année en cours)` : '')
+      : 'Aucune rando dans la sélection.';
+    const width = Math.round($('#evo-charts').clientWidth || evoDialog.clientWidth - 40 || 600);
+    $('#evo-charts').innerHTML = evoRows.length ? EVO_METRICS.map((m) => evoChart(m, evoRows, width)).join('') : '';
+    $('#evo-table').innerHTML = evoRows.length ? `
+      <table>
+        <thead><tr><th scope="col">Année</th><th scope="col">Randos</th><th scope="col">Kilomètres</th><th scope="col">Dénivelé +</th></tr></thead>
+        <tbody>${evoRows.slice().reverse().map((r) => `<tr><th scope="row">${r.year}</th><td>${nf0.format(r.n)}</td><td>${nf0.format(r.km)} km</td><td>${nf0.format(r.dplus)} m</td></tr>`).join('')}</tbody>
+        <tfoot><tr><th scope="row">Total</th><td>${nf0.format(evoRows.reduce((s, r) => s + r.n, 0))}</td><td>${nf0.format(evoRows.reduce((s, r) => s + r.km, 0))} km</td><td>${nf0.format(evoRows.reduce((s, r) => s + r.dplus, 0))} m</td></tr></tfoot>
+      </table>` : '';
+    $('#evo-tip').hidden = true;
+  }
+  function openEvo() {
+    evoDialog.showModal();
+    renderEvo(); // après ouverture : la largeur disponible est connue
+  }
+  // Infobulle : les trois mesures de l'année survolée
+  evoDialog.addEventListener('pointermove', (e) => {
+    const col = e.target.closest('.evo-col');
+    const tip = $('#evo-tip');
+    $$('.evo-col.is-hover', evoDialog).forEach((c) => c !== col && c.classList.remove('is-hover'));
+    if (!col) { tip.hidden = true; return; }
+    const year = +col.dataset.year;
+    $$(`.evo-col[data-year="${year}"]`, evoDialog).forEach((c) => c.classList.add('is-hover'));
+    const r = evoRows.find((x) => x.year === year);
+    tip.innerHTML = `<strong>${year}</strong><span>${nf0.format(r.n)} rando${r.n > 1 ? 's' : ''}</span><span>${nf0.format(r.km)} km</span><span>${nf0.format(r.dplus)} m D+</span>`;
+    tip.hidden = false;
+    const box = evoDialog.getBoundingClientRect();
+    const tw = tip.offsetWidth, th = tip.offsetHeight;
+    let x = e.clientX - box.left + 14, yPos = e.clientY - box.top + evoDialog.scrollTop - th - 12;
+    if (x + tw > box.width - 8) x = e.clientX - box.left - tw - 14;
+    if (yPos < evoDialog.scrollTop + 4) yPos = e.clientY - box.top + evoDialog.scrollTop + 16;
+    tip.style.transform = `translate(${Math.max(4, x)}px, ${yPos}px)`;
+  });
+  evoDialog.addEventListener('pointerleave', () => {
+    $('#evo-tip').hidden = true;
+    $$('.evo-col.is-hover', evoDialog).forEach((c) => c.classList.remove('is-hover'));
+  });
+  evoDialog.addEventListener('click', (e) => {
+    if (e.target === evoDialog || e.target.closest('[data-close-evo]')) { evoDialog.close(); return; }
+    const v = e.target.closest('[data-evo-view]');
+    if (v) {
+      const table = v.dataset.evoView === 'table';
+      $$('[data-evo-view]', evoDialog).forEach((b) => b.setAttribute('aria-pressed', String(b === v)));
+      $('#evo-charts').hidden = table;
+      $('#evo-table').hidden = !table;
+      $('#evo-tip').hidden = true;
+    }
+  });
+  window.addEventListener('resize', () => { if (evoDialog.open) renderEvo(); });
+  // Ouverture : bouton, ou clic sur les chiffres / le compteur du haut de page
+  $('#open-evo').addEventListener('click', openEvo);
+  $('#hero-stats').addEventListener('click', openEvo);
+  $('#hero-total').addEventListener('click', (e) => { if (!e.target.closest('#open-embed')) openEvo(); });
+
   // ------------------------------------------------------------ Compteur à intégrer sur un blog
   const PUBLIC_URL = 'https://bondex69009.github.io/randotheque/';
   const embedDialog = $('#embed');
@@ -707,7 +830,7 @@
   }
   function submitToIbp(r, blob) {
     const dt = new DataTransfer();
-    dt.items.add(new File([blob], r.file.split('/').pop(), { type: 'application/gpx+xml' }));
+    dt.items.add(new File([blob], r.downloadName || r.file.split('/').pop(), { type: 'application/gpx+xml' }));
     const form = document.createElement('form');
     form.method = 'post';
     form.enctype = 'multipart/form-data';
@@ -1024,7 +1147,7 @@
 
   function detailHtml(r) {
     const lvl = r.level;
-    const fileName = r.file.split('/').pop();
+    const fileName = r.downloadName || r.file.split('/').pop(); // nom d'origine (Drive du blog)
     const metaRows = Object.entries(r.meta || {})
       .filter(([k]) => META_LABELS[k] && !(k === 'description' && r.description === r.meta.description))
       .map(([k, v]) => {
@@ -1450,7 +1573,7 @@
     renderSuggest();
   });
   $('#sort').addEventListener('change', (e) => { state.sort = e.target.value; update(); });
-  $$('.segmented__btn').forEach((b) => b.addEventListener('click', () => {
+  $$('.segmented__btn[data-view]').forEach((b) => b.addEventListener('click', () => {
     state.view = b.dataset.view;
     syncFilterInputs();
     update();
@@ -1465,7 +1588,7 @@
     update();
   };
   $('#reset-filters').addEventListener('click', resetAll);
-  $('[data-action="reset"]').addEventListener('click', resetAll);
+  document.addEventListener('click', (e) => { if (e.target.closest('[data-action="reset"]')) resetAll(); });
 
   document.addEventListener('click', (e) => {
     const png = e.target.closest('[data-png]');

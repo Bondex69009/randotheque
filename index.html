@@ -14,7 +14,7 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=IBM+Plex+Sans:wght@400;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
   <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" crossorigin="">
-  <link rel="stylesheet" href="assets/style.css?v=21">
+  <link rel="stylesheet" href="assets/style.css?v=22">
 </head>
 <body>
   <a class="skip-link" href="#resultats">Aller aux résultats</a>
@@ -63,7 +63,15 @@
           <p class="hero-total" id="hero-total"></p>
           <div class="hero__stats-wrap">
             <dl class="hero__stats" id="hero-stats"></dl>
-            <p class="hero__note" id="stats-note" hidden><svg class="icon" aria-hidden="true"><use href="#i-sliders"/></svg>Chiffres de votre sélection</p>
+            <div class="hero__actions">
+              <button type="button" class="hero__link" id="open-evo">
+                <svg class="icon" aria-hidden="true"><use href="#i-chart"/></svg>Évolution par année
+              </button>
+              <span class="hero__note" id="stats-note" hidden>
+                <svg class="icon" aria-hidden="true"><use href="#i-sliders"/></svg>Chiffres de votre sélection
+                <button type="button" class="hero__clear" data-action="reset">Tout effacer</button>
+              </span>
+            </div>
           </div>
         </div>
         <p class="sync"><svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg><span id="sync-status">Synchronisé avec le blog toutes les heures.</span></p>
@@ -145,6 +153,31 @@
     </div>
   </footer>
 
+  <dialog class="embed evo" id="evo" aria-labelledby="evo-title">
+    <div class="embed__inner">
+      <header class="embed__head">
+        <div>
+          <h2 class="embed__title" id="evo-title">Évolution par année</h2>
+          <p class="evo__sub" id="evo-sub"></p>
+        </div>
+        <button type="button" class="icon-btn" data-close-evo aria-label="Fermer">
+          <svg class="icon" aria-hidden="true"><use href="#i-close"/></svg>
+        </button>
+      </header>
+      <div class="segmented evo__views" role="group" aria-label="Affichage">
+        <button type="button" class="segmented__btn" data-evo-view="chart" aria-pressed="true">
+          <svg class="icon" aria-hidden="true"><use href="#i-chart"/></svg><span>Graphiques</span>
+        </button>
+        <button type="button" class="segmented__btn" data-evo-view="table" aria-pressed="false">
+          <svg class="icon" aria-hidden="true"><use href="#i-grid"/></svg><span>Tableau</span>
+        </button>
+      </div>
+      <div id="evo-charts" class="evo__charts"></div>
+      <div id="evo-table" class="evo__table" hidden></div>
+      <div class="evo__tip" id="evo-tip" role="status" hidden></div>
+    </div>
+  </dialog>
+
   <dialog class="embed" id="embed" aria-labelledby="embed-title">
     <div class="embed__inner">
       <header class="embed__head">
@@ -211,6 +244,6 @@
   <script src="data/randos.js" onerror="window.RANDOTHEQUE=null"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
   <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js" crossorigin=""></script>
-  <script src="assets/app.js?v=19"></script>
+  <script src="assets/app.js?v=21"></script>
 </body>
 </html>

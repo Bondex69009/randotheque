@@ -250,7 +250,8 @@ function serveStatic(req, res, urlPath) {
     if (err || !st.isFile()) return send(res, 404, 'Introuvable');
     const ext = path.extname(file).toLowerCase();
     const headers = { 'Content-Type': TYPES[ext] || 'application/octet-stream', 'Cache-Control': 'no-cache', 'Accept-Ranges': 'bytes' };
-    if (ext === '.gpx') headers['Content-Disposition'] = `attachment; filename="${encodeURIComponent(path.basename(file))}"`;
+    // Pas de nom imposé : le site propose le nom d'origine du GPX (attribut download), comme sur GitHub Pages
+    if (ext === '.gpx') headers['Content-Disposition'] = 'attachment';
     // Lecture partielle (« Range ») : indispensable pour avancer dans un audio (et pour Safari).
     const range = /^bytes=(\d*)-(\d*)$/.exec(req.headers.range || '');
     let start = 0, end = st.size - 1, status = 200;

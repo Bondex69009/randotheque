@@ -264,12 +264,31 @@ function looksLikeGpx(buf) {
   return /<gpx[\s>]/i.test(head) || (/<\?xml/i.test(head) && buf.toString('utf8').includes('<gpx'));
 }
 
+// Google Drive envoie le nom en octets UTF-8 bruts, lus comme du Latin-1 (« CÃ¨ze ») : on les relit en UTF-8.
+export function fixUtf8(s) {
+  if (!/[\u0080-ÿ]/.test(s) || /[^\u0000-ÿ]/.test(s)) return s;
+  const out = Buffer.from(s, 'latin1').toString('utf8');
+  return out.includes('�') ? s : out;
+}
+
+// Nom d'origine du fichier (Google Drive, Dropbox) d'après l'en-tête Content-Disposition
+function originalFileName(res) {
+  const cd = res.headers.get('content-disposition') || '';
+  let name = (cd.match(/filename\*=(?:UTF-8|utf-8)''([^;]+)/) || [])[1];
+  if (name) { try { name = decodeURIComponent(name); } catch { /* nom laissé tel quel */ } }
+  else name = fixUtf8((cd.match(/filename="?([^";]+)"?/i) || [])[1] || '');
+  name = path.basename(name.replace(/\\/g, '/')).replace(/[\u0000-\u001f"<>|:*?]/g, '').trim();
+  return name || null;
+}
+
 async function fetchGpx(url) {
   const res = await fetchWithRetry(url);
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const buf = Buffer.from(await res.arrayBuffer());
   if (!looksLikeGpx(buf)) throw new Error('le fichier reçu n\'est pas un GPX (lien privé ou supprimé ?)');
-  return buf;
+  let name = originalFileName(res);
+  if (name && !/\.gpx$/i.test(name)) name += '.gpx';
+  return { buf, name };
 }
 
 const AUDIO_TYPES = {
@@ -280,7 +299,7 @@ async function fetchAudio(url) {
   const res = await fetchWithRetry(url);
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const type = (res.headers.get('content-type') || '').split(';')[0].trim().toLowerCase();
-  const fileName = ((res.headers.get('content-disposition') || '').match(/filename\*?=(?:UTF-8'')?"?([^";]+)/i) || [])[1] || '';
+  const fileName = originalFileName(res) || '';
   const nameExt = path.extname(fileName).slice(1).toLowerCase();
   const ext = AUDIO_TYPES[type] || (Object.values(AUDIO_TYPES).includes(nameExt) ? nameExt : null);
   if (!ext) throw new Error(`le fichier reçu n'est pas un audio (${type || 'type inconnu'})`);
@@ -379,12 +398,15 @@ async function main() {
   const usedNames = listLower(BLOG_GPX_DIR);
   const todo = [...found.values()].filter((it) => !knownFile(it) && (REFRESH || it.front || !failed[it.key]));
   const recheck = [...found.values()].filter((it) => it.front && knownFile(it));
+  // Nom d'origine des GPX déjà téléchargés avant qu'on le note (une seule fois par GPX ; le fichier n'est pas modifié)
+  const needName = [...found.values()].filter((it) => !it.front && knownFile(it) && !('originalName' in byKey.get(it.key)));
 
   console.log(`⬇️  Téléchargement de ${todo.length} nouveaux GPX, revérification de ${recheck.length}…`);
   let ok = 0, ko = 0, updated = 0;
   await pool(todo, 4, async (it) => {
     try {
-      const buf = await fetchGpx(it.downloadUrl);
+      const { buf, name } = await fetchGpx(it.downloadUrl);
+      it.originalName = name;
       it.file = uniqueName(`${it.date}_${slugify(it.name) || 'rando'}`, 'gpx', usedNames);
       fs.mkdirSync(BLOG_GPX_DIR, { recursive: true });
       fs.writeFileSync(gpxPath(it.file), buf);
@@ -398,7 +420,9 @@ async function main() {
   });
   await pool(recheck, 4, async (it) => {
     try {
-      if (writeIfChanged(gpxPath(knownFile(it)), await fetchGpx(it.downloadUrl))) {
+      const { buf, name } = await fetchGpx(it.downloadUrl);
+      it.originalName = name;
+      if (writeIfChanged(gpxPath(knownFile(it)), buf)) {
         updated++;
         console.log(`   🔄 GPX modifié sur le blog : ${it.name}`);
       }
@@ -408,6 +432,13 @@ async function main() {
     await sleep(150);
   });
   console.log(`   ✅ ${ok} téléchargés, 🔄 ${updated} mis à jour, ❌ ${ko} indisponibles`);
+  if (needName.length) {
+    console.log(`🏷️  Récupération du nom d'origine de ${needName.length} GPX…`);
+    await pool(needName, 4, async (it) => {
+      try { it.originalName = (await fetchGpx(it.downloadUrl)).name; } catch { it.originalName = null; }
+      await sleep(100);
+    });
+  }
 
   // ---- Résumés audio
   const audioPath = (f) => path.join(BLOG_AUDIO_DIR, f);
@@ -456,7 +487,11 @@ async function main() {
     it.outings = [...new Set(it.outings)].sort().reverse();
     const audio = (it.audio || []).filter((a) => audioFile.has(a.key)).map((a) => ({ ...a, file: audioFile.get(a.key) }));
     const { front, ...rest } = it;
-    items.push({ ...rest, audio: audio.length ? audio : null, file });
+    const known = byKey.get(it.key);
+    // Nom du fichier sur Google Drive / Dropbox : proposé au téléchargement sur le site
+    const originalName = it.originalName !== undefined ? it.originalName
+      : known && known.originalName !== undefined ? known.originalName : null;
+    items.push({ ...rest, audio: audio.length ? audio : null, file, originalName });
   }
   items.sort((a, b) => b.date.localeCompare(a.date));
 
