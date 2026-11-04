@@ -754,6 +754,11 @@ h1, h2, h3 { line-height: var(--lh-tight); margin: 0; }
 .embed__preview { padding: var(--space-3); border-radius: var(--radius-md); background: #0b0f0a; border: var(--border-w) dashed var(--c-border-strong); }
 .embed__preview[data-theme="clair"] { background: #f4f6f0; }
 .embed__preview iframe { pointer-events: none; color-scheme: normal; } /* comme sur un blog : fond transparent */
+.embed__preview { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: center; gap: var(--space-4); }
+.embed__pv { margin: 0; flex: 1 1 16rem; min-width: 0; }
+.embed__pv--narrow { flex: 0 0 250px; max-width: 100%; }
+.embed__pv figcaption { margin-bottom: var(--space-1); font-size: var(--fs-xs); color: var(--c-text-faint); text-align: center; }
+.embed__preview[data-theme="clair"] figcaption { color: #55624b; }
 .embed__label { font-size: var(--fs-sm); font-weight: var(--fw-semibold); }
 .embed__code {
   width: 100%; resize: vertical; padding: var(--space-3); border-radius: var(--radius-sm);

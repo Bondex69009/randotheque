@@ -729,15 +729,25 @@
   const embedDialog = $('#embed');
   const embedBase = () => (/^(localhost|127\.|\[::1\])/.test(location.hostname) || location.protocol === 'file:'
     ? PUBLIC_URL : new URL('./', location.href).href);
+  // iframe + petit script qui ajuste sa hauteur au contenu (colonne étroite : texte sur plusieurs lignes).
+  // Sans le script (s'il était retiré), la hauteur par défaut suffit à tout afficher.
   function embedCode(theme) {
-    const src = `${embedBase()}compteur.html${theme === 'clair' ? '?theme=clair' : ''}`;
-    return `<iframe src="${src}" title="Compteur global des Godillots Ailés depuis 1977" width="100%" height="128" scrolling="no" loading="lazy" style="border:0;display:block;max-width:420px;margin:0 auto;"></iframe>`;
+    const base = embedBase();
+    const src = `${base}compteur.html${theme === 'clair' ? '?theme=clair' : ''}`;
+    const origin = new URL(base).origin;
+    return `<iframe id="ga-compteur" src="${src}" title="Compteur global des Godillots Ailés depuis 1977" width="100%" height="190" scrolling="no" loading="lazy" style="border:0;display:block;width:100%;max-width:420px;margin:0 auto;"></iframe>
+<script>window.addEventListener("message",function(e){if(e.origin==="${origin}"&&e.data&&e.data.gaCompteurHeight){document.getElementById("ga-compteur").style.height=e.data.gaCompteurHeight+"px";}});</script>`;
   }
   function paintEmbed() {
     const theme = ($('input[name="embed-theme"]:checked', embedDialog) || {}).value || 'sombre';
     const code = embedCode(theme);
     $('#embed-code').value = code;
-    $('#embed-preview').innerHTML = code.replace(/src="[^"]+"/, `src="compteur.html${theme === 'clair' ? '?theme=clair' : ''}"`);
+    // Aperçu : même iframe servie localement, à la largeur d'une colonne de blog et à pleine largeur
+    const local = `compteur.html${theme === 'clair' ? '?theme=clair' : ''}`;
+    const frame = (id) => `<iframe id="${id}" src="${local}" title="Aperçu du compteur" height="190" scrolling="no" style="border:0;display:block;width:100%;"></iframe>`;
+    $('#embed-preview').innerHTML = `
+      <figure class="embed__pv embed__pv--narrow"><figcaption>Colonne du blog (250 px)</figcaption>${frame('pv-narrow')}</figure>
+      <figure class="embed__pv"><figcaption>Pleine largeur</figcaption>${frame('pv-wide')}</figure>`;
     $('#embed-preview').dataset.theme = theme;
     $('#embed-status').textContent = '';
   }
@@ -751,6 +761,11 @@
     }
   });
   embedDialog.addEventListener('change', (e) => { if (e.target.name === 'embed-theme') paintEmbed(); });
+  // L'aperçu applique le même réglage de hauteur que le code collé sur le blog
+  window.addEventListener('message', (e) => {
+    if (!e.data || !e.data.gaCompteurHeight) return;
+    for (const f of $$('#embed-preview iframe')) if (f.contentWindow === e.source) f.style.height = `${e.data.gaCompteurHeight}px`;
+  });
   $('#embed-code').addEventListener('focus', (e) => e.target.select());
 
   // ------------------------------------------------------------ Cartes Leaflet

@@ -40,7 +40,21 @@
     .value { font-size: 34px; font-weight: 800; color: var(--accent); margin: 3px 0; font-variant-numeric: tabular-nums; white-space: nowrap; }
     .value small { font-size: 15px; font-weight: 600; color: var(--muted); }
     .hint { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    @media (max-width: 300px) { .icon { display: none; } .value { font-size: 28px; } }
+    /* Colonne latérale d'un blog (environ 200 à 340 px) : contenu empilé et centré, textes sur plusieurs lignes */
+    @media (max-width: 340px) {
+      .counter { flex-direction: column; text-align: center; gap: 8px; padding: 14px 12px; }
+      .icon { width: 40px; height: 40px; border-radius: 10px; }
+      .icon svg { width: 22px; height: 22px; }
+      .body { align-items: center; }
+      .label { letter-spacing: 0.05em; }
+      .value { font-size: 32px; }
+      .hint { white-space: normal; overflow: visible; }
+    }
+    @media (max-width: 220px) {
+      .icon { display: none; }
+      .value { font-size: 26px; }
+      .label { font-size: 10px; letter-spacing: 0.03em; }
+    }
   </style>
 </head>
 <body>
@@ -76,6 +90,14 @@
         };
         requestAnimationFrame(step);
       };
+      // Hauteur envoyée à la page du blog : le code d'intégration ajuste l'iframe (rien n'est coupé)
+      const postHeight = () => {
+        if (window.parent === window) return;
+        window.parent.postMessage({ gaCompteurHeight: Math.ceil(document.body.getBoundingClientRect().height) }, '*');
+      };
+      if ('ResizeObserver' in window) new ResizeObserver(postHeight).observe(document.body);
+      window.addEventListener('load', postHeight);
+      postHeight();
       if ('IntersectionObserver' in window) {
         const io = new IntersectionObserver((entries) => {
           if (entries.some((e) => e.isIntersecting)) { io.disconnect(); run(); }
