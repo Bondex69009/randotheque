@@ -16,22 +16,26 @@ Vous pouvez aussi ouvrir directement `index.html` dans un navigateur.
 
 ## Mise en ligne automatique (GitHub Pages)
 
-Le site public est hébergé gratuitement sur GitHub Pages et **se met à jour tout seul chaque nuit vers 4h07
-(heure de Paris, été comme hiver)** : la tâche `.github/workflows/mise-a-jour.yml` lit le blog,
-télécharge les nouveaux GPX, les enregistre dans le dépôt, régénère le site et le publie.
-GitHub ne garantit pas ses tâches programmées (retards, voire abandons à l'heure pile) : des créneaux
-de rattrapage (5h07, 6h07, 7h37) refont la mise à jour si celle de 4h07 n'a pas eu lieu
-(règle dans `scripts/should-sync.mjs`). La date de dernière mise à jour est affichée en haut du site.
+Le site public est hébergé gratuitement sur GitHub Pages et **se met à jour tout seul toutes les heures
+(à hh:07)** : la tâche `.github/workflows/mise-a-jour.yml` lit le blog, télécharge les nouveaux GPX et résumés
+audio, les enregistre dans le dépôt, régénère le site et le publie. GitHub ne garantit pas l'heure exacte de ses
+tâches programmées : un passage sauté est simplement rattrapé l'heure suivante. Un commit n'est créé que s'il y a
+du nouveau. L'heure de la dernière vérification est affichée en haut du site.
+
+**Randos modifiées sur le blog** : un article modifié est relu (nom, date, IBP, animateurs…). Pour les articles de
+la **première page** du blog, les GPX et audios sont en plus retéléchargés à chaque passage : un fichier remplacé
+sur Google Drive est repris (même nom de fichier), et si le lien GPX change ou si l'article est remplacé par un
+autre (ex. « prochaine sortie » puis article définitif), l'ancien fichier est supprimé et le nouveau prend son nom.
 Personne n'a besoin de se connecter.
 
 Mise en place (une seule fois) :
 
 1. Créer un dépôt **public** sur GitHub (par exemple `randotheque`) et y envoyer ce dossier.
 2. Dans le dépôt : **Settings > Pages > Build and deployment > Source : « GitHub Actions »**.
-3. Onglet **Actions > Mise à jour quotidienne > Run workflow** pour la première publication.
+3. Onglet **Actions > Mise à jour horaire > Run workflow** pour la première publication.
 4. Le site est alors disponible sur `https://<compte>.github.io/randotheque/`.
 
-Pour forcer une mise à jour sans attendre le lendemain : **Actions > Mise à jour quotidienne > Run workflow**.
+Pour forcer une mise à jour sans attendre : **Actions > Mise à jour horaire > Run workflow**.
 En cas d'échec, GitHub envoie un e-mail au propriétaire du dépôt.
 
 Le site n'est pas destiné aux moteurs de recherche : la page porte `<meta name="robots" content="noindex, nofollow">`
@@ -40,6 +44,19 @@ du domaine (`https://<compte>.github.io/robots.txt`), c'est-à-dire dans un dép
 
 `npm run site` prépare localement le dossier `_site/` exactement comme il sera publié.
 L'interface d'administration n'est pas publiée en ligne (elle reste utilisable en local avec `npm run serve`).
+
+## Compteur total et intégration sur le blog
+
+Le haut du site affiche le **compteur total du club** (randos d'avant 2010 comprises). Il part de la valeur
+donnée par le club, **20 229 km au 3 novembre 2026** (rando de ce jour incluse), et chaque rando suivante déjà
+faite et non annulée s'y ajoute. Pour changer la référence : `TOTAL_REF` dans `scripts/build.mjs`.
+
+Le bouton **« Intégrer »** à côté du compteur donne un code HTML (balise `<iframe>`, fond sombre ou clair) à coller
+sur Blogger : **Mise en page > Ajouter un gadget > HTML/JavaScript**. Le compteur affiché sur le blog
+(`compteur.html`, qui lit le petit fichier `data/compteur.js`) se met à jour à chaque publication du site.
+
+Les autres chiffres du haut de page (randonnées, kilomètres, dénivelé, années) suivent les filtres et la
+recherche, avec une animation de compteur à chaque changement.
 
 ## Interface d'administration (en local)
 
@@ -82,7 +99,7 @@ Les animateurs s'écrivent comme sur le blog (« Bruno - Jean », « Guy et Pier
 
 | Commande | Rôle |
 |---|---|
-| `npm run blog` | Lit tous les articles de https://godillotsailes.blogspot.com, repère les liens « GPX » (Google Drive, Dropbox), télécharge les fichiers dans `gpx/blog/` et note les infos de la sortie (titre, date, IBP, animateurs, département, photo) dans `data/blog-catalog.json`. Seuls les nouveaux articles sont relus. `--refresh` relit tout. |
+| `npm run blog` | Lit tous les articles de https://godillotsailes.blogspot.com, repère les liens « GPX » (Google Drive, Dropbox), télécharge les fichiers dans `gpx/blog/`, les résumés audio (liens « Audio ») dans `audio/blog/`, et note les infos de la sortie (titre, date, IBP, animateurs, département, photo) dans `data/blog-catalog.json`. Seuls les articles nouveaux ou modifiés sont relus ; ceux de la première page du blog sont revérifiés à chaque fois. `--refresh` relit tout. |
 | `npm run build` | Analyse chaque GPX de `gpx/` et génère `data/randos.js` + `data/tracks/`. |
 | `npm run serve` | Petit serveur local. |
 
@@ -100,6 +117,9 @@ Les animateurs s'écrivent comme sur le blog (« Bruno - Jean », « Guy et Pier
 
 ## Dans chaque fiche de rando
 
+- **Résumé audio** : quand l'article du blog a un lien « RESUME - Audio », un lecteur (lecture/pause, avance,
+  vitesse) apparaît dans la fiche ; les cartes concernées portent la mention « Audio » et le filtre
+  « Contenu > Résumé audio » les regroupe.
 - **Exporter la fiche en image (PNG)** : image de 1920 px façon « tableau de bord IBP » (indice, distances,
   dénivelés, altitudes, temps total / en mouvement / de pause, vitesses, répartition montée / plat / descente).
   La « fiabilité » d'IBP index n'étant pas publique, l'image indique à la place la source de l'indice (blog ou estimé).

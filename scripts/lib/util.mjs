@@ -6,6 +6,8 @@ import { fileURLToPath } from 'node:url';
 export const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 export const GPX_DIR = path.join(ROOT, 'gpx');
 export const BLOG_GPX_DIR = path.join(GPX_DIR, 'blog');
+// Résumés audio publiés sur le blog (lus par le lecteur de la fiche rando)
+export const BLOG_AUDIO_DIR = path.join(ROOT, 'audio', 'blog');
 export const DATA_DIR = path.join(ROOT, 'data');
 export const CACHE_DIR = path.join(ROOT, '.cache');
 

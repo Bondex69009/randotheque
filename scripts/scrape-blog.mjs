@@ -1,15 +1,19 @@
 #!/usr/bin/env node
 // Récupère automatiquement les fichiers GPX publiés sur le blog des Godillots Ailés,
-// avec les infos de chaque sortie (nom, date, IBP, animateurs, département...).
+// avec les infos de chaque sortie (nom, date, IBP, animateurs, département, résumé audio...).
 //
 //   node scripts/scrape-blog.mjs            → met à jour (ne retélécharge que le nouveau)
 //   node scripts/scrape-blog.mjs --refresh  → relit tous les articles
 //
-// Résultat : fichiers dans gpx/blog/ + catalogue data/blog-catalog.json
+// Les articles modifiés sont relus (date de modification du flux). Pour les articles de la
+// première page du blog, les GPX et audios sont en plus retéléchargés à chaque passage :
+// un fichier remplacé sur Google Drive, ou un lien changé dans l'article, est donc repris.
+//
+// Résultat : fichiers dans gpx/blog/ et audio/blog/ + catalogue data/blog-catalog.json
 import fs from 'node:fs';
 import path from 'node:path';
 import {
-  BLOG_GPX_DIR, CACHE_DIR, DATA_DIR, decodeEntities, fetchWithRetry, pool,
+  BLOG_GPX_DIR, BLOG_AUDIO_DIR, CACHE_DIR, DATA_DIR, decodeEntities, fetchWithRetry, pool,
   readJSON, slugify, writeJSON, sleep,
 } from './lib/util.mjs';
 
@@ -18,6 +22,9 @@ const REFRESH = process.argv.includes('--refresh');
 const POST_CACHE = path.join(CACHE_DIR, 'blog', 'posts');
 const CATALOG_FILE = path.join(DATA_DIR, 'blog-catalog.json');
 const FAILED_FILE = path.join(CACHE_DIR, 'blog', 'failed-downloads.json');
+// Heure de la dernière vérification (non versionnée : elle change à chaque passage)
+const LAST_CHECK_FILE = path.join(CACHE_DIR, 'blog', 'last-check.json');
+const MAX_AUDIO_BYTES = 60 * 1024 * 1024;
 
 const MONTHS = ['janvier', 'fevrier', 'mars', 'avril', 'mai', 'juin', 'juillet', 'aout', 'septembre', 'octobre', 'novembre', 'decembre'];
 
@@ -43,6 +50,19 @@ async function listPosts() {
     if (entries.length < 150) break;
   }
   return posts;
+}
+
+// Identifiants des articles affichés sur la première page du blog.
+async function listFrontPage() {
+  try {
+    const res = await fetchWithRetry(`${BLOG}/`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const html = await res.text();
+    return new Set([...html.matchAll(/id=['"]post-body-(\d+)['"]/g)].map((m) => m[1]));
+  } catch (e) {
+    console.warn(`   ⚠️  Première page du blog illisible (${e.message}) : pas de revérification des fichiers`);
+    return new Set();
+  }
 }
 
 // On ne garde en cache que le corps de l'article (quelques Ko au lieu de ~150 Ko).
@@ -188,6 +208,16 @@ function parsePost(post, html) {
   const cancelled = post.labels.includes('ANNULEE') || /\bannul[ée]e?\b/i.test(post.title);
   const departements = post.labels.filter((l) => l !== 'ANNULEE');
   const image = post.thumb ? post.thumb.replace(/\/s72-[^/]*\//, '/w640-h360-c/') : null;
+  // Résumé audio (« RESUME - Audio 1'22" », lien Google Drive) : commun à toutes les traces de l'article
+  const audioSeen = new Set();
+  const audio = links
+    .filter((l) => /\baudio\b/i.test(l.text) && /drive\.google|dropbox/.test(l.href))
+    .map((l) => {
+      const dl = gpxDownloadUrl(l.href);
+      const dur = l.text.match(/(\d{1,2})\s*['’]\s*(\d{2})/);
+      return { key: dl.key, downloadUrl: dl.url, sourceUrl: l.href, label: l.text, seconds: dur ? +dur[1] * 60 + +dur[2] : null };
+    })
+    .filter((a) => !audioSeen.has(a.key) && audioSeen.add(a.key));
 
   const items = [];
   gpxLinks.forEach((link, k) => {
@@ -221,6 +251,7 @@ function parsePost(post, html) {
       departements,
       cancelled,
       image,
+      audio: audio.length ? audio : null,
       post: { id: post.id, title: post.title, url: post.url, published: post.published },
     });
   });
@@ -233,36 +264,68 @@ function looksLikeGpx(buf) {
   return /<gpx[\s>]/i.test(head) || (/<\?xml/i.test(head) && buf.toString('utf8').includes('<gpx'));
 }
 
-async function download(item, usedNames) {
-  const res = await fetchWithRetry(item.downloadUrl);
+async function fetchGpx(url) {
+  const res = await fetchWithRetry(url);
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const buf = Buffer.from(await res.arrayBuffer());
   if (!looksLikeGpx(buf)) throw new Error('le fichier reçu n\'est pas un GPX (lien privé ou supprimé ?)');
-  let base = `${item.date}_${slugify(item.name) || 'rando'}`;
-  let name = `${base}.gpx`;
-  for (let n = 2; usedNames.has(name.toLowerCase()); n++) name = `${base}-${n}.gpx`;
-  usedNames.add(name.toLowerCase());
-  fs.mkdirSync(BLOG_GPX_DIR, { recursive: true });
-  fs.writeFileSync(path.join(BLOG_GPX_DIR, name), buf);
+  return buf;
+}
+
+const AUDIO_TYPES = {
+  'audio/mpeg': 'mp3', 'audio/mp3': 'mp3', 'audio/mp4': 'm4a', 'audio/x-m4a': 'm4a', 'audio/aac': 'aac',
+  'audio/ogg': 'ogg', 'audio/opus': 'opus', 'audio/wav': 'wav', 'audio/x-wav': 'wav', 'audio/webm': 'webm',
+};
+async function fetchAudio(url) {
+  const res = await fetchWithRetry(url);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const type = (res.headers.get('content-type') || '').split(';')[0].trim().toLowerCase();
+  const fileName = ((res.headers.get('content-disposition') || '').match(/filename\*?=(?:UTF-8'')?"?([^";]+)/i) || [])[1] || '';
+  const nameExt = path.extname(fileName).slice(1).toLowerCase();
+  const ext = AUDIO_TYPES[type] || (Object.values(AUDIO_TYPES).includes(nameExt) ? nameExt : null);
+  if (!ext) throw new Error(`le fichier reçu n'est pas un audio (${type || 'type inconnu'})`);
+  if (+res.headers.get('content-length') > MAX_AUDIO_BYTES) throw new Error('fichier audio trop lourd');
+  const buf = Buffer.from(await res.arrayBuffer());
+  if (buf.length > MAX_AUDIO_BYTES) throw new Error('fichier audio trop lourd');
+  return { buf, ext };
+}
+
+function uniqueName(base, ext, used) {
+  let name = `${base}.${ext}`;
+  for (let n = 2; used.has(name.toLowerCase()); n++) name = `${base}-${n}.${ext}`;
+  used.add(name.toLowerCase());
   return name;
 }
+
+// N'écrit le fichier que si son contenu a changé (évite des commits inutiles). Renvoie true si écrit.
+function writeIfChanged(file, buf) {
+  if (fs.existsSync(file) && fs.readFileSync(file).equals(buf)) return false;
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  fs.writeFileSync(file, buf);
+  return true;
+}
+
+const listLower = (dir) => new Set(fs.existsSync(dir) ? fs.readdirSync(dir).map((f) => f.toLowerCase()) : []);
 
 // ---------------------------------------------------------------- Programme principal
 async function main() {
   console.log('📡 Lecture du flux du blog…');
-  const posts = await listPosts();
-  console.log(`   ${posts.length} articles trouvés`);
+  const [posts, frontPage] = await Promise.all([listPosts(), listFrontPage()]);
+  console.log(`   ${posts.length} articles trouvés, dont ${frontPage.size} en première page (fichiers revérifiés)`);
 
   const catalog = readJSON(CATALOG_FILE, { generatedAt: null, items: [] });
   const byKey = new Map(catalog.items.map((it) => [it.key, it]));
+  const knownAudio = new Map(catalog.items.flatMap((it) => (it.audio || []).filter((a) => a.file).map((a) => [a.key, a.file])));
   const failed = readJSON(FAILED_FILE, {});
 
   console.log('📖 Analyse des articles…');
   let done = 0;
+  const parsedOk = new Set(); // articles lus correctement (sert à repérer les liens retirés)
   const parsed = await pool(posts, 6, async (post) => {
     try {
       const html = await getPostHtml(post);
       const items = parsePost(post, html);
+      if (html.includes("class='post-body")) parsedOk.add(post.id);
       if (++done % 100 === 0) console.log(`   ${done}/${posts.length}`);
       return items;
     } catch (e) {
@@ -274,13 +337,15 @@ async function main() {
   // Un même GPX peut être publié plusieurs fois (rando refaite) : on regroupe par lien.
   const found = new Map();
   for (const item of parsed.flat()) {
+    const front = frontPage.has(item.post.id);
     const prev = found.get(item.key);
-    if (!prev) { found.set(item.key, { ...item, outings: [item.date] }); continue; }
+    if (!prev) { found.set(item.key, { ...item, outings: [item.date], front }); continue; }
     prev.outings.push(item.date);
     // On garde les infos de l'article le plus récent, en complétant ce qui manque.
     const [recent, old] = item.date > prev.date ? [item, prev] : [prev, item];
     const merged = { ...old, ...Object.fromEntries(Object.entries(recent).filter(([, v]) => v != null)) };
     merged.outings = prev.outings;
+    merged.front = prev.front || front;
     found.set(item.key, merged);
   }
   console.log(`   ${found.size} liens GPX distincts`);
@@ -290,17 +355,39 @@ async function main() {
     return;
   }
 
-  const usedNames = new Set(fs.existsSync(BLOG_GPX_DIR) ? fs.readdirSync(BLOG_GPX_DIR).map((f) => f.toLowerCase()) : []);
-  const todo = [...found.values()].filter((it) => {
-    const known = byKey.get(it.key);
-    return !(known && known.file && fs.existsSync(path.join(BLOG_GPX_DIR, known.file)));
-  }).filter((it) => REFRESH || !failed[it.key]);
+  // ---- GPX : nouveaux liens, puis revérification de ceux de la première page
+  const gpxPath = (f) => path.join(BLOG_GPX_DIR, f);
+  const knownFile = (it) => { const k = byKey.get(it.key); return k && k.file && fs.existsSync(gpxPath(k.file)) ? k.file : null; };
 
-  console.log(`⬇️  Téléchargement de ${todo.length} nouveaux GPX…`);
-  let ok = 0, ko = 0;
+  // Liens retirés d'un article de la première page, ou article récent supprimé (ex. « prochaine sortie »
+  // remplacé par l'article définitif) : les fichiers devenus orphelins sont supprimés (sinon ils
+  // réapparaîtraient comme des randos « perso » en double). C'est fait avant les téléchargements pour
+  // que le GPX qui remplace l'ancien garde exactement le même nom de fichier.
+  const postIds = new Set(posts.map((p) => p.id));
+  const frontSince = posts.filter((p) => frontPage.has(p.id)).map((p) => p.published).sort()[0];
+  const inScope = (old) => old.post && (
+    (frontPage.has(old.post.id) && parsedOk.has(old.post.id))
+    || (frontSince && !postIds.has(old.post.id) && old.post.published >= frontSince));
+  const stillUsed = new Set([...found.values()].map(knownFile).filter(Boolean).map((f) => f.toLowerCase()));
+  let removed = 0;
+  for (const old of catalog.items) {
+    if (!inScope(old) || !old.file || found.has(old.key) || stillUsed.has(old.file.toLowerCase())) continue;
+    if (!fs.existsSync(gpxPath(old.file))) continue;
+    fs.rmSync(gpxPath(old.file)); removed++;
+    console.log(`   🗑️  GPX retiré du blog : ${old.name} (${old.file})`);
+  }
+  const usedNames = listLower(BLOG_GPX_DIR);
+  const todo = [...found.values()].filter((it) => !knownFile(it) && (REFRESH || it.front || !failed[it.key]));
+  const recheck = [...found.values()].filter((it) => it.front && knownFile(it));
+
+  console.log(`⬇️  Téléchargement de ${todo.length} nouveaux GPX, revérification de ${recheck.length}…`);
+  let ok = 0, ko = 0, updated = 0;
   await pool(todo, 4, async (it) => {
     try {
-      it.file = await download(it, usedNames);
+      const buf = await fetchGpx(it.downloadUrl);
+      it.file = uniqueName(`${it.date}_${slugify(it.name) || 'rando'}`, 'gpx', usedNames);
+      fs.mkdirSync(BLOG_GPX_DIR, { recursive: true });
+      fs.writeFileSync(gpxPath(it.file), buf);
       ok++;
       delete failed[it.key];
     } catch (e) {
@@ -309,20 +396,77 @@ async function main() {
     }
     await sleep(150);
   });
-  console.log(`   ✅ ${ok} téléchargés, ❌ ${ko} indisponibles`);
+  await pool(recheck, 4, async (it) => {
+    try {
+      if (writeIfChanged(gpxPath(knownFile(it)), await fetchGpx(it.downloadUrl))) {
+        updated++;
+        console.log(`   🔄 GPX modifié sur le blog : ${it.name}`);
+      }
+    } catch (e) {
+      console.warn(`   ⚠️  ${it.name} : ${e.message} (on garde la version déjà téléchargée)`);
+    }
+    await sleep(150);
+  });
+  console.log(`   ✅ ${ok} téléchargés, 🔄 ${updated} mis à jour, ❌ ${ko} indisponibles`);
 
+  // ---- Résumés audio
+  const audioPath = (f) => path.join(BLOG_AUDIO_DIR, f);
+  const audioJobs = new Map();
+  for (const it of found.values()) {
+    if (!it.file && !knownFile(it)) continue; // rando sans GPX : absente du catalogue, audio inutile
+    for (const a of it.audio || []) if (!audioJobs.has(a.key) || it.front) audioJobs.set(a.key, { a, it });
+  }
+  const audioStillUsed = new Set([...audioJobs.keys()].map((k) => knownAudio.get(k)).filter(Boolean).map((f) => f.toLowerCase()));
+  for (const old of catalog.items) {
+    if (!inScope(old)) continue;
+    for (const a of old.audio || []) {
+      if (!a.file || audioJobs.has(a.key) || audioStillUsed.has(a.file.toLowerCase()) || !fs.existsSync(audioPath(a.file))) continue;
+      fs.rmSync(audioPath(a.file)); removed++;
+    }
+  }
+  const usedAudio = listLower(BLOG_AUDIO_DIR);
+  const audioFile = new Map();
+  let aNew = 0, aUpd = 0, aKo = 0;
+  await pool([...audioJobs.values()], 3, async ({ a, it }) => {
+    const known = knownAudio.get(a.key);
+    const exists = !!known && fs.existsSync(audioPath(known));
+    if (exists && !it.front && !REFRESH) { audioFile.set(a.key, known); return; }
+    if (!exists && failed[a.key] && !it.front && !REFRESH) return;
+    try {
+      const { buf, ext } = await fetchAudio(a.downloadUrl);
+      const base = `${it.date}_${slugify(it.name.replace(/\s*\([^)]*\)$/, '')) || 'audio'}`;
+      const name = exists && path.extname(known).slice(1) === ext ? known : uniqueName(base, ext, usedAudio);
+      if (writeIfChanged(audioPath(name), buf)) { if (exists) aUpd++; else aNew++; }
+      if (exists && name !== known) fs.rmSync(audioPath(known), { force: true });
+      audioFile.set(a.key, name);
+      delete failed[a.key];
+    } catch (e) {
+      if (exists) audioFile.set(a.key, known);
+      else { aKo++; failed[a.key] = { url: a.sourceUrl, post: it.post.url, error: e.message }; }
+    }
+    await sleep(150);
+  });
+  if (audioJobs.size) console.log(`🎧 ${audioFile.size} résumés audio (${aNew} nouveaux, ${aUpd} mis à jour, ${aKo} indisponibles)`);
+
+  // ---- Catalogue
   const items = [];
   for (const it of found.values()) {
-    const known = byKey.get(it.key);
-    const file = it.file || (known && known.file);
-    if (!file || !fs.existsSync(path.join(BLOG_GPX_DIR, file))) continue;
+    const file = it.file || knownFile(it);
+    if (!file || !fs.existsSync(gpxPath(file))) continue;
     it.outings = [...new Set(it.outings)].sort().reverse();
-    items.push({ ...it, file });
+    const audio = (it.audio || []).filter((a) => audioFile.has(a.key)).map((a) => ({ ...a, file: audioFile.get(a.key) }));
+    const { front, ...rest } = it;
+    items.push({ ...rest, audio: audio.length ? audio : null, file });
   }
   items.sort((a, b) => b.date.localeCompare(a.date));
-  writeJSON(CATALOG_FILE, { generatedAt: new Date().toISOString(), source: BLOG, items });
+
+  // La date du catalogue ne bouge que s'il y a du nouveau : pas de commit inutile toutes les heures.
+  const changed = updated || aNew || aUpd || removed || JSON.stringify(items) !== JSON.stringify(catalog.items);
+  const now = new Date().toISOString();
+  writeJSON(CATALOG_FILE, { generatedAt: changed || !catalog.generatedAt ? now : catalog.generatedAt, source: BLOG, items });
   writeJSON(FAILED_FILE, failed);
-  console.log(`📚 Catalogue : ${items.length} randos du blog → ${path.relative(process.cwd(), CATALOG_FILE)}`);
+  writeJSON(LAST_CHECK_FILE, { checkedAt: now });
+  console.log(`📚 Catalogue : ${items.length} randos du blog → ${path.relative(process.cwd(), CATALOG_FILE)}${changed ? '' : ' (aucun changement)'}`);
   const unavailable = Object.keys(failed).length;
   if (unavailable) console.log(`   (${unavailable} liens morts listés dans .cache/blog/failed-downloads.json)`);
 }

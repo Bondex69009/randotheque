@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Compteur total | Les Godillots Ailés</title>
+  <meta name="robots" content="noindex, nofollow">
+  <!-- Compteur total du club, à intégrer sur un blog avec une balise <iframe> (voir le bouton « Intégrer » du site).
+       ?theme=clair pour un fond clair. Les chiffres viennent de data/compteur.js, régénéré à chaque mise à jour. -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@600;800&display=swap">
+  <style>
+    :root {
+      --accent: #87f700; --accent-soft: #bff77c; --text: #eef5e6; --muted: #a5b39b;
+      --card: rgb(11 15 10 / 0.88); --border: rgb(135 247 0 / 0.55); --on-accent: #0b0f0a;
+    }
+    :root[data-theme="clair"] {
+      --accent: #3f7a00; --accent-soft: #2f5c00; --text: #17200f; --muted: #55624b;
+      --card: #ffffff; --border: rgb(63 122 0 / 0.45); --on-accent: #ffffff;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; background: transparent; }
+    body { font-family: "Plus Jakarta Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; padding: 4px; }
+    .counter {
+      display: flex; align-items: center; gap: 12px; max-width: 412px; margin: 0 auto; padding: 14px 18px 14px 14px;
+      border-radius: 18px; border: 1px solid var(--border); text-decoration: none; color: var(--text);
+      background: linear-gradient(135deg, rgb(135 247 0 / 0.16), rgb(1 255 255 / 0.05) 70%), var(--card);
+      transition: border-color 150ms ease, transform 150ms ease;
+    }
+    .counter:hover { border-color: var(--accent); transform: translateY(-1px); }
+    .counter:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+    .icon {
+      flex: none; display: grid; place-items: center; width: 52px; height: 52px; border-radius: 12px;
+      background: var(--accent); color: var(--on-accent);
+    }
+    .icon svg { width: 28px; height: 28px; }
+    .body { display: flex; flex-direction: column; min-width: 0; line-height: 1.15; }
+    .label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+    .value { font-size: 34px; font-weight: 800; color: var(--accent); margin: 3px 0; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .value small { font-size: 15px; font-weight: 600; color: var(--muted); }
+    .hint { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    @media (max-width: 300px) { .icon { display: none; } .value { font-size: 28px; } }
+  </style>
+</head>
+<body>
+  <a class="counter" id="counter" href="./" target="_blank" rel="noopener" title="Voir l'historique des randos des Godillots Ailés">
+    <span class="icon" aria-hidden="true">
+      <svg viewBox="0 0 24 24"><path d="M5 18c3-1 3-5 7-6s4-5 7-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-dasharray="0.1 4"/><circle cx="5" cy="18" r="2" fill="currentColor"/><circle cx="19" cy="6" r="2" fill="currentColor"/></svg>
+    </span>
+    <span class="body">
+      <span class="label">Compteur total du club</span>
+      <span class="value"><span id="km" aria-hidden="true">…</span> <small>km</small><span id="km-sr" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)"></span></span>
+      <span class="hint">Les Godillots Ailés · randos d'avant 2010 comprises</span>
+    </span>
+  </a>
+  <script src="data/compteur.js"></script>
+  <script>
+    (() => {
+      const theme = new URLSearchParams(location.search).get('theme');
+      if (theme === 'clair') document.documentElement.dataset.theme = 'clair';
+      const data = window.COMPTEUR;
+      const el = document.getElementById('km');
+      if (!data) { el.textContent = '–'; return; }
+      const fmt = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 }).format;
+      document.getElementById('km-sr').textContent = `${fmt(data.km)} km`;
+      const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+      // Défilement du compteur quand il devient visible sur la page du blog
+      const run = () => {
+        if (reduced) { el.textContent = fmt(data.km); return; }
+        const t0 = performance.now(), ms = 1800;
+        const step = (t) => {
+          const k = Math.min(1, (t - t0) / ms);
+          el.textContent = fmt(Math.round(data.km * (1 - Math.pow(1 - k, 4))));
+          if (k < 1) requestAnimationFrame(step);
+        };
+        requestAnimationFrame(step);
+      };
+      if ('IntersectionObserver' in window) {
+        const io = new IntersectionObserver((entries) => {
+          if (entries.some((e) => e.isIntersecting)) { io.disconnect(); run(); }
+        });
+        io.observe(el);
+      } else run();
+    })();
+  </script>
+</body>
+</html>

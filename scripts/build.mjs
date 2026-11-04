@@ -26,6 +26,9 @@ const OFFLINE = process.argv.includes('--offline');
 // Corrections saisies dans l'interface d'administration, par fichier : { "gpx/…/x.gpx": { name, hidden… } }
 const OVERRIDES_FILE = path.join(DATA_DIR, 'overrides.json');
 const EDITABLE = ['name', 'date', 'description', 'animateurs', 'ibp', 'commune'];
+// Compteur total du club (randos d'avant 2010 comprises) : valeur de référence donnée par le club au
+// 3 novembre 2026, rando de ce jour incluse. Chaque rando suivante déjà faite et non annulée s'y ajoute.
+const TOTAL_REF = { km: 20229, date: '2026-11-03' };
 
 // ---------------------------------------------------------------- Niveaux IBP (randonnée pédestre)
 export const LEVELS = [
@@ -272,6 +275,8 @@ async function main() {
           image: blog.image,
           cancelled: blog.cancelled,
           gpxUrl: blog.sourceUrl,
+          audio: (blog.audio || []).filter((a) => a.file && fs.existsSync(path.join(ROOT, 'audio', 'blog', a.file)))
+            .map((a) => ({ file: `audio/blog/${a.file}`, label: a.label, seconds: a.seconds, url: a.sourceUrl })),
         } : null,
       });
     } catch (e) {
@@ -340,17 +345,35 @@ async function main() {
     errors,
   }, false);
   const hiddenCount = randos.filter((r) => r.hidden).length;
-  for (const r of randos) { delete r.orig; delete r.edited; }
+  for (const r of randos) {
+    delete r.orig; delete r.edited;
+    if (r.blog && !r.blog.audio.length) delete r.blog.audio;
+  }
   const visible = randos.filter((r) => !r.hidden);
 
+  const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Paris' }).format(new Date());
+  const total = {
+    km: Math.round(TOTAL_REF.km + visible
+      .filter((r) => r.date > TOTAL_REF.date && r.date <= today && !(r.blog && r.blog.cancelled))
+      .reduce((s, r) => s + r.distanceKm, 0)),
+    ref: TOTAL_REF,
+  };
   const payload = {
     generatedAt: new Date().toISOString(),
+    total,
     levels: LEVELS.map(({ id, max, label }) => ({ id, max: max === Infinity ? null : max, label })),
     ibpModel: model.n ? { samples: model.n, mae: +model.mae.toFixed(1), coef: model.coef.map((c) => +c.toFixed(3)) } : null,
-    blog: { url: catalog.source || 'https://godillotsailes.blogspot.com', scrapedAt: catalog.generatedAt || null },
+    blog: {
+      url: catalog.source || 'https://godillotsailes.blogspot.com',
+      scrapedAt: catalog.generatedAt || null,                                   // dernière nouveauté reprise
+      checkedAt: readJSON(path.join(CACHE_DIR, 'blog', 'last-check.json'), {}).checkedAt || catalog.generatedAt || null, // dernière vérification
+    },
     randos: visible,
   };
   fs.writeFileSync(path.join(DATA_DIR, 'randos.js'), `window.RANDOTHEQUE=${JSON.stringify(payload)};`);
+  // Données minuscules pour le compteur à intégrer sur un blog (compteur.html)
+  fs.writeFileSync(path.join(DATA_DIR, 'compteur.js'),
+    `window.COMPTEUR=${JSON.stringify({ km: total.km, randos: visible.length, generatedAt: payload.generatedAt })};`);
   writeJSON(path.join(DATA_DIR, 'randos.json'), payload, false);
   writeJSON(GEO_CACHE_FILE, geoCache);
   writeJSON(ELE_CACHE_FILE, eleCache, false);

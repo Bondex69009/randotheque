@@ -30,6 +30,8 @@ const TYPES = {
   '.css': 'text/css; charset=utf-8', '.json': 'application/json; charset=utf-8',
   '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg', '.ico': 'image/x-icon',
   '.gpx': 'application/gpx+xml', '.md': 'text/plain; charset=utf-8',
+  '.mp3': 'audio/mpeg', '.m4a': 'audio/mp4', '.aac': 'audio/aac', '.ogg': 'audio/ogg', '.opus': 'audio/ogg',
+  '.wav': 'audio/wav', '.webm': 'audio/webm',
 };
 
 // ---------------------------------------------------------------- Jeton d'accès
@@ -244,12 +246,27 @@ function serveStatic(req, res, urlPath) {
   let file = path.normalize(path.join(ROOT, urlPath));
   if (!file.startsWith(ROOT)) return send(res, 403, 'Interdit');
   if (fs.existsSync(file) && fs.statSync(file).isDirectory()) file = path.join(file, 'index.html');
-  fs.readFile(file, (err, buf) => {
-    if (err) return send(res, 404, 'Introuvable');
+  fs.stat(file, (err, st) => {
+    if (err || !st.isFile()) return send(res, 404, 'Introuvable');
     const ext = path.extname(file).toLowerCase();
-    const headers = { 'Content-Type': TYPES[ext] || 'application/octet-stream', 'Cache-Control': 'no-cache' };
+    const headers = { 'Content-Type': TYPES[ext] || 'application/octet-stream', 'Cache-Control': 'no-cache', 'Accept-Ranges': 'bytes' };
     if (ext === '.gpx') headers['Content-Disposition'] = `attachment; filename="${encodeURIComponent(path.basename(file))}"`;
-    res.writeHead(200, headers).end(buf);
+    // Lecture partielle (« Range ») : indispensable pour avancer dans un audio (et pour Safari).
+    const range = /^bytes=(\d*)-(\d*)$/.exec(req.headers.range || '');
+    let start = 0, end = st.size - 1, status = 200;
+    if (range && (range[1] || range[2])) {
+      start = range[1] ? +range[1] : Math.max(0, st.size - +range[2]);
+      end = range[1] && range[2] ? Math.min(+range[2], st.size - 1) : st.size - 1;
+      if (start > end || start >= st.size) {
+        return res.writeHead(416, { 'Content-Range': `bytes */${st.size}` }).end();
+      }
+      status = 206;
+      headers['Content-Range'] = `bytes ${start}-${end}/${st.size}`;
+    }
+    headers['Content-Length'] = end - start + 1;
+    res.writeHead(status, headers);
+    if (req.method === 'HEAD') return res.end();
+    fs.createReadStream(file, { start, end }).pipe(res);
   });
 }
 

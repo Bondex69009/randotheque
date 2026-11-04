@@ -53,6 +53,7 @@
       r.blog && r.blog.title, r.file.split('/').pop(), r.meta && r.meta.keywords,
       r.meta && r.meta.author, r.loop ? 'boucle' : 'aller simple', r.date && r.date.slice(0, 4),
       (r.waypoints || []).map((w) => w.name).join(' '),
+      r.blog && r.blog.audio ? 'audio resume audio' : '',
     ].filter(Boolean).join(' '));
     r._dur = r.durationMin;
     r.animateursList = r.animateursList || [];
@@ -69,10 +70,13 @@
   // ------------------------------------------------------------ État (synchronisé avec l'URL)
   const defaults = () => ({
     q: '', levels: new Set(), depts: new Set(), anims: new Set(), types: new Set(), sources: new Set(),
+    years: new Set(), communes: new Set(), extras: new Set(),
     dist: [BOUNDS.dist.min, BOUNDS.dist.max], dplus: [BOUNDS.dplus.min, BOUNDS.dplus.max],
     dur: [BOUNDS.dur.min, BOUNDS.dur.max], sort: 'date-desc', view: 'grid',
   });
-  const SET_KEYS = ['levels', 'depts', 'anims', 'types', 'sources'];
+  const SET_KEYS = ['levels', 'years', 'depts', 'communes', 'anims', 'types', 'extras', 'sources'];
+  const yearOf = (r) => r.date.slice(0, 4);
+  const communeOf = (r) => r.commune || 'Inconnue';
   let state = defaults();
   let openId = null;
 
@@ -112,7 +116,10 @@
       for (const t of norm(state.q).split(/\s+/).filter(Boolean)) if (!r._search.includes(t)) return false;
     }
     if (skip !== 'levels' && state.levels.size && !state.levels.has(r.level || 'na')) return false;
+    if (skip !== 'years' && state.years.size && !state.years.has(yearOf(r))) return false;
     if (skip !== 'depts' && state.depts.size && !state.depts.has(r.deptName || 'Inconnu')) return false;
+    if (skip !== 'communes' && state.communes.size && !state.communes.has(communeOf(r))) return false;
+    if (skip !== 'extras' && state.extras.has('audio') && !(r.blog && r.blog.audio)) return false;
     if (skip !== 'anims' && state.anims.size && !r.animateursList.some((n) => state.anims.has(n))) return false;
     if (skip !== 'types' && state.types.size && !state.types.has(r.loop ? 'boucle' : 'aller')) return false;
     if (skip !== 'sources' && state.sources.size && !state.sources.has(r.source)) return false;
@@ -148,11 +155,25 @@
     for (const r of RANDOS) for (const n of r.animateursList) m.set(n, (m.get(n) || 0) + 1);
     return [...m].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'fr')).map(([name]) => ({ name }));
   })();
+  const yearEntries = [...new Set(RANDOS.map(yearOf))].sort((a, b) => b.localeCompare(a)).map((name) => ({ name }));
+  const communeEntries = (() => {
+    const m = new Map();
+    for (const r of RANDOS) {
+      const k = communeOf(r);
+      const e = m.get(k) || { name: k, code: r.deptCode || '', n: 0 };
+      e.n++;
+      m.set(k, e);
+    }
+    return [...m.values()].sort((a, b) => (a.name === 'Inconnue') - (b.name === 'Inconnue') || b.n - a.n || a.name.localeCompare(b.name, 'fr'));
+  })();
   const CHECKLISTS = {
+    years: { entries: yearEntries, label: (d) => esc(d.name), more: (n) => `Afficher les ${n} années`, limit: 8 },
     depts: { entries: deptEntries, label: (d) => `${d.code ? `${esc(d.code)} · ` : ''}${esc(d.name)}`, more: (n) => `Afficher les ${n} départements` },
+    communes: { entries: communeEntries, label: (d) => `${esc(d.name)}${d.code ? ` <small>(${esc(d.code)})</small>` : ''}`, more: (n) => `Afficher les ${n} villages` },
     anims: { entries: animEntries, label: (d) => esc(d.name), more: (n) => `Afficher les ${n} animateurs` },
   };
-  const expanded = { depts: false, anims: false };
+  const expanded = { years: false, depts: false, communes: false, anims: false };
+  const listQuery = { communes: '' };
 
   function rangeGroup(key, label, hint) {
     const b = BOUNDS[key];
@@ -180,6 +201,10 @@
         </div>
         <p class="fgroup__hint">Vert ≤ 25 · Bleu ≤ 50 · Jaune ≤ 75 · Rouge ≤ 100 · Noir au-delà</p>
       </fieldset>
+      <fieldset class="fgroup">
+        <legend class="fgroup__legend">Année</legend>
+        <div class="dept-list dept-list--cols" id="f-years"></div>
+      </fieldset>
       ${rangeGroup('dist', 'Distance')}
       ${rangeGroup('dplus', 'Dénivelé positif')}
       ${rangeGroup('dur', 'Temps de marche estimé', 'Pauses non comprises')}
@@ -194,11 +219,25 @@
         <legend class="fgroup__legend">Département</legend>
         <div class="dept-list" id="f-depts"></div>
       </fieldset>
+      <fieldset class="fgroup">
+        <legend class="fgroup__legend">Village de départ</legend>
+        <label class="list-search">
+          <span class="visually-hidden">Chercher un village</span>
+          ${icon('search')}<input type="search" id="communes-q" placeholder="Chercher un village…" autocomplete="off" spellcheck="false">
+        </label>
+        <div class="dept-list" id="f-communes"></div>
+      </fieldset>
       ${animEntries.length ? `<fieldset class="fgroup">
         <legend class="fgroup__legend">Animateur</legend>
         <div class="dept-list" id="f-anims"></div>
         <p class="fgroup__hint">Randos encadrées par au moins un des animateurs cochés</p>
       </fieldset>` : ''}
+      <fieldset class="fgroup">
+        <legend class="fgroup__legend">Contenu</legend>
+        <div class="chips">
+          <label class="chip"><input type="checkbox" name="extras" value="audio"><span>${icon('audio')}Résumé audio <small data-count="extras:audio"></small></span></label>
+        </div>
+      </fieldset>
       <fieldset class="fgroup">
         <legend class="fgroup__legend">Origine de la trace</legend>
         <div class="chips">
@@ -206,8 +245,15 @@
           <label class="chip"><input type="checkbox" name="sources" value="perso"><span>Ajoutées au dossier <small data-count="sources:perso"></small></span></label>
         </div>
       </fieldset>`;
+    renderChecklist('years');
     renderChecklist('depts');
+    renderChecklist('communes');
     if (animEntries.length) renderChecklist('anims');
+    $('#communes-q').addEventListener('input', (e) => {
+      listQuery.communes = e.target.value;
+      renderChecklist('communes');
+      updateCounts();
+    });
 
     $('#filters-body').addEventListener('change', (e) => {
       const t = e.target;
@@ -235,8 +281,20 @@
   function renderChecklist(key) {
     const box = $(`#f-${key}`);
     if (!box) return;
-    const { entries, label, more } = CHECKLISTS[key];
-    const LIMIT = 6;
+    const { entries, label, more, limit = 6 } = CHECKLISTS[key];
+    const LIMIT = limit;
+    const q = norm(listQuery[key] || '').trim();
+    if (q) {
+      const hits = entries.filter((d) => norm(d.name).includes(q));
+      for (const d of entries) if (state[key].has(d.name) && !hits.includes(d)) hits.push(d);
+      box.innerHTML = hits.length ? hits.map((d) => `
+      <label class="check">
+        <input type="checkbox" name="${key}" value="${esc(d.name)}" ${state[key].has(d.name) ? 'checked' : ''}>
+        <span class="check__label">${label(d)}</span>
+        <span class="check__count" data-count="${key}:${esc(d.name)}"></span>
+      </label>`).join('') : '<p class="fgroup__hint">Aucun village ne correspond.</p>';
+      return;
+    }
     const list = expanded[key] ? entries.slice() : entries.slice(0, LIMIT);
     // garder visibles les éléments cochés même repliés
     for (const d of entries) if (state[key].has(d.name) && !list.includes(d)) list.push(d);
@@ -268,8 +326,7 @@
   function syncFilterInputs() {
     $('#q').value = state.q;
     $('#sort').value = SORTS[state.sort] ? state.sort : 'date-desc';
-    renderChecklist('depts');
-    renderChecklist('anims');
+    for (const k of Object.keys(CHECKLISTS)) renderChecklist(k);
     for (const input of $$('#filters-body input[type=checkbox]')) input.checked = state[input.name].has(input.value);
     for (const key of Object.keys(BOUNDS)) {
       $(`#${key}-min`).value = state[key][0];
@@ -283,6 +340,7 @@
     const facets = {
       levels: (r) => r.level || 'na', types: (r) => (r.loop ? 'boucle' : 'aller'),
       sources: (r) => r.source, depts: (r) => r.deptName || 'Inconnu', anims: (r) => r.animateursList,
+      years: yearOf, communes: communeOf, extras: (r) => (r.blog && r.blog.audio ? 'audio' : []),
     };
     for (const [facet, keyOf] of Object.entries(facets)) {
       const counts = {};
@@ -313,7 +371,10 @@
       }
     }
     for (const t of state.types) tags.push({ label: t === 'boucle' ? 'Boucle' : 'Aller simple', clear: () => state.types.delete(t) });
+    for (const y of [...state.years].sort()) tags.push({ label: y, clear: () => state.years.delete(y) });
     for (const d of state.depts) tags.push({ label: d, clear: () => state.depts.delete(d) });
+    for (const c of state.communes) tags.push({ label: c, clear: () => state.communes.delete(c) });
+    if (state.extras.has('audio')) tags.push({ label: 'Résumé audio', clear: () => state.extras.delete('audio') });
     for (const a of state.anims) tags.push({ label: `Animateur : ${a}`, clear: () => state.anims.delete(a) });
     for (const s of state.sources) tags.push({ label: s === 'blog' ? 'Blog du club' : 'Ajoutées au dossier', clear: () => state.sources.delete(s) });
     return tags;
@@ -367,6 +428,7 @@
   function cardHtml(r) {
     const flags = [];
     if (r.blog && r.blog.cancelled) flags.push('<span class="pill pill--warn">Annulée</span>');
+    if (r.blog && r.blog.audio) flags.push(`<span class="pill pill--audio" title="Résumé audio disponible">${icon('audio')}Audio</span>`);
     flags.push(`<span class="pill" title="${r.loop ? 'Boucle' : 'Aller simple'}">${icon(r.loop ? 'loop' : 'arrow')}${r.loop ? 'Boucle' : 'Aller'}</span>`);
     return `
     <article class="card">
@@ -422,30 +484,130 @@
     else renderOverviewMap();
     renderActiveFilters();
     updateCounts();
+    updateHeroStats(filtered);
     writeHash();
   }
 
   // ------------------------------------------------------------ Statistiques du bandeau
+  const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
+  const fmtYear = (y) => String(y);
+
+  // Animation « compteur » : le chiffre défile de sa valeur affichée jusqu'à la nouvelle.
+  // Le texte animé est masqué aux lecteurs d'écran ; la valeur finale leur est donnée tout de suite.
+  function countTo(key, to, { fmt = nf0.format, dur } = {}) {
+    const el = $(`[data-stat="${key}"]`);
+    const sr = $(`[data-sr="${key}"]`);
+    if (!el) return;
+    if (sr) sr.textContent = fmt(to);
+    const from = el._cur ?? 0;
+    cancelAnimationFrame(el._raf);
+    if (from === to || reducedMotion.matches || document.hidden) {
+      el._cur = to; el.textContent = fmt(to); el.classList.remove('is-counting');
+      return;
+    }
+    const ms = dur || Math.min(1300, 450 + Math.log10(Math.abs(to - from) + 1) * 200);
+    const t0 = performance.now();
+    el.classList.add('is-counting');
+    const step = (t) => {
+      const k = Math.min(1, (t - t0) / ms);
+      const e = 1 - Math.pow(1 - k, 4); // ralentit à l'arrivée
+      el._cur = Math.round(from + (to - from) * e);
+      el.textContent = fmt(el._cur);
+      if (k < 1) el._raf = requestAnimationFrame(step);
+      else el.classList.remove('is-counting');
+    };
+    el._raf = requestAnimationFrame(step);
+  }
+  const num = (key, initial = '0') => `<span class="num" data-stat="${key}" aria-hidden="true">${initial}</span><span class="visually-hidden" data-sr="${key}"></span>`;
+
   function renderHeroStats() {
-    const km = RANDOS.reduce((s, r) => s + r.distanceKm, 0);
-    const dp = RANDOS.reduce((s, r) => s + (r.dplus || 0), 0);
-    const years = RANDOS.map((r) => r.date.slice(0, 4)).sort();
+    // Compteur total du club (calculé par scripts/build.mjs, randos d'avant 2010 comprises)
+    const totalKm = DATA.total ? DATA.total.km : RANDOS.reduce((s, r) => s + r.distanceKm, 0);
+    $('#hero-total').innerHTML = `
+      <span class="hero-total__icon" aria-hidden="true">${icon('distance')}</span>
+      <span class="hero-total__body">
+        <span class="hero-total__label">Compteur total du club</span>
+        <span class="hero-total__value">${num('total')} <small>km</small></span>
+        <span class="hero-total__hint">randos d'avant 2010 comprises</span>
+      </span>
+      <button type="button" class="hero-total__embed" id="open-embed" title="Code HTML pour afficher ce compteur sur un blog">
+        ${icon('code')}<span>Intégrer</span>
+      </button>`;
+    countTo('total', Math.round(totalKm), { dur: 1800 });
+
     $('#hero-stats').innerHTML = `
-      <div><dt>Randonnées</dt><dd>${nf0.format(RANDOS.length)}</dd></div>
-      <div><dt>Kilomètres de sentiers</dt><dd>${nf0.format(km)} <small>km</small></dd></div>
-      <div><dt>Dénivelé cumulé</dt><dd>${nf0.format(dp)} <small>m</small></dd></div>
-      <div><dt>Sorties de</dt><dd>${years[0]} <small>à</small> ${years[years.length - 1]}</dd></div>`;
-    const when = '';
-    // Dernière synchronisation avec le blog (date et heure de Paris)
-    if (DATA.blog && DATA.blog.scrapedAt) {
-      const at = new Date(DATA.blog.scrapedAt);
-      const day = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Europe/Paris' }).format(at);
-      const hour = new Intl.DateTimeFormat('fr-FR', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Paris' }).format(at);
-      $('#sync-status').textContent = `Mis à jour depuis le blog le ${day} à ${hour.replace(':', 'h')}`;
+      <div><dt>Randonnées</dt><dd>${num('count')}</dd></div>
+      <div><dt>Kilomètres de sentiers</dt><dd>${num('km')} <small>km</small></dd></div>
+      <div><dt>Dénivelé cumulé</dt><dd>${num('dplus')} <small>m</small></dd></div>
+      <div><dt id="years-label">Sorties de</dt><dd>${num('y0', '–')}<span id="years-to"> <small>à</small> ${num('y1', '–')}</span></dd></div>`;
+
+    // Dernière vérification du blog (date et heure de Paris)
+    const at = DATA.blog && (DATA.blog.checkedAt || DATA.blog.scrapedAt);
+    if (at) {
+      const d = new Date(at);
+      const day = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Europe/Paris' }).format(d);
+      const hour = new Intl.DateTimeFormat('fr-FR', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Paris' }).format(d);
+      $('#sync-status').textContent = `Synchronisé avec le blog toutes les heures · dernière vérification le ${day} à ${hour.replace(':', 'h')}`;
     }
     const model = DATA.ibpModel ? ` IBP estimé calé sur ${DATA.ibpModel.samples} randos du blog (écart moyen ±${nf1.format(DATA.ibpModel.mae)}).` : '';
-    $('#footer-info').textContent = `Données générées le ${fmtDate(DATA.generatedAt.slice(0, 10))}.${when}${model}`;
+    $('#footer-info').textContent = `Données générées le ${fmtDate(DATA.generatedAt.slice(0, 10))}.${model}`;
   }
+
+  // Chiffres du bandeau calculés sur les randos affichées (filtres et recherche compris)
+  let yearsReady = false;
+  function updateHeroStats(list) {
+    countTo('count', list.length);
+    countTo('km', Math.round(list.reduce((s, r) => s + r.distanceKm, 0)));
+    countTo('dplus', Math.round(list.reduce((s, r) => s + (r.dplus || 0), 0)));
+    const years = list.map((r) => +r.date.slice(0, 4)).filter(Number.isFinite);
+    const y0 = years.length ? Math.min(...years) : null, y1 = years.length ? Math.max(...years) : null;
+    const yEl0 = $('[data-stat="y0"]'), yEl1 = $('[data-stat="y1"]');
+    if (y0 == null) {
+      for (const el of [yEl0, yEl1]) { cancelAnimationFrame(el._raf); el._cur = undefined; el.textContent = '–'; }
+      $('[data-sr="y0"]').textContent = 'aucune';
+    } else {
+      // Au premier affichage, les années sont posées directement (pas de défilement depuis 0)
+      if (!yearsReady) { yEl0._cur = y0; yEl1._cur = y1; yearsReady = true; }
+      if (yEl0._cur == null) yEl0._cur = y0;
+      if (yEl1._cur == null) yEl1._cur = y1;
+      countTo('y0', y0, { fmt: fmtYear });
+      countTo('y1', y1, { fmt: fmtYear });
+    }
+    const single = y0 != null && y0 === y1;
+    $('#years-label').textContent = single ? 'Sorties en' : 'Sorties de';
+    $('#years-to').hidden = single || y0 == null;
+    const note = $('#stats-note');
+    note.hidden = list.length === RANDOS.length;
+  }
+
+  // ------------------------------------------------------------ Compteur à intégrer sur un blog
+  const PUBLIC_URL = 'https://bondex69009.github.io/randotheque/';
+  const embedDialog = $('#embed');
+  const embedBase = () => (/^(localhost|127\.|\[::1\])/.test(location.hostname) || location.protocol === 'file:'
+    ? PUBLIC_URL : new URL('./', location.href).href);
+  function embedCode(theme) {
+    const src = `${embedBase()}compteur.html${theme === 'clair' ? '?theme=clair' : ''}`;
+    return `<iframe src="${src}" title="Compteur total des Godillots Ailés" width="100%" height="128" scrolling="no" loading="lazy" style="border:0;display:block;max-width:420px;margin:0 auto;"></iframe>`;
+  }
+  function paintEmbed() {
+    const theme = ($('input[name="embed-theme"]:checked', embedDialog) || {}).value || 'sombre';
+    const code = embedCode(theme);
+    $('#embed-code').value = code;
+    $('#embed-preview').innerHTML = code.replace(/src="[^"]+"/, `src="compteur.html${theme === 'clair' ? '?theme=clair' : ''}"`);
+    $('#embed-preview').dataset.theme = theme;
+    $('#embed-status').textContent = '';
+  }
+  document.addEventListener('click', async (e) => {
+    if (e.target.closest('#open-embed')) { paintEmbed(); embedDialog.showModal(); $('#embed-copy').focus(); return; }
+    if (e.target === embedDialog || e.target.closest('[data-close-embed]')) { embedDialog.close(); return; }
+    if (e.target.closest('#embed-copy')) {
+      const area = $('#embed-code');
+      try { await navigator.clipboard.writeText(area.value); } catch { area.select(); document.execCommand('copy'); }
+      $('#embed-status').textContent = 'Code copié ! Collez-le dans un gadget « HTML/JavaScript » de Blogger.';
+    }
+  });
+  embedDialog.addEventListener('change', (e) => { if (e.target.name === 'embed-theme') paintEmbed(); });
+  $('#embed-code').addEventListener('focus', (e) => e.target.select());
 
   // ------------------------------------------------------------ Cartes Leaflet
   const hasLeaflet = () => typeof window.L !== 'undefined';
@@ -758,6 +920,98 @@
     keywords: 'Mots-clés', creator: 'Logiciel', version: 'Version GPX', trackType: 'Activité', link: 'Lien', copyright: 'Droits',
   };
 
+  // ------------------------------------------------------------ Lecteur audio (résumé publié sur le blog)
+  const fmtClock = (sec) => {
+    if (!Number.isFinite(sec) || sec < 0) return '–:––';
+    const t = Math.floor(sec);
+    return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`;
+  };
+  const RATES = [1, 1.25, 1.5, 2, 0.75];
+  const fmtRate = (v) => `${String(v).replace('.', ',')}×`;
+
+  function audioPanelHtml(r) {
+    const list = r.blog.audio;
+    return `
+          <section class="panel" aria-labelledby="audio-title">
+            <h3 class="panel__title" id="audio-title">Résumé audio</h3>
+            ${list.map((a, i) => {
+              const name = list.length > 1 ? `Résumé ${i + 1}` : 'Résumé de la sortie';
+              return `
+            <div class="player" data-player>
+              <audio preload="metadata" src="${encodeURI(a.file)}"></audio>
+              <button type="button" class="player__btn" data-play aria-label="Écouter : ${esc(name)}">${icon('play')}</button>
+              <div class="player__track">
+                <span class="player__name">${esc(name)}</span>
+                <input type="range" class="player__seek" data-seek min="0" max="${a.seconds || 0}" step="0.1" value="0"
+                       aria-label="Position dans le résumé audio" aria-valuetext="0:00">
+                <div class="player__time"><span data-cur>0:00</span><span data-dur>${a.seconds ? fmtClock(a.seconds) : '–:––'}</span></div>
+              </div>
+              <button type="button" class="player__rate" data-rate aria-label="Vitesse de lecture : normale">${fmtRate(1)}</button>
+            </div>`;
+            }).join('')}
+          </section>`;
+  }
+
+  // Branche les lecteurs de la fiche (appelé après chaque ouverture)
+  function setupPlayers(root, r) {
+    $$('[data-player]', root).forEach((box, idx) => {
+      const audio = $('audio', box), btn = $('[data-play]', box), seek = $('[data-seek]', box);
+      const cur = $('[data-cur]', box), durEl = $('[data-dur]', box), rateBtn = $('[data-rate]', box);
+      const label = btn.getAttribute('aria-label').replace(/^Écouter : /, '');
+      let seeking = false;
+      const paint = () => {
+        const t = seeking ? +seek.value : audio.currentTime;
+        if (!seeking) seek.value = t;
+        const max = +seek.max || 1;
+        seek.style.setProperty('--p', `${Math.min(100, (t / max) * 100)}%`);
+        cur.textContent = fmtClock(t);
+        seek.setAttribute('aria-valuetext', `${fmtClock(t)} sur ${fmtClock(+seek.max)}`);
+      };
+      const setBtn = (st) => {
+        btn.dataset.state = st;
+        const playing = st === 'playing' || st === 'loading';
+        btn.innerHTML = icon(playing ? 'pause' : 'play');
+        btn.setAttribute('aria-label', `${playing ? 'Mettre en pause' : 'Écouter'} : ${label}`);
+      };
+      audio.addEventListener('loadedmetadata', () => {
+        if (Number.isFinite(audio.duration)) { seek.max = audio.duration; durEl.textContent = fmtClock(audio.duration); }
+        paint();
+      });
+      audio.addEventListener('timeupdate', paint);
+      audio.addEventListener('waiting', () => { if (!audio.paused) setBtn('loading'); });
+      audio.addEventListener('playing', () => setBtn('playing'));
+      audio.addEventListener('pause', () => setBtn('paused'));
+      audio.addEventListener('ended', () => { setBtn('paused'); audio.currentTime = 0; paint(); });
+      audio.addEventListener('error', () => {
+        setBtn('paused');
+        if ($('.player__error', box)) return;
+        const src = r.blog.audio[idx];
+        box.insertAdjacentHTML('beforeend', `<p class="player__error" role="status">Lecture impossible.${src && src.url ? ` <a href="${esc(src.url)}" target="_blank" rel="noopener">Écouter sur Google Drive</a>` : ''}</p>`);
+      });
+      btn.addEventListener('click', () => {
+        if (!audio.paused) { audio.pause(); return; }
+        for (const other of $$('audio', root)) if (other !== audio) other.pause(); // un seul résumé à la fois
+        setBtn('loading');
+        audio.play().catch(() => setBtn('paused'));
+        if ('mediaSession' in navigator && window.MediaMetadata) {
+          navigator.mediaSession.metadata = new MediaMetadata({
+            title: `Résumé audio · ${r.name}`, artist: 'Les Godillots Ailés', album: fmtDate(r.date),
+            artwork: [{ src: 'assets/apple-touch-icon.png', sizes: '180x180', type: 'image/png' }],
+          });
+        }
+      });
+      seek.addEventListener('input', () => { seeking = true; paint(); });
+      seek.addEventListener('change', () => { audio.currentTime = +seek.value; seeking = false; paint(); });
+      rateBtn.addEventListener('click', () => {
+        const next = RATES[(RATES.indexOf(audio.playbackRate) + 1) % RATES.length] || 1;
+        audio.playbackRate = next;
+        rateBtn.textContent = fmtRate(next);
+        rateBtn.setAttribute('aria-label', `Vitesse de lecture : ${next === 1 ? 'normale' : fmtRate(next)}`);
+      });
+    });
+  }
+  const stopAudio = () => { for (const a of $$('audio', dialog)) a.pause(); };
+
   function detailHtml(r) {
     const lvl = r.level;
     const fileName = r.file.split('/').pop();
@@ -833,6 +1087,7 @@
             <a class="btn btn--outline btn--block" href="${IBP_PAGE}" target="_blank" rel="noopener" data-ibp="${r.id}"
                title="Le fichier GPX est envoyé à ibpindex.com, qui affiche son analyse dans un nouvel onglet">${icon('gauge')}Analyser la trace sur ibpindex.com</a>
           </div>
+          ${blog && blog.audio ? audioPanelHtml(r) : ''}
           ${blog ? `
           <section class="panel" aria-labelledby="blog-title">
             <h3 class="panel__title" id="blog-title">Sur le blog</h3>
@@ -902,7 +1157,9 @@
     if (!r) return;
     openId = id;
     if (push) writeHash();
+    stopAudio();
     $('#detail-content').innerHTML = detailHtml(r);
+    setupPlayers($('#detail-content'), r);
     if (!dialog.open) dialog.showModal();
     $('#detail-content').scrollTop = 0;
     dialog.scrollTop = 0;
@@ -948,6 +1205,7 @@
     if (dialog.open) dialog.close();
   }
   dialog.addEventListener('close', () => {
+    stopAudio();
     if (detailMap) { detailMap.remove(); detailMap = null; }
     const last = openId;
     openId = null;
@@ -1002,6 +1260,8 @@
   }));
   const resetAll = () => {
     const view = state.view;
+    listQuery.communes = '';
+    $('#communes-q').value = '';
     state = defaults();
     state.view = view;
     syncFilterInputs();
