@@ -32,6 +32,9 @@
     const h = Math.floor(min / 60), m = Math.round(min % 60);
     return h ? `${h} h ${m ? String(m).padStart(2, '0') : ''}`.trim() : `${m} min`;
   };
+  // Poids d'un fichier : « 245 Ko », « 1,2 Mo »
+  const fmtSize = (b) => (b == null ? 'n.c.' : b < 1024 * 1024
+    ? `${nf0.format(Math.max(1, Math.round(b / 1024)))} Ko` : `${nf1.format(b / 1024 / 1024)} Mo`);
   const fmtDate = (d) => { try { return df.format(new Date(d + 'T12:00:00')); } catch { return d; } };
   const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const norm = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
@@ -1054,6 +1057,7 @@
             <h3 class="panel__title" id="meta-title">Métadonnées du fichier GPX</h3>
             <dl class="meta-list">
               <dt>Fichier</dt><dd>${esc(fileName)}</dd>
+              <dt>Poids</dt><dd>${fmtSize(r.fileSize)}</dd>
               ${metaRows}
               <dt>Contenu</dt><dd>${r.kind === 'route' ? 'Route' : 'Trace'} de ${nf0.format(r.points)} points${r.waypoints && r.waypoints.length ? `, ${r.waypoints.length} point(s) d'intérêt` : ''}</dd>
               <dt>Altitudes</dt><dd>${r.eleSource === 'ign' ? 'Complétées par le service altimétrique IGN' : r.eleSource ? 'Issues du fichier GPX' : 'Absentes'}</dd>
@@ -1081,7 +1085,7 @@
             ${kpi(r.loop ? 'loop' : 'arrow', 'Parcours', r.loop ? 'Boucle' : 'Aller simple', '', 'kpi--wide')}
           </div>
           <div class="actions">
-            <a class="btn btn--primary btn--block" href="${encodeURI(r.file)}" download="${esc(fileName)}">${icon('download')}Télécharger le GPX</a>
+            <a class="btn btn--primary btn--block" href="${encodeURI(r.file)}" download="${esc(fileName)}">${icon('download')}Télécharger le GPX${r.fileSize ? ` <span class="btn__meta">(${fmtSize(r.fileSize)})</span>` : ''}</a>
             <button type="button" class="btn btn--outline btn--block" data-png="${r.id}">${icon('image')}Exporter la fiche en image (PNG)</button>
             ${blog ? `<a class="btn btn--outline btn--block" href="${esc(blog.url)}" target="_blank" rel="noopener">${icon('external')}Voir l'article sur le blog</a>` : ''}
             <a class="btn btn--outline btn--block" href="${IBP_PAGE}" target="_blank" rel="noopener" data-ibp="${r.id}"

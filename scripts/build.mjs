@@ -234,6 +234,7 @@ async function main() {
       randos.push({
         id,
         file: rel,
+        fileSize: fs.statSync(file).size, // poids du fichier GPX, en octets
         source: blog ? 'blog' : 'perso',
         name,
         description,

@@ -661,6 +661,8 @@ h1, h2, h3 { line-height: var(--lh-tight); margin: 0; }
 
 .site-footer strong { color: var(--c-accent); }
 
+.btn__meta { font-weight: var(--fw-medium); opacity: 0.75; }
+
 /* ------------------------------------------------------------- Lecteur audio */
 .player {
   display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: var(--space-3);
