@@ -1,152 +1,153 @@
 # Randothèque
 
-Catalogue des randonnées, construit automatiquement à partir de fichiers GPX.
-Pour chaque rando : nom, distance, dénivelés, temps estimé, IBP index, carte, profil et métadonnées du fichier.
+Catalogue des randonnées du club, construit automatiquement à partir de fichiers GPX.
+Chaque rando a son nom, sa distance, ses dénivelés, un temps estimé, l'IBP index, une carte, un profil et les métadonnées du fichier.
 
 ## Utilisation rapide
 
-Prérequis : [Node.js](https://nodejs.org) 18 ou plus récent (aucune autre installation).
+Il faut [Node.js](https://nodejs.org) 18 ou plus récent, et rien d'autre.
 
 ```bash
 npm run update   # récupère les nouveaux GPX du blog puis régénère les données
 npm run serve    # ouvre la Randothèque sur http://localhost:8080
 ```
 
-Vous pouvez aussi ouvrir directement `index.html` dans un navigateur.
+On peut aussi ouvrir directement `index.html` dans un navigateur.
 
 ## Mise en ligne automatique (GitHub Pages)
 
-Le site public est hébergé gratuitement sur GitHub Pages et **se met à jour tout seul toutes les heures
-(à hh:07)** : la tâche `.github/workflows/mise-a-jour.yml` lit le blog, télécharge les nouveaux GPX et résumés
-audio, les enregistre dans le dépôt, régénère le site et le publie. GitHub ne garantit pas l'heure exacte de ses
-tâches programmées : un passage sauté est simplement rattrapé l'heure suivante. Un commit n'est créé que s'il y a
-du nouveau. L'heure de la dernière vérification est affichée en haut du site.
+Le site public est hébergé gratuitement sur GitHub Pages et se met à jour tout seul toutes les heures, à hh:07.
+La tâche `.github/workflows/mise-a-jour.yml` lit le blog, télécharge les nouveaux GPX et résumés audio, les
+enregistre dans le dépôt, régénère le site et le publie. GitHub ne garantit pas l'heure exacte de ses tâches
+programmées ; un passage sauté est rattrapé l'heure suivante. La tâche ne crée un commit que s'il y a du nouveau,
+et le haut du site indique l'heure de la dernière vérification. Personne n'a besoin de se connecter.
 
-**Randos modifiées sur le blog** : un article modifié est relu (nom, date, IBP, animateurs…). Pour les articles de
-la **première page** du blog, les GPX et audios sont en plus retéléchargés à chaque passage : un fichier remplacé
-sur Google Drive est repris (même nom de fichier), et si le lien GPX change ou si l'article est remplacé par un
-autre (ex. « prochaine sortie » puis article définitif), l'ancien fichier est supprimé et le nouveau prend son nom.
-Personne n'a besoin de se connecter.
+Un article modifié sur le blog est relu (nom, date, IBP, animateurs…). Pour les articles de la première page du
+blog, les GPX et audios sont en plus retéléchargés à chaque passage. Un fichier remplacé sur Google Drive est donc
+repris sous le même nom. Si le lien GPX change, ou si l'article est remplacé par un autre (par exemple « prochaine
+sortie » puis l'article définitif), l'ancien fichier est supprimé et le nouveau prend son nom.
 
-Mise en place (une seule fois) :
+Mise en place, une seule fois :
 
-1. Créer un dépôt **public** sur GitHub (par exemple `randotheque`) et y envoyer ce dossier.
-2. Dans le dépôt : **Settings > Pages > Build and deployment > Source : « GitHub Actions »**.
-3. Onglet **Actions > Mise à jour horaire > Run workflow** pour la première publication.
+1. Créer un dépôt public sur GitHub (par exemple `randotheque`) et y envoyer ce dossier.
+2. Dans le dépôt : Settings > Pages > Build and deployment > Source : « GitHub Actions ».
+3. Onglet Actions > Mise à jour horaire > Run workflow, pour la première publication.
 4. Le site est alors disponible sur `https://<compte>.github.io/randotheque/`.
 
-Pour forcer une mise à jour sans attendre : **Actions > Mise à jour horaire > Run workflow**.
+Pour forcer une mise à jour sans attendre : Actions > Mise à jour horaire > Run workflow.
 En cas d'échec, GitHub envoie un e-mail au propriétaire du dépôt.
 
 Le site n'est pas destiné aux moteurs de recherche : la page porte `<meta name="robots" content="noindex, nofollow">`
-et un `robots.txt` interdit l'exploration. Sur GitHub Pages, ce fichier n'est lu par les robots qu'à la racine
-du domaine (`https://<compte>.github.io/robots.txt`), c'est-à-dire dans un dépôt nommé `<compte>.github.io`.
+et un `robots.txt` interdit l'exploration. Sur GitHub Pages, les robots ne lisent ce fichier qu'à la racine du
+domaine (`https://<compte>.github.io/robots.txt`), c'est-à-dire dans un dépôt nommé `<compte>.github.io`.
 
-`npm run site` prépare localement le dossier `_site/` exactement comme il sera publié.
-L'interface d'administration n'est pas publiée en ligne (elle reste utilisable en local avec `npm run serve`).
+`npm run site` prépare en local le dossier `_site/` tel qu'il sera publié.
+L'interface d'administration n'est pas publiée en ligne ; elle reste utilisable en local avec `npm run serve`.
 
 ## Compteur total et intégration sur le blog
 
-Le haut du site affiche le **compteur global depuis 1977** (toutes les randos du club, d'avant 2010 comprises). Il part de la valeur
-donnée par le club, **20 229 km au 3 novembre 2026** (rando de ce jour incluse), et chaque rando suivante déjà
-faite et non annulée s'y ajoute. Pour changer la référence : `TOTAL_REF` dans `scripts/build.mjs`.
+Le haut du site affiche le compteur global depuis 1977, qui inclut les randos d'avant 2010. Il part de la valeur
+donnée par le club, 20 229 km au 3 novembre 2026 (rando de ce jour incluse). Chaque rando suivante s'y ajoute une
+fois sa date passée, sauf si elle est annulée. La référence se règle avec `TOTAL_REF` dans `scripts/build.mjs`.
 
-Le bouton **« Intégrer »** à côté du compteur donne un code HTML (balise `<iframe>`, fond sombre ou clair) à coller
-sur Blogger : **Mise en page > Ajouter un gadget > HTML/JavaScript**. Le compteur affiché sur le blog
-(`compteur.html`, qui lit le petit fichier `data/compteur.js`) se met à jour à chaque publication du site.
+Le bouton « Intégrer », à côté du compteur, donne un code HTML (balise `<iframe>`, fond sombre ou clair) à coller sur
+Blogger, dans Mise en page > Ajouter un gadget > HTML/JavaScript. Le compteur affiché sur le blog (`compteur.html`,
+qui lit le petit fichier `data/compteur.js`) se met à jour à chaque publication du site.
 
-Les autres chiffres du haut de page (randonnées, kilomètres, dénivelé, années) suivent les filtres et la
-recherche, avec une animation de compteur à chaque changement.
+Les autres chiffres du haut de page (randonnées, kilomètres, dénivelé, années) suivent les filtres et la recherche,
+avec une animation de compteur à chaque changement.
 
 ## Interface d'administration (en local)
 
-Avec `npm run serve`, le terminal affiche une adresse secrète du type
-`http://localhost:8080/admin/XXXXXXXX`. Elle donne accès, **sans mot de passe**, à une page pour :
+Avec `npm run serve`, le terminal affiche une adresse secrète du type `http://localhost:8080/admin/XXXXXXXX`.
+Elle ouvre, sans mot de passe, une page qui permet de :
 
-- **ajouter** des randos en glissant des fichiers GPX (le formulaire s'ouvre pour compléter nom, date, animateurs, IBP…) ;
-- **modifier** les infos affichées de n'importe quelle rando, y compris celles du blog
-  (le bouton « Rétablir » remet la valeur d'origine) ;
-- **supprimer** une rando : celles du blog sont masquées (onglet « Masquées », bouton « Réafficher »),
-  celles ajoutées vont dans la corbeille (onglet « Corbeille », bouton « Restaurer ») ;
-- **synchroniser** avec le blog pour récupérer les nouvelles sorties.
+- ajouter des randos en glissant des fichiers GPX (un formulaire s'ouvre pour compléter nom, date, animateurs, IBP…) ;
+- modifier les infos affichées de n'importe quelle rando, y compris celles du blog (le bouton « Rétablir » remet la
+  valeur d'origine) ;
+- supprimer une rando : celles du blog sont masquées (onglet « Masquées », bouton « Réafficher »), celles ajoutées
+  à la main vont dans la corbeille (onglet « Corbeille », bouton « Restaurer ») ;
+- synchroniser avec le blog pour récupérer les nouvelles sorties.
 
 Chaque changement régénère le site en 2 à 3 secondes.
 
-- L'adresse secrète est la seule protection : ne la partagez qu'avec les gestionnaires.
-  Pour en changer, supprimez le fichier `.admin-token` et relancez `npm run serve`
-  (ou imposez la vôtre avec la variable `ADMIN_TOKEN`).
-- Les corrections sont enregistrées dans `data/overrides.json` : elles survivent aux synchronisations avec le blog.
-- L'administration a besoin du serveur `npm run serve` : elle ne fonctionne pas sur un hébergement
-  purement statique (GitHub Pages, Netlify…).
+L'adresse secrète est la seule protection, donc il ne faut la donner qu'aux gestionnaires. Pour en changer,
+supprimez le fichier `.admin-token` et relancez `npm run serve`, ou imposez la vôtre avec la variable `ADMIN_TOKEN`.
+Les corrections sont enregistrées dans `data/overrides.json` et survivent aux synchronisations avec le blog.
+L'administration a besoin du serveur `npm run serve` ; elle ne fonctionne pas sur un hébergement purement statique
+(GitHub Pages, Netlify…).
 
 ## Ajouter vos propres GPX à la main
 
 1. Déposez vos fichiers `.gpx` dans `gpx/mes-randos/` (ou n'importe quel sous-dossier de `gpx/`).
 2. Lancez `npm run build`.
 
-Les infos sont lues dans le fichier (nom, description, auteur, date, mots-clés, logiciel…).
-Pour compléter ou corriger une rando, placez à côté un fichier JSON du même nom, par exemple
-`ma-rando.json` à côté de `ma-rando.gpx` :
+Les infos sont lues dans le fichier (nom, description, auteur, date, mots-clés, logiciel…). Pour compléter ou
+corriger une rando, placez à côté un fichier JSON du même nom, par exemple `ma-rando.json` à côté de `ma-rando.gpx` :
 
 ```json
 { "name": "Le Mont Bouquet", "ibp": 58, "animateurs": "Bruno - Jean", "date": "2026-03-12", "description": "…" }
 ```
 
-Les animateurs s'écrivent comme sur le blog (« Bruno - Jean », « Guy et Pierre ») ou en liste
-(`["Bruno", "Jean"]`) : chaque nom apparaît ensuite dans le filtre « Animateur ».
+Les animateurs s'écrivent comme sur le blog (« Bruno - Jean », « Guy et Pierre ») ou en liste (`["Bruno", "Jean"]`).
+Chaque nom apparaît ensuite dans le filtre « Animateur ».
 
 ## Ce que font les scripts
 
 | Commande | Rôle |
 |---|---|
-| `npm run blog` | Lit tous les articles de https://godillotsailes.blogspot.com, repère les liens « GPX » (Google Drive, Dropbox), télécharge les fichiers dans `gpx/blog/`, les résumés audio (liens « Audio ») dans `audio/blog/`, et note les infos de la sortie (titre, date, IBP, animateurs, département, photo) dans `data/blog-catalog.json`. Seuls les articles nouveaux ou modifiés sont relus ; ceux de la première page du blog sont revérifiés à chaque fois. `--refresh` relit tout ; `--recent=10` relit de force les articles des 10 dernières randos et retélécharge leurs GPX et audios. |
+| `npm run blog` | Lit tous les articles de https://godillotsailes.blogspot.com et repère les liens « GPX » (Google Drive, Dropbox). Télécharge les fichiers dans `gpx/blog/` et les résumés audio (liens « Audio ») dans `audio/blog/`, puis note les infos de la sortie (titre, date, IBP, animateurs, département, photo) dans `data/blog-catalog.json`. Seuls les articles nouveaux ou modifiés sont relus, plus ceux de la première page du blog à chaque fois. `--refresh` relit tout ; `--recent=10` relit de force les articles des 10 dernières randos et retélécharge leurs GPX et audios. |
 | `npm run build` | Analyse chaque GPX de `gpx/` et génère `data/randos.js` + `data/tracks/`. |
 | `npm run serve` | Petit serveur local. |
 
 ## Comment sont calculées les valeurs
 
-- **Distance** : somme des distances entre points de la trace.
-- **Dénivelés** : altitudes lissées sur ~60 m puis seuil de 3 m pour ignorer le bruit GPS.
-  Si le fichier n'a pas d'altitudes, elles sont demandées au service altimétrique de l'IGN.
-- **Temps estimé** : norme DIN 33466 (4 km/h à plat, 300 m/h en montée, 500 m/h en descente), pauses non comprises.
-- **IBP index** : valeur publiée sur le blog quand elle existe. Sinon, estimation (affichée avec « ≈ »)
-  par une régression calée sur les randos du blog qui ont un IBP officiel (écart moyen d'environ 2 points).
+- Distance : somme des distances entre les points de la trace.
+- Dénivelés : altitudes lissées sur environ 60 m, puis seuil de 3 m pour ignorer le bruit GPS. Si le fichier n'a pas
+  d'altitudes, elles sont demandées au service altimétrique de l'IGN.
+- Temps estimé : norme DIN 33466 (4 km/h à plat, 300 m/h en montée, 500 m/h en descente), pauses non comprises.
+- IBP index : valeur publiée sur le blog quand elle existe. Sinon, une estimation (affichée avec « ≈ ») par une
+  régression calée sur les randos du blog qui ont un IBP officiel, avec un écart moyen d'environ 2 points.
   Pour la valeur officielle, analysez le GPX sur https://www.ibpindex.com/ibpindex/analyser.php.
-- **Niveau** : Vert ≤ 25 (très facile), Bleu ≤ 50 (facile), Jaune ≤ 75 (moyen), Rouge ≤ 100 (difficile), Noir au-delà.
-- **Commune / département** : déduits du point de départ via geo.api.gouv.fr.
+- Niveau : Vert ≤ 25 (très facile), Bleu ≤ 50 (facile), Jaune ≤ 75 (moyen), Rouge ≤ 100 (difficile), Noir au-delà.
+- Commune et département : déduits du point de départ via geo.api.gouv.fr.
 
 ## Dans chaque fiche de rando
 
-- **Télécharger le GPX** : le fichier est proposé sous son **nom d'origine** sur le Google Drive du blog
-  (ex. `Piste_2026-11-03-Parignargues-16h08.gpx`), avec son poids. Dans le dépôt, les fichiers gardent leur nom
-  (`gpx/blog/AAAA-MM-JJ_nom.gpx`), qui ne change jamais.
-- **Itinéraire** : bouton Google Maps qui guide jusqu'au **parking** indiqué sur le blog (lien « Vue Parking »,
-  sinon arrivée de l'itinéraire « Route Google Maps », sinon coordonnées de l'article), à condition qu'il soit à
-  moins de 10 km du départ de la trace ; sinon jusqu'au **point de départ du GPX**. Les liens Google Maps courts
-  sont résolus une seule fois (`.cache/blog/maps-resolved.json`).
-- **Albums photos** : un bouton par album Google Photos lié dans l'article du blog (« Photos de Bruno »,
-  « Le film »…), qui ouvre l'album dans un nouvel onglet. Les très anciens liens Picasa / Google+ ne
-  fonctionnent plus et sont ignorés.
-- **Évolution par année** : en cliquant sur les chiffres ou le compteur du haut de page, trois graphiques
-  (nombre de randos, kilomètres, dénivelé) et un tableau, calculés sur la sélection en cours.
-- **Résumé audio** : quand l'article du blog a un lien « RESUME - Audio », un lecteur (lecture/pause, avance,
-  vitesse) apparaît dans la fiche ; les cartes concernées portent la mention « Audio » et le filtre
-  « Contenu > Résumé audio » les regroupe.
-- **Exporter la fiche en image (PNG)** : image de 1920 px façon « tableau de bord IBP » (indice, distances,
-  dénivelés, altitudes, temps total / en mouvement / de pause, vitesses, répartition montée / plat / descente).
-  La « fiabilité » d'IBP index n'étant pas publique, l'image indique à la place la source de l'indice (blog ou estimé).
-  Sans horodatage dans le GPX, le temps estimé remplace les temps réels.
-- **Analyser la trace sur ibpindex.com** : le GPX est envoyé automatiquement au formulaire d'IBP index,
-  qui ouvre son analyse complète dans un nouvel onglet.
+Le bouton « Télécharger le GPX » propose le fichier sous son nom d'origine sur le Google Drive du blog (par exemple
+`Piste_2026-11-03-Parignargues-16h08.gpx`) et indique son poids. Dans le dépôt, les fichiers gardent leur nom
+(`gpx/blog/AAAA-MM-JJ_nom.gpx`), qui ne change jamais.
 
-Réglages calés sur les analyses d'IBP index : pauses = vitesse lissée sur 2 min < 1 km/h ;
-montée / plat / descente = tronçons de 10 m, altitude lissée sur 60 m, plat entre −1,25 % et +1,25 %.
-Une altitude constante sur tout le parcours (0 m ou 30 m partout) est considérée comme absente
-et remplacée par celle du service altimétrique de l'IGN.
+Le bouton « Itinéraire » ouvre Google Maps jusqu'au parking indiqué sur le blog : le lien « Vue Parking », sinon
+l'arrivée de l'itinéraire « Route Google Maps », sinon les coordonnées écrites dans l'article. Ce parking n'est
+retenu que s'il est à moins de 10 km du départ de la trace ; sinon, Google Maps mène au point de départ du GPX.
+Les liens Google Maps courts ne sont résolus qu'une fois (`.cache/blog/maps-resolved.json`).
+
+Chaque album Google Photos lié dans l'article (« Photos de Bruno », « Le film »…) a son bouton, qui ouvre l'album
+dans un nouvel onglet. Les très anciens liens Picasa et Google+ ne fonctionnent plus et sont ignorés.
+
+Un clic sur les chiffres ou sur le compteur du haut de page ouvre l'évolution par année : trois graphiques (nombre
+de randos, kilomètres, dénivelé) et un tableau, calculés sur la sélection en cours.
+
+Quand l'article du blog a un lien « RESUME - Audio », la fiche affiche un lecteur (lecture et pause, avance,
+vitesse). Les cartes concernées portent la mention « Audio », et le filtre « Contenu > Résumé audio » les regroupe.
+
+« Exporter la fiche en image (PNG) » produit une image de 1920 px façon « tableau de bord IBP » : indice, distances,
+dénivelés, altitudes, temps total, en mouvement et de pause, vitesses, répartition montée, plat et descente.
+La « fiabilité » d'IBP index n'est pas publique, alors l'image indique à sa place la source de l'indice (blog ou
+estimé). Si le GPX n'a pas d'horodatage, le temps estimé remplace les temps réels.
+
+« Analyser la trace sur ibpindex.com » envoie le GPX au formulaire d'IBP index, qui ouvre son analyse complète dans
+un nouvel onglet.
+
+Les réglages sont calés sur les analyses d'IBP index. Une pause, c'est une vitesse lissée sur 2 min inférieure à
+1 km/h. La répartition montée, plat et descente se fait par tronçons de 10 m, avec l'altitude lissée sur 60 m ; le
+plat va de −1,25 % à +1,25 %. Une altitude constante sur tout le parcours (0 m ou 30 m partout) est considérée comme
+absente et remplacée par celle du service altimétrique de l'IGN.
 
 ## Limites connues
 
-- Les GPX publiés avant 2017 sur l'ancien Dropbox public ne sont plus téléchargeables (liens morts) ;
-  la liste est dans `.cache/blog/failed-downloads.json`.
-- En 2017-2018 le blog n'affichait pas la valeur IBP : ces randos ont un IBP estimé.
-- Les cartes et la police nécessitent une connexion internet.
+- Les GPX publiés avant 2017 sur l'ancien Dropbox public ne sont plus téléchargeables (liens morts) ; la liste est
+  dans `.cache/blog/failed-downloads.json`.
+- En 2017-2018, le blog n'affichait pas la valeur IBP : ces randos ont un IBP estimé.
+- Les cartes et la police de caractères ont besoin d'une connexion internet.
