@@ -24,12 +24,9 @@
     body { font-family: "Plus Jakarta Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; padding: 4px; }
     .counter {
       display: flex; align-items: center; gap: 12px; max-width: 412px; margin: 0 auto; padding: 14px 18px 14px 14px;
-      border-radius: 18px; border: 1px solid var(--border); text-decoration: none; color: var(--text);
+      border-radius: 18px; border: 1px solid var(--border); color: var(--text);
       background: linear-gradient(135deg, rgb(135 247 0 / 0.16), rgb(1 255 255 / 0.05) 70%), var(--card);
-      transition: border-color 150ms ease, transform 150ms ease;
     }
-    .counter:hover { border-color: var(--accent); transform: translateY(-1px); }
-    .counter:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
     .icon {
       flex: none; display: grid; place-items: center; width: 52px; height: 52px; border-radius: 12px;
       background: var(--accent); color: var(--on-accent);
@@ -58,7 +55,7 @@
   </style>
 </head>
 <body>
-  <a class="counter" id="counter" href="./" target="_blank" rel="noopener" title="Voir l'historique des randos des Godillots Ailés">
+  <div class="counter" id="counter">
     <span class="icon" aria-hidden="true">
       <svg viewBox="0 0 24 24"><path d="M5 18c3-1 3-5 7-6s4-5 7-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-dasharray="0.1 4"/><circle cx="5" cy="18" r="2" fill="currentColor"/><circle cx="19" cy="6" r="2" fill="currentColor"/></svg>
     </span>
@@ -67,7 +64,7 @@
       <span class="value"><span id="km" aria-hidden="true">…</span> <small>km</small><span id="km-sr" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)"></span></span>
       <span class="hint">Les Godillots Ailés<span class="hint-more"> · toutes les randos du club</span></span>
     </span>
-  </a>
+  </div>
   <script src="data/compteur.js"></script>
   <script>
     (() => {
