@@ -19,6 +19,8 @@ import {
 
 const BLOG = 'https://godillotsailes.blogspot.com';
 const REFRESH = process.argv.includes('--refresh');
+// --recent=10 : relit de force les articles des 10 dernières randos et retélécharge leurs GPX / audios
+const RECENT = Number((process.argv.find((a) => a.startsWith('--recent=')) || '').split('=')[1]) || 0;
 const POST_CACHE = path.join(CACHE_DIR, 'blog', 'posts');
 const CATALOG_FILE = path.join(DATA_DIR, 'blog-catalog.json');
 const FAILED_FILE = path.join(CACHE_DIR, 'blog', 'failed-downloads.json');
@@ -73,10 +75,10 @@ function slimPost(html) {
   return html.slice(Math.max(0, i - 200), j > 0 ? j + 40 : undefined);
 }
 
-async function getPostHtml(post) {
+async function getPostHtml(post, force = false) {
   const file = path.join(POST_CACHE, `${post.id}.html`);
   const metaFile = file + '.updated';
-  if (!REFRESH && fs.existsSync(file) && fs.existsSync(metaFile)
+  if (!REFRESH && !force && fs.existsSync(file) && fs.existsSync(metaFile)
       && fs.readFileSync(metaFile, 'utf8') === post.updated) {
     return fs.readFileSync(file, 'utf8');
   }
@@ -372,6 +374,16 @@ async function main() {
   console.log(`   ${posts.length} articles trouvés, dont ${frontPage.size} en première page (fichiers revérifiés)`);
 
   const catalog = readJSON(CATALOG_FILE, { generatedAt: null, items: [] });
+  // Articles des N dernières randos : relus de force et traités comme ceux de la première page
+  const forced = new Set();
+  if (RECENT) {
+    for (const it of [...catalog.items].sort((a, b) => b.date.localeCompare(a.date))) {
+      if (forced.size >= RECENT) break;
+      if (it.post) forced.add(it.post.id);
+    }
+    for (const id of forced) frontPage.add(id);
+    console.log(`   --recent=${RECENT} : ${forced.size} articles relus de force`);
+  }
   const byKey = new Map(catalog.items.map((it) => [it.key, it]));
   const knownAudio = new Map(catalog.items.flatMap((it) => (it.audio || []).filter((a) => a.file).map((a) => [a.key, a.file])));
   const failed = readJSON(FAILED_FILE, {});
@@ -381,7 +393,7 @@ async function main() {
   const parsedOk = new Set(); // articles lus correctement (sert à repérer les liens retirés)
   const parsed = await pool(posts, 6, async (post) => {
     try {
-      const html = await getPostHtml(post);
+      const html = await getPostHtml(post, forced.has(post.id));
       const items = parsePost(post, html);
       if (html.includes("class='post-body")) parsedOk.add(post.id);
       if (++done % 100 === 0) console.log(`   ${done}/${posts.length}`);
@@ -534,7 +546,7 @@ async function main() {
       : known && known.originalName !== undefined ? known.originalName : null;
     items.push({ ...rest, audio: audio.length ? audio : null, file, originalName });
   }
-  items.sort((a, b) => b.date.localeCompare(a.date));
+  items.sort((a, b) => b.date.localeCompare(a.date) || a.key.localeCompare(b.key)); // ordre stable : pas de commit inutile
 
   // La date du catalogue ne bouge que s'il y a du nouveau : pas de commit inutile toutes les heures.
   const changed = updated || aNew || aUpd || removed || JSON.stringify(items) !== JSON.stringify(catalog.items);

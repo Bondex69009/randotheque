@@ -99,7 +99,7 @@ Les animateurs s'écrivent comme sur le blog (« Bruno - Jean », « Guy et Pier
 
 | Commande | Rôle |
 |---|---|
-| `npm run blog` | Lit tous les articles de https://godillotsailes.blogspot.com, repère les liens « GPX » (Google Drive, Dropbox), télécharge les fichiers dans `gpx/blog/`, les résumés audio (liens « Audio ») dans `audio/blog/`, et note les infos de la sortie (titre, date, IBP, animateurs, département, photo) dans `data/blog-catalog.json`. Seuls les articles nouveaux ou modifiés sont relus ; ceux de la première page du blog sont revérifiés à chaque fois. `--refresh` relit tout. |
+| `npm run blog` | Lit tous les articles de https://godillotsailes.blogspot.com, repère les liens « GPX » (Google Drive, Dropbox), télécharge les fichiers dans `gpx/blog/`, les résumés audio (liens « Audio ») dans `audio/blog/`, et note les infos de la sortie (titre, date, IBP, animateurs, département, photo) dans `data/blog-catalog.json`. Seuls les articles nouveaux ou modifiés sont relus ; ceux de la première page du blog sont revérifiés à chaque fois. `--refresh` relit tout ; `--recent=10` relit de force les articles des 10 dernières randos et retélécharge leurs GPX et audios. |
 | `npm run build` | Analyse chaque GPX de `gpx/` et génère `data/randos.js` + `data/tracks/`. |
 | `npm run serve` | Petit serveur local. |
 
