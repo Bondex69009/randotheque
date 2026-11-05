@@ -878,3 +878,9 @@ h1, h2, h3 { line-height: var(--lh-tight); margin: 0; }
 .btn--route .btn__label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .btn--route .btn__meta { font-size: var(--fs-xs); }
 .btn--route .btn__ext { width: 0.875rem; height: 0.875rem; opacity: 0.7; }
+
+/* Bouton « Survol 3D animé » */
+.btn--fly { color: var(--c-text); background: linear-gradient(135deg, rgb(135 247 0 / 0.16), rgb(1 255 255 / 0.1)); border: var(--border-w) solid var(--c-accent-ring); }
+.btn--fly:hover { border-color: var(--c-accent); background: linear-gradient(135deg, rgb(135 247 0 / 0.26), rgb(1 255 255 / 0.16)); }
+.btn--fly > .icon:first-child { color: var(--c-accent); }
+.btn--fly .btn__meta { font-size: var(--fs-xs); color: var(--c-text-muted); font-weight: var(--fw-medium); }
