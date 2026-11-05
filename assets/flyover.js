@@ -7,6 +7,7 @@
   const nf1 = new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
   const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  const cssVar = (n, fb) => getComputedStyle(document.documentElement).getPropertyValue(n).trim() || fb;
   const reduceMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
   const fmtDur = (min) => { const m = Math.round(min); const h = Math.floor(m / 60); return h ? `${h} h ${String(m % 60).padStart(2, '0')}` : `${m} min`; };
 
@@ -236,7 +237,8 @@
     const S = sampler(T);
     const total = T.total;
     const fr = o.inFrance;
-    const color = o.color || '#87f700';
+    const color = o.color || cssVar('--c-accent', '#87f700');
+    const bgColor = cssVar('--c-bg', '#0b0f0a');
 
     const dlg = document.createElement('dialog');
     dlg.className = 'fo';
@@ -269,13 +271,13 @@
             done: { type: 'geojson', data: { type: 'Feature', geometry: { type: 'LineString', coordinates: [lineCoords[0], lineCoords[0]] } } },
           },
           layers: [
-            { id: 'bg', type: 'background', paint: { 'background-color': '#1b2418' } },
+            { id: 'bg', type: 'background', paint: { 'background-color': bgColor } },
             { id: 'base', type: 'raster', source: 'base', paint: { 'raster-fade-duration': 200 } },
             { id: 'hs', type: 'hillshade', source: 'hs', paint: { 'hillshade-exaggeration': 0.35, 'hillshade-shadow-color': 'rgba(0,0,0,0.55)', 'hillshade-highlight-color': 'rgba(255,255,255,0.15)' } },
             { id: 'route-casing', type: 'line', source: 'route', layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': '#000', 'line-opacity': 0.35, 'line-width': 6 } },
             { id: 'route', type: 'line', source: 'route', layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': '#ffffff', 'line-opacity': 0.55, 'line-width': 2.5, 'line-dasharray': [1.5, 1.5] } },
             { id: 'done-glow', type: 'line', source: 'done', layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': color, 'line-opacity': 0.45, 'line-width': 14, 'line-blur': 8 } },
-            { id: 'done-casing', type: 'line', source: 'done', layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': '#0b0f0a', 'line-width': 7.5 } },
+            { id: 'done-casing', type: 'line', source: 'done', layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': bgColor, 'line-width': 7.5 } },
             { id: 'done', type: 'line', source: 'done', layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': color, 'line-width': 5 } },
           ],
           terrain: { source: 'dem', exaggeration: 1.5 },

@@ -1,21 +1,21 @@
 /* Randothèque – Survol 3D (chargé à la demande avec MapLibre GL) */
 .fo {
   position: fixed; inset: 0; width: 100vw; height: 100vh; height: 100dvh; max-width: none; max-height: none;
-  margin: 0; padding: 0; border: 0; background: #0b0f0a; color: var(--c-text); overflow: hidden;
+  margin: 0; padding: 0; border: 0; background: var(--c-bg); color: var(--c-text); overflow: hidden;
 }
 .fo::backdrop { background: #000; }
 .fo__map { position: absolute; inset: 0; }
 .fo__map .maplibregl-ctrl-top-right { top: 5.25rem; }
-.fo__map .maplibregl-ctrl-group { background: rgb(11 15 10 / 0.78); border: 1px solid var(--c-border); }
+.fo__map .maplibregl-ctrl-group { background: color-mix(in srgb, var(--c-bg) 78%, transparent); border: 1px solid var(--c-border); }
 .fo__map .maplibregl-ctrl-group button + button { border-top-color: var(--c-border); }
 .fo__map .maplibregl-ctrl-icon { filter: invert(1); }
-.fo__map .maplibregl-ctrl-attrib { background: rgb(11 15 10 / 0.6); color: var(--c-text-faint); font-size: 10px; }
+.fo__map .maplibregl-ctrl-attrib { background: color-mix(in srgb, var(--c-bg) 60%, transparent); color: var(--c-text-faint); font-size: 10px; }
 .fo__map .maplibregl-ctrl-attrib a { color: var(--c-text-muted); }
 .fo__map .maplibregl-ctrl-bottom-right, .fo__map .maplibregl-ctrl-bottom-left { bottom: var(--fo-bottom-h, 11rem); }
 
 .fo__loading {
   position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; gap: var(--space-3);
-  background: #0b0f0a; color: var(--c-text-muted); font-size: var(--fs-sm); z-index: 3;
+  background: var(--c-bg); color: var(--c-text-muted); font-size: var(--fs-sm); z-index: 3;
 }
 .fo__spinner {
   width: 2.25rem; height: 2.25rem; border-radius: 50%;
@@ -25,7 +25,7 @@
 @keyframes fo-spin { to { transform: rotate(360deg); } }
 
 .fo__card {
-  background: rgb(11 15 10 / 0.74); border: 1px solid rgb(255 255 255 / 0.08);
+  background: color-mix(in srgb, var(--c-bg) 74%, transparent); border: 1px solid rgb(255 255 255 / 0.08);
   backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
   border-radius: var(--radius-lg); box-shadow: 0 10px 30px -12px rgb(0 0 0 / 0.7);
 }
@@ -52,14 +52,14 @@
 .fo__bottom {
   position: absolute; left: 0; right: 0; bottom: 0; z-index: 2;
   padding: var(--space-3) var(--space-4) calc(var(--space-2) + env(safe-area-inset-bottom));
-  background: linear-gradient(to top, rgb(8 11 7 / 0.96) 55%, rgb(8 11 7 / 0.7) 85%, rgb(8 11 7 / 0));
+  background: linear-gradient(to top, color-mix(in srgb, var(--c-bg) 96%, transparent) 55%, color-mix(in srgb, var(--c-bg) 70%, transparent) 85%, color-mix(in srgb, var(--c-bg) 0%, transparent));
 }
 .fo__bar { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; margin-bottom: var(--space-2); }
 .fo__spacer { flex: 1; }
 .fo__btn {
   display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2);
   height: var(--tap); min-width: var(--tap); border-radius: var(--radius-pill); cursor: pointer;
-  border: 1px solid rgb(255 255 255 / 0.14); background: rgb(11 15 10 / 0.74); color: var(--c-text);
+  border: 1px solid rgb(255 255 255 / 0.14); background: color-mix(in srgb, var(--c-bg) 74%, transparent); color: var(--c-text);
   font-size: var(--fs-sm); font-weight: var(--fw-semibold);
   backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
   transition: border-color var(--dur-fast) var(--ease), background var(--dur-fast) var(--ease);
@@ -70,7 +70,7 @@
 .fo__btn--play:hover { background: var(--c-accent-hover); }
 .fo__btn--play svg { width: 1.375rem; height: 1.375rem; }
 .fo__btn--pill { padding-inline: var(--space-4); }
-.fo__speed { display: inline-flex; padding: 3px; gap: 2px; border-radius: var(--radius-pill); background: rgb(11 15 10 / 0.74); border: 1px solid rgb(255 255 255 / 0.14); }
+.fo__speed { display: inline-flex; padding: 3px; gap: 2px; border-radius: var(--radius-pill); background: color-mix(in srgb, var(--c-bg) 74%, transparent); border: 1px solid rgb(255 255 255 / 0.14); }
 .fo__chip {
   min-width: 2.5rem; height: 2.25rem; border: 0; border-radius: var(--radius-pill); background: transparent;
   color: var(--c-text-muted); font-size: var(--fs-xs); font-weight: var(--fw-bold); cursor: pointer;
@@ -87,11 +87,11 @@
 .fo-p-tick { stroke: rgb(255 255 255 / 0.35); }
 .fo-p-axis { fill: var(--c-text-faint); font: 600 10px "IBM Plex Mono", ui-monospace, monospace; }
 .fo-p-pct { fill: #fff; font: 700 10px "IBM Plex Sans", system-ui, sans-serif; paint-order: stroke; stroke: rgb(0 0 0 / 0.55); stroke-width: 2.5px; }
-.fo-p-alt { fill: #fff; font: 700 11px "IBM Plex Mono", ui-monospace, monospace; paint-order: stroke; stroke: #0b0f0a; stroke-width: 3px; }
+.fo-p-alt { fill: #fff; font: 700 11px "IBM Plex Mono", ui-monospace, monospace; paint-order: stroke; stroke: var(--c-bg); stroke-width: 3px; }
 .fo-p-summit { fill: #fff; }
-.fo-p-mask { fill: rgb(8 11 7 / 0.62); }
+.fo-p-mask { fill: color-mix(in srgb, var(--c-bg) 62%, transparent); }
 .fo-p-cur { stroke: var(--c-accent); stroke-width: 2; }
-.fo-p-dot { fill: var(--c-accent); stroke: #0b0f0a; stroke-width: 2.5; }
+.fo-p-dot { fill: var(--c-accent); stroke: var(--c-bg); stroke-width: 2.5; }
 .fo__profile:focus-visible { outline: 2px solid var(--c-accent); outline-offset: 4px; }
 
 .fo__legend { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-4); margin: var(--space-1) 0 0; padding: 0; list-style: none; font-size: 0.6875rem; color: var(--c-text-faint); }
@@ -112,7 +112,7 @@
 
 .fo-flag {
   display: grid; place-items: center; width: 1.75rem; height: 1.75rem; border-radius: 50% 50% 50% 0; transform: rotate(-45deg);
-  font: 800 0.8125rem/1 var(--font-sans); color: #0b0f0a; box-shadow: 0 0 0 2px #0b0f0a, 0 6px 12px -4px rgb(0 0 0 / 0.8);
+  font: 800 0.8125rem/1 var(--font-sans); color: var(--c-bg); box-shadow: 0 0 0 2px var(--c-bg), 0 6px 12px -4px rgb(0 0 0 / 0.8);
 }
 .fo-flag span { transform: rotate(45deg); }
 .fo-flag--start { background: var(--c-accent); }

@@ -1417,8 +1417,8 @@
     try {
       await Promise.all([
         loadAsset(`https://unpkg.com/maplibre-gl@${ML_VER}/dist/maplibre-gl.css`, true),
-        loadAsset('assets/flyover.css?v=4', true),
-        loadAsset(`https://unpkg.com/maplibre-gl@${ML_VER}/dist/maplibre-gl.js`).then(() => loadAsset('assets/flyover.js?v=4')),
+        loadAsset('assets/flyover.css?v=5', true),
+        loadAsset(`https://unpkg.com/maplibre-gl@${ML_VER}/dist/maplibre-gl.js`).then(() => loadAsset('assets/flyover.js?v=5')),
       ]);
       const track = await loadTrack(id);
       stopAudio();
