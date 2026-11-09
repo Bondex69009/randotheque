@@ -1,7 +1,61 @@
 {
-  "generatedAt": "2026-11-09T11:14:40.299Z",
+  "generatedAt": "2026-11-09T22:12:29.459Z",
   "source": "https://godillotsailes.blogspot.com",
   "items": [
+    {
+      "key": "drive:1apejJsYyacRSPmLJxN2VQY20EJqXyub7",
+      "downloadUrl": "https://drive.google.com/uc?export=download&id=1apejJsYyacRSPmLJxN2VQY20EJqXyub7",
+      "sourceUrl": "https://drive.google.com/file/d/1apejJsYyacRSPmLJxN2VQY20EJqXyub7/view?usp=sharing",
+      "name": "CASTELNAU-VALENCE (30)",
+      "date": "2026-11-13",
+      "ibp": 32,
+      "ibpColor": null,
+      "declared": null,
+      "animateurs": "Marc - Bernard",
+      "departements": [
+        "30-GARD"
+      ],
+      "cancelled": false,
+      "image": "https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEgqAxENfbRNzch_2yRvqbMSMOGn0SH2DuknQi1qYpZHIJN53iFgLqlPxsbOUelVjrKG78O5hWN3v4QbMdF2_BXUj3DVwTZD1aNipHcvj29Rdu1YwhbKnGXe47qrrjyoIdv9AbKTITy2fbMzgl1TNQ3gHIv330BWaifuHHKJqUzB4wtc6v0ZlavL-cpaYIk/w640-h360-c/20261106_141826.jpg",
+      "audio": [
+        {
+          "key": "drive:1JLj16llqJDF4ZoarH5TYxHsyBREMArTG",
+          "downloadUrl": "https://drive.google.com/uc?export=download&id=1JLj16llqJDF4ZoarH5TYxHsyBREMArTG",
+          "sourceUrl": "https://drive.google.com/file/d/1JLj16llqJDF4ZoarH5TYxHsyBREMArTG/view?usp=sharing",
+          "label": "PRESENTATION - Audio 2'02\"",
+          "seconds": 122,
+          "file": "2026-11-13_castelnau-valence.mp3"
+        }
+      ],
+      "albums": null,
+      "maps": [
+        {
+          "url": "https://maps.app.goo.gl/52w4HQdWcd3juxB66",
+          "label": "Vue Parking",
+          "kind": "parking",
+          "lat": 44.008167,
+          "lon": 4.254306
+        },
+        {
+          "url": "https://maps.app.goo.gl/tc6aVipZmcgDviC7A",
+          "label": "44° 0'29.37\"N 4°15'15.49\"E",
+          "kind": "autre",
+          "lat": 44.008158,
+          "lon": 4.254303
+        }
+      ],
+      "post": {
+        "id": "3498078208077805705",
+        "title": "Vendredi 13 novembre 2026 - Prochaine sortie ...",
+        "url": "https://godillotsailes.blogspot.com/2026/11/vendredi-13-novembre-2026-prochaine.html",
+        "published": "2026-11-09T11:02:52.823+01:00"
+      },
+      "outings": [
+        "2026-11-13"
+      ],
+      "originalName": "2026-11-06_Castelnau104.gpx",
+      "file": "2026-11-13_castelnau-valence-30.gpx"
+    },
     {
       "key": "drive:1NXIeEVQyWIeNJKTX-V_eNb2r6XU8ZnEQ",
       "downloadUrl": "https://drive.google.com/uc?export=download&id=1NXIeEVQyWIeNJKTX-V_eNb2r6XU8ZnEQ",
@@ -58,8 +112,8 @@
       "outings": [
         "2026-11-03"
       ],
-      "originalName": "Piste_2026-11-03-Parignargues-16h08.gpx",
-      "file": "2026-11-03_parignargues-30-gajan.gpx"
+      "file": "2026-11-03_parignargues-30-gajan.gpx",
+      "originalName": "Piste_2026-11-03-Parignargues-16h08.gpx"
     },
     {
       "key": "drive:1ntv2nJ_HsxNzElx8Ul74iFikVOB2p8r7",
@@ -125,8 +179,8 @@
       "outings": [
         "2026-10-25"
       ],
-      "originalName": "Piste_2026-Mialet-10-25-16h17.gpx",
-      "file": "2026-10-25_mialet-30-gr-70-le-chemin-de-stevenson-passe-a-mialet.gpx"
+      "file": "2026-10-25_mialet-30-gr-70-le-chemin-de-stevenson-passe-a-mialet.gpx",
+      "originalName": "Piste_2026-Mialet-10-25-16h17.gpx"
     },
     {
       "key": "drive:1dOwHLhxLqZmZmPP8rLimyk2_kmMvb-8N",
@@ -184,8 +238,8 @@
       "outings": [
         "2026-10-15"
       ],
-      "originalName": "Piste_2026-10-15-Carme La Roque sur Cèze-15h02.gpx",
-      "file": "2026-10-15_carme-30-la-roque-sur-ceze-les-cascades-du-sautadet.gpx"
+      "file": "2026-10-15_carme-30-la-roque-sur-ceze-les-cascades-du-sautadet.gpx",
+      "originalName": "Piste_2026-10-15-Carme La Roque sur Cèze-15h02.gpx"
     },
     {
       "key": "drive:16KEVz9lmnWU6SrkU5e0O90pbIzNYCyVN",
@@ -247,8 +301,8 @@
       "outings": [
         "2026-10-11"
       ],
-      "originalName": "2026-10-11_Peyrolles150.gpx",
-      "file": "2026-10-11_peyrolles-30-sentier-de-la-diligence.gpx"
+      "file": "2026-10-11_peyrolles-30-sentier-de-la-diligence.gpx",
+      "originalName": "2026-10-11_Peyrolles150.gpx"
     },
     {
       "key": "drive:1KVvaqHq4LsozInszFkinMYOxhsmJvS_Q",
@@ -306,8 +360,8 @@
       "outings": [
         "2026-10-06"
       ],
-      "originalName": "Piste_2026-10-06-Saint Hilaire d'Ozilhan-17h17.gpx",
-      "file": "2026-10-06_saint-hilaire-d-ozilhan-30-la-combe-sabatiere.gpx"
+      "file": "2026-10-06_saint-hilaire-d-ozilhan-30-la-combe-sabatiere.gpx",
+      "originalName": "Piste_2026-10-06-Saint Hilaire d'Ozilhan-17h17.gpx"
     },
     {
       "key": "drive:1r7r5PZXs6N3mBDeaPQcwC21N42m11hX0",
@@ -365,8 +419,8 @@
       "outings": [
         "2026-10-04"
       ],
-      "originalName": "Piste_2026-10-04-Saint-Just-15h21.gpx",
-      "file": "2026-10-04_saint-just-et-vacquieres-30.gpx"
+      "file": "2026-10-04_saint-just-et-vacquieres-30.gpx",
+      "originalName": "Piste_2026-10-04-Saint-Just-15h21.gpx"
     },
     {
       "key": "drive:1WOjG4ydFT4fyQKYL_xV87pSruCEEUU82",
@@ -424,8 +478,8 @@
       "outings": [
         "2026-09-25"
       ],
-      "originalName": "Piste_2026-09-25-Candillargues-Etang de l_OR-12h05.gpx",
-      "file": "2026-09-25_candillargues-34-l-etang-de-l-or.gpx"
+      "file": "2026-09-25_candillargues-34-l-etang-de-l-or.gpx",
+      "originalName": "Piste_2026-09-25-Candillargues-Etang de l_OR-12h05.gpx"
     },
     {
       "key": "drive:1HfLMUhh_kxU2eyC1utB_hvqBFrA4NJV1",
