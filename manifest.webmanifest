@@ -1,0 +1,32 @@
+{
+  "name": "Historique des randos · Les Godillots Ailés",
+  "short_name": "Godillots Ailés",
+  "description": "L'historique des randos des Godillots Ailés (A.C.R.P. Caissargues) : traces GPX, cartes, profils.",
+  "lang": "fr",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0b0f0a",
+  "theme_color": "#0b0f0a",
+  "icons": [
+    {
+      "src": "assets/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
