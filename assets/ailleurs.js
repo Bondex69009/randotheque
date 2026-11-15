@@ -1,5 +1,5 @@
 /* Randothèque – « Chercher aussi sur » : randos trouvées sur d'autres sites (Visorando, RandoGPS,
-   blog Poulx Rando Pédestre), affichées dans un panneau à part sous la barre de recherche.
+   blog Poulx Rando Pédestre, blog des recos des Godillots Ailés), affichées dans un panneau à part sous la barre de recherche.
    Ces randos ne sont PAS des randos du club : ce fichier ne lit ni ne modifie les données du club,
    les filtres, les chiffres ou le compteur. Il reçoit seulement de app.js le texte cherché
    (événement « randos:search »). */
@@ -165,6 +165,48 @@
               durationMin: r.durationMin || null, loop: r.loop, start: r.start || null,
               level: FFR[r.ffr] || null, levelTitle: 'Indice FFR', levelText: r.ffr ? cap(r.ffr) : '',
               gpxUrl: r.gpx, gpxLabel: 'GPX sur le Drive du blog',
+              gpxNote: r.gpx ? 'trace pas encore récupérée par la randothèque' : 'pas de GPX dans cet article',
+            }),
+          };
+        });
+        return { items, more };
+      },
+    },
+    {
+      id: 'reco', name: 'Reco des GA', home: 'https://godillotsreco.blogspot.com/',
+      // Articles du blog des reconnaissances et traces GPX récupérés à chaque mise à jour (scripts/scrape-reco.mjs)
+      data: null,
+      async search(t) {
+        if (!this.data) {
+          const res = await fetch('externes/reco/reco.json', { cache: 'no-cache' });
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          this.data = await res.json();
+          for (const r of this.data.items) r._n = ` ${norm(`${r.name} ${r.commune || ''} ${r.eclaireurs || ''} ${(r.date || '').slice(0, 4)}`).replace(/[^a-z0-9]+/g, ' ')}`;
+        }
+        const want = words(t);
+        const more = `https://godillotsreco.blogspot.com/search?q=${encodeURIComponent(t)}`;
+        if (!want.length) return { items: [], more };
+        const FFR = { vert: 'vert', bleu: 'bleu', jaune: 'jaune', orange: 'jaune', rouge: 'rouge', noir: 'noir' };
+        const fmt = (d) => (d ? new Date(`${d}T12:00:00`).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' }) : '');
+        const items = this.data.items.filter((r) => want.every((w) => r._n.includes(` ${w}`))).map((r) => {
+          const name = r.name || r.commune || 'Reco';
+          const title = r.part ? `${name} (trace ${r.part})` : name;
+          return {
+            title,
+            url: r.url,
+            meta: [km(r.km), plus(r.dplus), r.effort ? `Effort ${r.effort}` : '', fmt(r.date)].filter(Boolean),
+            sub: [r.id ? 'Trace, profil et survol 3D' : '', r.eclaireurs ? `Éclaireurs : ${r.eclaireurs}` : ''].filter(Boolean).join(' · '),
+            fiche: async () => ({
+              id: r.id || `rc-${this.data.items.indexOf(r)}`,
+              sourceName: 'Reco des Godillots Ailés', name: title,
+              url: r.url, date: r.date, animateurs: r.eclaireurs ? `Éclaireurs : ${r.eclaireurs}` : null, image: r.image, photos: r.photos,
+              commune: r.commune, deptName: r.deptName, region: r.deptCode ? 'France' : null,
+              trackUrl: r.id ? `externes/reco/tracks/${r.id}.js` : null,
+              distanceKm: r.km, dplus: r.dplus, dminus: r.dminus ?? null, altMin: r.altMin ?? null, altMax: r.altMax ?? null,
+              durationMin: r.durationMin || null, loop: r.loop, start: r.start || null,
+              level: FFR[r.ffr] || null, levelTitle: r.effort ? 'Effort' : 'Indice FFR',
+              levelText: [r.effort ? String(r.effort) : '', r.ffr ? r.ffr.charAt(0).toUpperCase() + r.ffr.slice(1) : ''].filter(Boolean).join(' · '),
+              gpxUrl: r.gpx, gpxLabel: 'GPX sur le blog des recos',
               gpxNote: r.gpx ? 'trace pas encore récupérée par la randothèque' : 'pas de GPX dans cet article',
             }),
           };

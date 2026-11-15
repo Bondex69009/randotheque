@@ -42,6 +42,11 @@ if (fs.existsSync(path.join(ROOT, 'externes', 'poulx', 'poulx.json'))) {
   copy('externes/poulx/poulx.json', 'externes/poulx/poulx.json');
   copy('externes/poulx/tracks', 'externes/poulx/tracks');
 }
+// Articles du blog des recos des GA (hors base du club et du compteur) : liste et traces simplifiées
+if (fs.existsSync(path.join(ROOT, 'externes', 'reco', 'reco.json'))) {
+  copy('externes/reco/reco.json', 'externes/reco/reco.json');
+  copy('externes/reco/tracks', 'externes/reco/tracks');
+}
 copy('gpx', 'gpx');
 if (fs.existsSync(path.join(ROOT, 'audio'))) copy('audio', 'audio');
 // Pas de traitement Jekyll par GitHub Pages
