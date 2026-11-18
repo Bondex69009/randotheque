@@ -15,6 +15,12 @@
  */
 
 $sm_lib = rtrim( (string) ( $_SERVER['DOCUMENT_ROOT'] ?? '' ), '/' ) . '/stats/lib';
+if ( ! is_file( $sm_lib . '/core.php' ) ) {
+	http_response_code( 503 );
+	header( 'Content-Type: application/json; charset=utf-8' );
+	echo json_encode( array( 'error' => 'Le moteur des statistiques (dossier /stats/ du sous-domaine) n\'est pas encore en ligne : il part avec la prochaine mise à jour.' ), JSON_UNESCAPED_UNICODE );
+	exit;
+}
 require $sm_lib . '/core.php';
 require $sm_lib . '/track.php';
 require $sm_lib . '/geo.php';
