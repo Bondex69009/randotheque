@@ -73,28 +73,49 @@ function sm_collect() {
 		sm_done();
 	}
 
+	// Les rejets ne sont comptés qu'une fois par page vue (pas pour chaque action ou mesure de durée).
+	$GLOBALS['sm_count_rejects'] = in_array( $data['t'] ?? '', array( 'pv', 'wd' ), true );
+
 	// Robots, outils automatiques et tout ce qui n'est pas un vrai navigateur.
 	$ua = substr( (string) ( $_SERVER['HTTP_USER_AGENT'] ?? '' ), 0, 512 );
-	if ( sm_is_bot( $ua ) || ! sm_is_real_browser( $ua ) ) {
-		sm_done();
+	if ( sm_is_bot( $ua ) ) {
+		sm_reject( $site, 'bot', sm_browser( $ua ) );
+	}
+	if ( ! sm_is_real_browser( $ua ) ) {
+		sm_reject( $site, 'browser', sm_browser( $ua ) );
 	}
 	// Un vrai navigateur envoie toujours l'origine de la page (requête d'un autre site)…
 	if ( empty( $_SERVER['HTTP_ORIGIN'] ) ) {
-		sm_done();
+		sm_reject( $site, 'fake', 'Sans origine' );
 	}
 	// … et Chrome, Edge et Firefox récents ajoutent les en-têtes Sec-Fetch : un script qui
 	// se fait passer pour eux en imitant seulement le User-Agent les oublie presque toujours.
 	if ( preg_match( '~(Chrome|Firefox)/\d~', $ua ) && ! preg_match( '~CriOS|FxiOS|iPhone|iPad~', $ua ) && empty( $_SERVER['HTTP_SEC_FETCH_MODE'] ) ) {
-		sm_done();
+		sm_reject( $site, 'fake', 'Faux navigateur' );
 	}
 
 	// L'administrateur (adresse notée à sa connexion) n'est jamais compté.
 	$ip = sm_ip();
 	if ( $ip && sm_is_admin_ip( $ip ) ) {
-		sm_done();
+		sm_reject( $site, 'admin' );
 	}
 
 	$kind = (string) ( $data['t'] ?? '' );
+
+	// Pays inhabituels et centres de données : faux visiteurs (contrôlé à chaque page vue ;
+	// une action n'est comptée que rattachée à une visite déjà acceptée).
+	$geo = null;
+	if ( 'pv' === $kind || 'wd' === $kind ) {
+		$geo     = sm_geo_lookup( $ip );
+		$allowed = (array) sm_cfg( 'allowed_countries' );
+		if ( '' !== $geo[0] && $allowed && ! in_array( $geo[0], $allowed, true ) ) {
+			sm_reject( $site, 'country', $geo[0] );
+		}
+		$asn = sm_asn_lookup( $ip );
+		if ( '' !== $asn[1] && sm_cfg( 'datacenter_pattern' ) && preg_match( sm_cfg( 'datacenter_pattern' ), $asn[1] ) ) {
+			sm_reject( $site, 'datacenter', $asn[1] );
+		}
+	}
 
 	// Temps passé (envoyé quand le visiteur quitte ou masque la page).
 	if ( 'ping' === $kind ) {
@@ -123,7 +144,6 @@ function sm_collect() {
 
 	// Affichage du compteur sur le blog : compté à part, sans visite.
 	if ( 'wd' === $kind ) {
-		$geo  = sm_geo_lookup( $ip );
 		$row += array(
 			'type'    => 3,
 			'device'  => sm_device( $ua, $touch ),
@@ -171,7 +191,7 @@ function sm_collect() {
 		$utm    = is_array( $data['u'] ?? null ) ? $data['u'] : array();
 		$ref    = (string) ( $data['r'] ?? '' );
 		$source = sm_site_source( $ref, $utm, $site );
-		$geo    = sm_geo_lookup( $ip );
+		$geo    = $geo ?: sm_geo_lookup( $ip );
 
 		$row['is_entry'] = 1;
 		$row['session']  = bin2hex( random_bytes( 8 ) );
@@ -283,8 +303,8 @@ try {
 
 		case 'geo':
 			sm_require_admin();
-			$step = (string) ( sm_body()['step'] ?? '' );
-			$res  = sm_geo_step( $step );
+			$body = sm_body();
+			$res  = sm_geo_step( (string) ( $body['step'] ?? '' ), (string) ( $body['kind'] ?? 'city' ) );
 			if ( is_string( $res ) ) {
 				sm_json( array( 'error' => $res ), 500 );
 			}

@@ -6,8 +6,29 @@
  * (DB-IP « City Lite », licence CC BY 4.0), puis elle est oubliée.
  */
 
-function sm_geo_file() {
-	return SM_DATA . '/geo-city.mmdb';
+function sm_geo_file( $kind = 'city' ) {
+	return SM_DATA . '/geo-' . ( 'asn' === $kind ? 'asn' : 'city' ) . '.mmdb';
+}
+
+function sm_asn_is_ready() {
+	return is_readable( sm_geo_file( 'asn' ) );
+}
+
+/**
+ * Opérateur réseau d'une IP (base DB-IP « ASN Lite ») : [numéro, nom]. Vide si inconnu.
+ */
+function sm_asn_lookup( $ip ) {
+	if ( ! $ip || ! sm_asn_is_ready() || ! filter_var( $ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE ) ) {
+		return array( 0, '' );
+	}
+	try {
+		$db  = new StatsM_Mmdb( sm_geo_file( 'asn' ) );
+		$rec = $db->get( $ip );
+		$db->close();
+	} catch ( Throwable $e ) {
+		return array( 0, '' );
+	}
+	return array( (int) ( $rec['autonomous_system_number'] ?? 0 ), (string) ( $rec['autonomous_system_organization'] ?? '' ) );
 }
 
 function sm_geo_is_ready() {
@@ -121,9 +142,11 @@ function sm_geo_http( $url, $out = null, $range = '' ) {
 	return array( $code, $len, '' );
 }
 
-function sm_geo_step( $step ) {
+function sm_geo_step( $step, $kind = 'city' ) {
+	$kind = 'asn' === $kind ? 'asn' : 'city';
+	$key  = 'geo_dl_' . $kind;
 	@set_time_limit( 120 );
-	$gz = SM_DATA . '/geo-city.mmdb.gz';
+	$gz = SM_DATA . '/geo-' . $kind . '.mmdb.gz';
 
 	if ( 'debut' === $step ) {
 		sm_protect_dir( SM_DATA );
@@ -132,14 +155,14 @@ function sm_geo_step( $step ) {
 		}
 		$last = '';
 		foreach ( array( 0, 1 ) as $back ) {
-			$url = 'https://download.db-ip.com/free/dbip-city-lite-' . date( 'Y-m', strtotime( "first day of -$back month" ) ) . '.mmdb.gz';
+			$url = 'https://download.db-ip.com/free/dbip-' . $kind . '-lite-' . date( 'Y-m', strtotime( "first day of -$back month" ) ) . '.mmdb.gz';
 			list( $code, $len, $err ) = sm_geo_http( $url );
 			if ( 200 === $code && $len > 0 ) {
 				@unlink( $gz );
 				if ( false === @file_put_contents( $gz, '' ) ) {
 					return 'impossible de créer le fichier dans data/';
 				}
-				sm_set( 'geo_dl', json_encode( array( 'url' => $url, 'size' => $len ) ) );
+				sm_set( $key, json_encode( array( 'url' => $url, 'size' => $len ) ) );
 				return array( 'taille' => $len, 'recu' => 0 );
 			}
 			$last = $err ? $err : "réponse HTTP $code";
@@ -147,7 +170,7 @@ function sm_geo_step( $step ) {
 		return 'le site DB-IP ne répond pas au serveur (' . $last . ')';
 	}
 
-	$state = json_decode( (string) sm_get( 'geo_dl', '' ), true );
+	$state = json_decode( (string) sm_get( $key, '' ), true );
 	if ( ! is_array( $state ) || ! is_file( $gz ) ) {
 		return 'téléchargement non commencé, relancez l\'installation';
 	}
@@ -179,7 +202,7 @@ function sm_geo_step( $step ) {
 		if ( $have !== $size ) {
 			return 'téléchargement incomplet, relancez l\'installation';
 		}
-		$part = sm_geo_file() . '.part';
+		$part = sm_geo_file( $kind ) . '.part';
 		$in   = gzopen( $gz, 'rb' );
 		$out  = fopen( $part, 'wb' );
 		if ( ! $in || ! $out ) {
@@ -197,14 +220,14 @@ function sm_geo_step( $step ) {
 		gzclose( $in );
 		fclose( $out );
 		@unlink( $gz );
-		sm_set( 'geo_dl', '' );
+		sm_set( $key, '' );
 		try {
 			( new StatsM_Mmdb( $part ) )->close();
 		} catch ( Throwable $e ) {
 			@unlink( $part );
 			return 'le fichier téléchargé est invalide';
 		}
-		if ( ! @rename( $part, sm_geo_file() ) ) {
+		if ( ! @rename( $part, sm_geo_file( $kind ) ) ) {
 			@unlink( $part );
 			return 'impossible de mettre la base en service';
 		}

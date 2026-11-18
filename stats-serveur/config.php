@@ -28,6 +28,27 @@ return array(
 		'http://127.0.0.1:8090',
 	),
 
+	// Pays d'où les visites sont comptées (codes ISO). Les autres sont considérées comme du faux
+	// trafic (robots, fermes de clics) et écartées. Une visite dont le pays est inconnu est gardée.
+	// Europe, Amérique du Nord, Maghreb, outre-mer français, Australie / Nouvelle-Zélande.
+	'allowed_countries' => array(
+		'FR', 'BE', 'CH', 'LU', 'MC', 'AD', 'ES', 'IT', 'PT', 'DE', 'AT', 'NL', 'GB', 'IE', 'DK', 'SE', 'NO', 'FI', 'IS',
+		'PL', 'CZ', 'SK', 'HU', 'SI', 'HR', 'GR', 'MT', 'CY', 'EE', 'LV', 'LT', 'RO', 'BG', 'LI', 'SM', 'VA',
+		'US', 'CA',
+		'MA', 'TN', 'DZ',
+		'RE', 'GP', 'MQ', 'GF', 'YT', 'NC', 'PF', 'PM', 'BL', 'MF', 'WF',
+		'AU', 'NZ',
+	),
+
+	// Hébergeurs et centres de données : un vrai randonneur ne navigue pas depuis un serveur.
+	// Reconnus par le nom de l'opérateur réseau (base DB-IP ASN Lite). Pas Cloudflare, Akamai
+	// ni Fastly : ils transportent aussi les vrais visiteurs (Relais privé iCloud, WARP).
+	'datacenter_pattern' => '~amazon|aws|google cloud|google llc|microsoft|azure|ovh|hetzner|digitalocean|linode|akamai connected cloud|vultr|choopa|constant company|scaleway|online s\.a\.s|contabo|oracle|alibaba|tencent|huawei cloud|m247|leaseweb|ionos|1&1|hostinger|hostwinds|colocrossing|datacamp|cdn77|g-core|gcore|packet|equinix|servers\.com|psychz|quadranet|kamatera|upcloud|netcup|ionos|o2switch|ikoula|hivelocity|zenlayer|tzulo|clouvider|worldstream|nforce|serverion|limestone|buyvm|frantech|racknerd|cogent|hurricane electric|selectel|timeweb|yandex|baidu|bytedance|hosting|datacenter|data center|server~i',
+
+	// En-tête qui porte l'IP réelle quand le serveur est derrière un proxy (ex. 'HTTP_CF_CONNECTING_IP'
+	// si le sous-domaine passe un jour en nuage orange chez Cloudflare). Vide : connexion directe.
+	'proxy_header'    => '',
+
 	// Durée sans activité après laquelle une visite est terminée (minutes).
 	'session_minutes' => 30,
 

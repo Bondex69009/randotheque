@@ -301,6 +301,8 @@ function sm_report( $site, $period, $from = '', $to = '' ) {
 			'days'  => $len,
 		),
 		'geo_ready' => sm_geo_is_ready(),
+		'asn_ready' => sm_asn_is_ready(),
+		'rejects'   => sm_rejects( $site, $s, $e ),
 		'labels'    => array(
 			'events'  => sm_events(),
 			'sources' => sm_source_labels(),
@@ -353,6 +355,33 @@ function sm_live( $site ) {
 		'people' => sm_all( "SELECT site, MAX(city) AS city, MAX(country) AS country, MAX(device) AS device, MAX(ts) AS last, SUM(type = 2) AS actions FROM hits WHERE $w AND type IN (1,2) GROUP BY visitor ORDER BY last DESC LIMIT 20" ),
 		'feed'   => sm_all(
 			'SELECT site, ts, event, label, city, device FROM hits WHERE type = 2' . ( 'all' !== $site ? ' AND site = ' . sm_db()->quote( $site ) : '' ) . ' ORDER BY ts DESC LIMIT 15'
+		),
+	);
+}
+
+/**
+ * Trafic écarté sur la période : par raison, et détail (pays, hébergeur, navigateur).
+ */
+function sm_rejects( $site, DateTimeImmutable $s, DateTimeImmutable $e ) {
+	$w = "day >= '" . $s->format( 'Y-m-d' ) . "' AND day < '" . $e->format( 'Y-m-d' ) . "'" . ( 'all' !== $site ? ' AND site = ' . sm_db()->quote( $site ) : '' );
+	return array(
+		'reasons' => array_map(
+			function ( $r ) {
+				return array( $r['reason'], (int) $r['n'] );
+			},
+			sm_all( "SELECT reason, SUM(n) AS n FROM rejects WHERE $w GROUP BY reason ORDER BY n DESC" )
+		),
+		'countries' => array_map(
+			function ( $r ) {
+				return array( $r['detail'], (int) $r['n'] );
+			},
+			sm_all( "SELECT detail, SUM(n) AS n FROM rejects WHERE $w AND reason = 'country' GROUP BY detail ORDER BY n DESC LIMIT 10" )
+		),
+		'hosts' => array_map(
+			function ( $r ) {
+				return array( $r['detail'], (int) $r['n'] );
+			},
+			sm_all( "SELECT detail, SUM(n) AS n FROM rejects WHERE $w AND reason = 'datacenter' GROUP BY detail ORDER BY n DESC LIMIT 10" )
 		),
 	);
 }

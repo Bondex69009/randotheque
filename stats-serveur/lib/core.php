@@ -18,6 +18,9 @@ $GLOBALS['sm_config'] = array_merge(
 		'allowed_origins' => array(),
 		'session_minutes' => 30,
 		'retention'       => 25,
+		'allowed_countries'  => array(),
+		'datacenter_pattern' => '',
+		'proxy_header'       => '',
 	),
 	(array) require SM_ROOT . '/config.php'
 );
@@ -95,6 +98,7 @@ function sm_db() {
 		CREATE INDEX IF NOT EXISTS hits_visitor ON hits (visitor, id);
 		CREATE INDEX IF NOT EXISTS hits_session ON hits (session);
 		CREATE INDEX IF NOT EXISTS hits_ipk ON hits (ipk, day);
+		CREATE TABLE IF NOT EXISTS rejects (day TEXT NOT NULL, site TEXT NOT NULL, reason TEXT NOT NULL, detail TEXT NOT NULL DEFAULT '', n INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (day, site, reason, detail));
 		CREATE TABLE IF NOT EXISTS settings (k TEXT PRIMARY KEY, v TEXT NOT NULL);
 		CREATE TABLE IF NOT EXISTS tokens (hash TEXT PRIMARY KEY, expires INTEGER NOT NULL);
 		CREATE TABLE IF NOT EXISTS admin_ips (k TEXT PRIMARY KEY, seen INTEGER NOT NULL);
@@ -161,6 +165,7 @@ function sm_daily_maintenance() {
 	sm_q( 'DELETE FROM tokens WHERE expires < ?', array( time() ) );
 	sm_q( 'DELETE FROM admin_ips WHERE seen < ?', array( time() - 180 * 86400 ) );
 	sm_q( 'DELETE FROM login_fails WHERE ts < ?', array( time() - 86400 ) );
+	sm_q( 'DELETE FROM rejects WHERE day < ?', array( date( 'Y-m-d', strtotime( "-$months months" ) ) ) );
 }
 
 /* -------------------------------------------------------------------------
@@ -191,7 +196,11 @@ function sm_done( $code = 204 ) {
  * Adresse IP du visiteur (utilisée en mémoire seulement, jamais enregistrée).
  */
 function sm_ip() {
-	foreach ( array( 'HTTP_CF_CONNECTING_IP', 'HTTP_X_REAL_IP', 'HTTP_X_FORWARDED_FOR', 'REMOTE_ADDR' ) as $key ) {
+	// Seule l'adresse vue par le serveur fait foi : les en-têtes X-Forwarded-For & co. se falsifient
+	// en une ligne (un robot pourrait se faire passer pour un visiteur français ou pour l'admin).
+	// Derrière un proxy (Cloudflare en nuage orange), indiquer son en-tête dans config.php : proxy_header.
+	$keys = array_filter( array( (string) sm_cfg( 'proxy_header' ), 'REMOTE_ADDR' ) );
+	foreach ( $keys as $key ) {
 		if ( empty( $_SERVER[ $key ] ) ) {
 			continue;
 		}
@@ -322,4 +331,22 @@ function sm_require_admin() {
 	// L'administrateur peut changer d'adresse (4G, autre wifi) : on la note à chaque ouverture.
 	sm_remember_admin_ip();
 	return $token;
+}
+
+/**
+ * Compte une visite écartée (total par jour, raison et pays / hébergeur : aucune donnée personnelle).
+ */
+function sm_reject( $site, $reason, $detail = '' ) {
+	if ( empty( $GLOBALS['sm_count_rejects'] ) ) {
+		sm_done();
+	}
+	try {
+		sm_q(
+			'INSERT INTO rejects (day, site, reason, detail, n) VALUES (?, ?, ?, ?, 1) ON CONFLICT(day, site, reason, detail) DO UPDATE SET n = n + 1',
+			array( date( 'Y-m-d' ), $site, $reason, mb_substr( (string) $detail, 0, 80 ) )
+		);
+	} catch ( Throwable $e ) {
+		// Le comptage des rejets ne doit jamais bloquer.
+	}
+	sm_done();
 }
