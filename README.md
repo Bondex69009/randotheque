@@ -42,7 +42,7 @@ Un espace par site, qui ne montre que ses visites (petit cadenas en haut à droi
 https://randotheque.anthony-bondon.fr/godillots-ailes/stats/ et https://randotheque.anthony-bondon.fr/gerard-martine/stats/.
 Visiteurs, visites, fiches ouvertes, GPX téléchargés, survols 3D, duels VS, partages, recherches,
 filtres, sources de trafic, villes (carte), appareils, navigateurs, affluence, durée des visites, journal des visites,
-affichages du compteur sur le blog, faux visiteurs écartés et visiteurs en temps réel.
+affichages du compteur sur le blog et visiteurs en temps réel.
 
 - **Sans cookie, RGPD** : rien n'est écrit sur l'appareil des visiteurs ; les IP ne sont jamais enregistrées
   (empreinte anonyme dont la clé change chaque jour) ; données effacées après 25 mois. Pas de bandeau cookie.

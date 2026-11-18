@@ -12,7 +12,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,600;0,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
   <link rel="stylesheet" href="../assets/style.css">
-  <link rel="stylesheet" href="stats-admin.css?v=8">
+  <link rel="stylesheet" href="stats-admin.css?v=9">
 </head>
 <body class="sx">
   <header class="site-header">
@@ -214,16 +214,10 @@
         <div class="sx-table-wrap" id="c-recent"></div>
       </section>
 
-      <div class="sx-grid">
-        <section class="sx-card" aria-labelledby="t-widget">
-          <header class="sx-card__head"><h2 class="sx-card__title" id="t-widget">Compteur sur le blog</h2></header>
-          <div id="c-widget"></div>
-        </section>
-        <section class="sx-card" aria-labelledby="t-rejects">
-          <header class="sx-card__head"><h2 class="sx-card__title" id="t-rejects">Faux visiteurs écartés</h2></header>
-          <div id="c-rejects"></div>
-        </section>
-      </div>
+      <section class="sx-card sx-card--wide" aria-labelledby="t-widget">
+        <header class="sx-card__head"><h2 class="sx-card__title" id="t-widget">Compteur sur le blog</h2></header>
+        <div id="c-widget"></div>
+      </section>
 
       <footer class="sx-foot">
         <p><strong>Vie privée.</strong> Aucun cookie ni stockage sur l'appareil des visiteurs. Les adresses IP ne sont jamais enregistrées : elles servent sur le moment à trouver la ville et à calculer une empreinte anonyme dont la clé change chaque jour (un visiteur qui revient un autre jour compte comme nouveau). Les robots, outils automatiques, navigateurs non standard, visites depuis des pays inhabituels ou des centres de données sont écartés. Données effacées au bout de 25 mois. Conforme aux conditions de la CNIL pour se passer de bandeau cookie.</p>
@@ -233,6 +227,6 @@
   </main>
 
   <div class="sx-tip" id="sx-tip" role="tooltip" hidden></div>
-  <script src="stats-admin.js?v=8"></script>
+  <script src="stats-admin.js?v=9"></script>
 </body>
 </html>
