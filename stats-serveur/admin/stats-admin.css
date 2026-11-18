@@ -171,10 +171,6 @@
 .sx-chip--gpx { background: var(--c-accent); color: var(--c-on-accent); }
 .sx-chip--rando { background: color-mix(in oklab, var(--c-accent) 30%, var(--c-surface-3)); }
 
-/* Carte des villes */
-.sx-geo { display: grid; gap: var(--space-5); }
-@media (min-width: 900px) { .sx-geo { grid-template-columns: 3fr 2fr; } }
-.sx-map { height: 24rem; border-radius: var(--radius-md); overflow: hidden; background: var(--c-bg-raised); }
 
 /* Carte d'affluence */
 .sx-heat { display: grid; gap: 3px; overflow-x: auto; font-size: var(--fs-xs); }
@@ -197,10 +193,11 @@
   background: var(--c-bg-raised); border: 1px solid var(--c-border-strong); border-radius: var(--radius-sm); box-shadow: var(--shadow-pop);
 }
 .sx-tip[hidden] { display: none; }
-.sx-tiles { filter: invert(1) hue-rotate(180deg) brightness(0.85) contrast(0.9) saturate(0.4); }
-.sx .leaflet-container { background: var(--c-bg-raised); font: inherit; }
 @media (max-width: 599px) {
   .sx-seg { border-radius: var(--radius-md); }
   .sx-seg button { border-radius: var(--radius-sm); }
   .sx-live__feed li:nth-child(n+4) { display: none; }
 }
+
+/* Villes : deux colonnes sur grand écran (la carte a été retirée) */
+@media (min-width: 900px) { #c-cities .sx-bars { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: var(--space-6); } }

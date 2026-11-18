@@ -1,7 +1,7 @@
 /* Randothèques – espace statistiques des deux sites (réservé aux gestionnaires).
    Accès par un champ mot de passe : le serveur renvoie un jeton, gardé dans ce navigateur
    (celui de l'administrateur seulement) et envoyé dans l'en-tête X-Stats-Token.
-   Graphiques dessinés en SVG/HTML, sans bibliothèque ; carte des villes avec Leaflet. */
+   Graphiques dessinés en SVG/HTML, sans bibliothèque. */
 (() => {
   'use strict';
 
@@ -36,7 +36,7 @@
 
   const state = { period: '30d', from: '', to: '', metric: 'visitors' };
   try { Object.assign(state, JSON.parse(sessionStorage.getItem('rt-stats-view') || '{}')); } catch { /* rien */ }
-  let data = null, map = null, mapLayer = null, liveTimer = null;
+  let data = null, liveTimer = null;
 
   // ------------------------------------------------------------ Serveur
   async function api(action, { method = 'GET', body, query = {} } = {}) {
@@ -340,22 +340,8 @@
   function drawGeo() {
     const cities = data.cities;
     $('#c-cities').innerHTML = cities.length
-      ? bars(cities.map((c) => [`${flag(c.country)} ${c.city}`, c.n]), { max: 12 })
+      ? bars(cities.map((c) => [`${flag(c.country)} ${c.city}`, c.n]), { max: 25 })
       : empty(data.geo_ready ? undefined : 'Base des villes pas encore installée sur le serveur (bouton en bas de page).');
-    const el = $('#c-map');
-    if (typeof L === 'undefined') { el.innerHTML = empty('Carte indisponible (pas de connexion).'); return; }
-    if (!map) {
-      map = L.map(el, { scrollWheelZoom: false, attributionControl: true }).setView([46.6, 2.5], 5);
-      L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 12, attribution: '© OpenStreetMap', className: 'sx-tiles' }).addTo(map);
-    }
-    if (mapLayer) mapLayer.remove();
-    const pts = cities.filter((c) => c.lat != null && c.lon != null);
-    const top = Math.max(1, ...pts.map((c) => c.n));
-    mapLayer = L.layerGroup(pts.map((c) => L.circleMarker([c.lat, c.lon], {
-      radius: 5 + 18 * Math.sqrt(c.n / top), color: css('--c-bg'), weight: 2, fillColor: ACCENT(), fillOpacity: 0.75,
-    }).bindTooltip(`<strong>${esc(c.city)}</strong> ${flag(c.country)}<br>${nf0.format(c.n)} visite${c.n > 1 ? 's' : ''}`))).addTo(map);
-    if (pts.length) map.fitBounds(L.latLngBounds(pts.map((c) => [c.lat, c.lon])).pad(0.3), { maxZoom: 8 });
-    setTimeout(() => map.invalidateSize(), 50);
   }
 
   function drawTech() {
