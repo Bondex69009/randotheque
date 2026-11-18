@@ -36,7 +36,7 @@
   };
   const ACCENT = () => css('--c-accent') || '#87f700';
 
-  const state = { period: '30d', from: '', to: '', metric: 'visitors' };
+  const state = { period: '30d', from: '', to: '', metric: 'visitors', rfEvent: '', rfRando: '' };
   try { Object.assign(state, JSON.parse(sessionStorage.getItem('rt-stats-view') || '{}')); } catch { /* rien */ }
   let data = null, liveTimer = null;
 
@@ -317,6 +317,89 @@
       </tr>`).join('')}</tbody></table>`;
   }
 
+  // Actions par rando : filtre par action (sur quelles randos : GPX, Relive, blog…) et par rando
+  // (tout ce qui a été cliqué sur sa fiche), avec le journal des derniers clics correspondants.
+  const RF_COLS = [['rando', 'Vues'], ['gpx', 'GPX'], ['relive', 'Relive'], ['blog', 'Blog'], ['photos', 'Photos'], ['route', 'Itinéraire'], ['fly', '3D'], ['share', 'Partages']];
+  function drawByRando() {
+    const br = data.by_rando || { names: {}, counts: [], btns: [], log: [] };
+    const L = data.labels.events;
+    const name = (id) => br.names[id] || id;
+    // Totaux par rando et par action
+    const per = new Map();
+    for (const [id, ev, n, v] of br.counts) {
+      if (!per.has(id)) per.set(id, { id, total: 0, ev: {}, people: {} });
+      const p = per.get(id);
+      p.total += n; p.ev[ev] = (p.ev[ev] || 0) + n; p.people[ev] = v;
+    }
+    const evTotals = {};
+    for (const [, ev, n] of br.counts) evTotals[ev] = (evTotals[ev] || 0) + n;
+
+    // Listes des filtres (une valeur choisie absente de la période reste proposée)
+    if (state.rfEvent && !evTotals[state.rfEvent]) evTotals[state.rfEvent] = 0;
+    const evOpts = Object.entries(evTotals).sort((a, b) => b[1] - a[1]);
+    $('#sx-rf-event').innerHTML = `<option value="">Toutes les actions</option>${evOpts.map(([e, n]) => `<option value="${esc(e)}"${e === state.rfEvent ? ' selected' : ''}>${esc(L[e] || e)} (${nf0.format(n)})</option>`).join('')}`;
+    const rOpts = [...per.values()].sort((a, b) => b.total - a.total || name(a.id).localeCompare(name(b.id), 'fr'));
+    const rSel = state.rfRando && !per.has(state.rfRando) ? `<option value="${esc(state.rfRando)}" selected>${esc(name(state.rfRando))} (0)</option>` : '';
+    $('#sx-rf-rando').innerHTML = `<option value="">Toutes les randos</option>${rSel}${rOpts.map((p) => `<option value="${esc(p.id)}"${p.id === state.rfRando ? ' selected' : ''}>${esc(name(p.id))} (${nf0.format(p.total)})</option>`).join('')}`;
+
+    const box = $('#c-byrando');
+    if (!br.counts.length && !state.rfRando) { box.innerHTML = empty('Aucune action sur une fiche rando pendant cette période.'); return; }
+    const ev = state.rfEvent, rid = state.rfRando;
+    const parts = [];
+
+    if (!rid) {
+      // Classement des randos (pour l'action choisie, ou toutes)
+      const rows = [...per.values()].map((p) => ({ ...p, n: ev ? p.ev[ev] || 0 : p.total })).filter((p) => p.n > 0).sort((a, b) => b.n - a.n).slice(0, 50);
+      const top = Math.max(1, ...rows.map((r) => r.n));
+      const cell = (r) => `<td><button type="button" class="sx-linkbtn" data-rf-rando="${esc(r.id)}">${esc(name(r.id))}</button><span class="sx-inline-bar" style="width:${(100 * r.n) / top}%"></span></td>`;
+      parts.push(rows.length ? `<div class="sx-table-wrap"><table class="sx-table">
+        <thead><tr><th scope="col">#</th><th scope="col">Rando</th>${ev
+          ? `<th scope="col" class="num">${esc(L[ev] || ev)}</th><th scope="col" class="num">Personnes</th>`
+          : `<th scope="col" class="num">Actions</th>${RF_COLS.map(([, t]) => `<th scope="col" class="num">${t}</th>`).join('')}`}</tr></thead>
+        <tbody>${rows.map((r, i) => `<tr><td class="rank">${i + 1}</td>${cell(r)}${ev
+          ? `<td class="num">${nf0.format(r.n)}</td><td class="num">${nf0.format(r.people[ev] || 0)}</td>`
+          : `<td class="num">${nf0.format(r.n)}</td>${RF_COLS.map(([k]) => {
+            const v = k === 'fly' ? (r.ev.fly || 0) + (r.ev.fly_duel || 0) : k === 'share' ? (r.ev.share || 0) + (r.ev.png || 0) : r.ev[k] || 0;
+            return `<td class="num">${v ? nf0.format(v) : '<span class="sx-muted">–</span>'}</td>`;
+          }).join('')}`}</tr>`).join('')}</tbody></table></div>
+        <p class="sx-note">Cliquez sur une rando pour voir tout ce qui a été cliqué sur sa fiche.</p>`
+        : empty('Aucune rando concernée par cette action sur la période.'));
+    } else {
+      // Détail d'une rando : actions par type et boutons de la fiche
+      const p = per.get(rid) || { ev: {}, people: {}, total: 0 };
+      const evRows = Object.entries(p.ev).sort((a, b) => b[1] - a[1])
+        .map(([e, n]) => [L[e] || e, n, `par ${nf0.format(p.people[e] || 0)} personne${(p.people[e] || 0) > 1 ? 's' : ''}`]);
+      const btnRows = br.btns.filter((b) => b[0] === rid).sort((a, b) => b[2] - a[2]).map((b) => [b[1], b[2]]);
+      parts.push(`<p class="sx-note" style="margin-top:0"><a href="../#rando=${encodeURIComponent(rid)}" target="_blank" rel="noopener"><strong>${esc(name(rid))}</strong></a> : ${nf0.format(p.total)} action${p.total > 1 ? 's' : ''} sur la période. <button type="button" class="btn btn--ghost btn--sm" data-rf-rando="">Toutes les randos</button></p>
+        <div class="sx-byrando__grid">
+          <div><h3 class="sx-sub">Actions</h3>${bars(evRows, { max: 30, color: CAT[0] })}</div>
+          <div><h3 class="sx-sub">Boutons de la fiche</h3>${btnRows.length ? bars(btnRows, { max: 30, color: CAT[2] }) : empty('Aucun bouton de la fiche cliqué.')}</div>
+        </div>`);
+    }
+
+    // Journal des derniers clics correspondant aux filtres
+    const dev = { mobile: '📱', desktop: '💻', tablet: '📲' };
+    const when = (ts) => new Date(ts.replace(' ', 'T')).toLocaleString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+    const log = br.log.filter(([, id, e]) => (!rid || id === rid) && (!ev || e === ev)).slice(0, 30);
+    if (log.length) {
+      parts.push(`<h3 class="sx-sub">Derniers clics${ev ? ` · ${esc(L[ev] || ev)}` : ''}</h3><div class="sx-table-wrap"><table class="sx-table sx-table--log">
+        <thead><tr><th scope="col">Quand</th>${rid ? '' : '<th scope="col">Rando</th>'}<th scope="col">Action</th><th scope="col">Bouton</th><th scope="col">Où</th></tr></thead>
+        <tbody>${log.map(([ts, id, e, btn, city, device]) => `<tr><td class="nowrap">${when(ts)}</td>${rid ? '' : `<td><button type="button" class="sx-linkbtn" data-rf-rando="${esc(id)}">${esc(name(id))}</button></td>`}
+          <td><span class="sx-chip sx-chip--${esc(e)}">${esc(ONE[e] || e)}</span></td><td>${esc(btn) || '<span class="sx-muted">–</span>'}</td>
+          <td><span aria-hidden="true">${dev[device] || ''}</span> ${esc(city || 'Ville inconnue')}</td></tr>`).join('')}</tbody></table></div>`);
+    }
+    box.innerHTML = parts.join('');
+  }
+  function setRf(key, val) { state[key] = val; save(); if (data) drawByRando(); }
+  $('#sx-rf-event').addEventListener('change', (e) => setRf('rfEvent', e.target.value));
+  $('#sx-rf-rando').addEventListener('change', (e) => setRf('rfRando', e.target.value));
+  $('#c-byrando').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-rf-rando]');
+    if (!b) return;
+    setRf('rfRando', b.dataset.rfRando);
+    $('#t-byrando').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+
   function drawLists() {
     $('#c-search').innerHTML = bars(data.searches, { max: 15, labelFmt: (k) => `« ${esc(k)} »` });
     $('#c-filters').innerHTML = bars(data.filters, { max: 15, color: CAT[0] });
@@ -425,7 +508,9 @@
       : empty('Aucun affichage du compteur sur la période.');
     const note = $('#sx-geo-note');
     note.innerHTML = data.geo_ready && data.asn_ready
-      ? 'Villes et hébergeurs : bases DB-IP City Lite et ASN Lite (CC BY 4.0), installées sur le serveur. <button type="button" class="btn btn--ghost btn--sm" id="sx-geo">Mettre à jour les bases</button>'
+      ? `${data.geo_src === 'maxmind'
+        ? 'Villes : GeoLite2 City de MaxMind (<a href="https://www.maxmind.com" rel="noopener">maxmind.com</a>). Hébergeurs : DB-IP ASN Lite (CC BY 4.0).'
+        : 'Villes et hébergeurs : bases DB-IP City Lite et ASN Lite (CC BY 4.0).'} Installées sur le serveur.` + ' <button type="button" class="btn btn--ghost btn--sm" id="sx-geo">Mettre à jour les bases</button>'
       : '<button type="button" class="btn btn--primary btn--sm" id="sx-geo">Installer les bases des villes et des hébergeurs</button> pour voir d\'où viennent les visiteurs et écarter les pays inhabituels et les centres de données (1 à 2 minutes, à refaire une fois par mois).';
   }
 
@@ -496,7 +581,7 @@
     } finally {
       $('#sx-app').classList.remove('is-loading');
     }
-    drawSummary(); drawKpis(); drawEvo(); drawFunnel(); drawActions(); drawRandos(); drawLists();
+    drawSummary(); drawKpis(); drawEvo(); drawFunnel(); drawActions(); drawRandos(); drawByRando(); drawLists();
     drawSources(); drawGeo(); drawTech(); drawHeat(); drawRecent(); drawMisc();
     live();
   }

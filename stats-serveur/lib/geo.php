@@ -85,14 +85,16 @@ function sm_geo_lookup( $ip ) {
 define( 'SM_GEO_CHUNK', 16 * 1024 * 1024 );
 
 /**
- * Requête HTTP vers DB-IP. $out : fichier où écrire le corps (null = en-têtes seuls).
+ * Requête HTTP vers DB-IP ou MaxMind. $out : fichier où écrire le corps (null = en-têtes seuls).
+ * $auth : « identifiant:clé » (MaxMind), envoyé seulement au premier serveur, pas après redirection.
  *
- * @return array [code HTTP, taille annoncée, message d'erreur]
+ * @return array [code HTTP, taille annoncée, message d'erreur, adresse finale, taille totale (Content-Range)]
  */
-function sm_geo_http( $url, $out = null, $range = '' ) {
+function sm_geo_http( $url, $out = null, $range = '', $auth = '' ) {
 	$ua = 'RandothequeStats/' . SM_VERSION;
 	if ( function_exists( 'curl_init' ) ) {
-		$ch = curl_init( $url );
+		$total = 0;
+		$ch    = curl_init( $url );
 		curl_setopt_array(
 			$ch,
 			array(
@@ -100,8 +102,17 @@ function sm_geo_http( $url, $out = null, $range = '' ) {
 				CURLOPT_USERAGENT      => $ua,
 				CURLOPT_CONNECTTIMEOUT => 15,
 				CURLOPT_TIMEOUT        => 75,
+				CURLOPT_HEADERFUNCTION => function ( $c, $h ) use ( &$total ) {
+					if ( preg_match( '~^Content-Range:\s*bytes\s+\d+-\d+/(\d+)~i', $h, $m ) ) {
+						$total = (int) $m[1];
+					}
+					return strlen( $h );
+				},
 			)
 		);
+		if ( $auth ) {
+			curl_setopt( $ch, CURLOPT_USERPWD, $auth );
+		}
 		if ( $out ) {
 			curl_setopt( $ch, CURLOPT_FILE, $out );
 		} else {
@@ -115,15 +126,19 @@ function sm_geo_http( $url, $out = null, $range = '' ) {
 		$code = (int) curl_getinfo( $ch, CURLINFO_HTTP_CODE );
 		$len  = (int) curl_getinfo( $ch, CURLINFO_CONTENT_LENGTH_DOWNLOAD );
 		$err  = $ok ? '' : curl_error( $ch );
+		$eff  = (string) curl_getinfo( $ch, CURLINFO_EFFECTIVE_URL );
 		curl_close( $ch );
-		return array( $code, $len, $err );
+		return array( $code, $len, $err, $eff, $total );
+	}
+	if ( $auth ) {
+		return array( 0, 0, 'cURL est nécessaire pour télécharger chez MaxMind', '', 0 );
 	}
 	// Sans cURL : flux PHP (nécessite allow_url_fopen).
 	$headers = "User-Agent: $ua\r\n" . ( $range ? "Range: bytes=$range\r\n" : '' );
 	$ctx     = stream_context_create( array( 'http' => array( 'method' => $out ? 'GET' : 'HEAD', 'header' => $headers, 'timeout' => 75, 'ignore_errors' => true ) ) );
 	$in      = @fopen( $url, 'rb', false, $ctx );
 	if ( ! $in ) {
-		return array( 0, 0, 'connexion impossible (cURL absent et allow_url_fopen désactivé ?)' );
+		return array( 0, 0, 'connexion impossible (cURL absent et allow_url_fopen désactivé ?)', $url, 0 );
 	}
 	$meta = stream_get_meta_data( $in );
 	$code = 0;
@@ -139,7 +154,102 @@ function sm_geo_http( $url, $out = null, $range = '' ) {
 		stream_copy_to_stream( $in, $out );
 	}
 	fclose( $in );
-	return array( $code, $len, '' );
+	return array( $code, $len, '', $url, 0 );
+}
+
+/** Identifiants MaxMind « compte:clé » si renseignés (secret.php), sinon chaîne vide. */
+function sm_maxmind_auth() {
+	$id  = trim( (string) sm_cfg( 'maxmind_account_id' ) );
+	$key = trim( (string) sm_cfg( 'maxmind_license_key' ) );
+	return ( '' !== $id && '' !== $key ) ? $id . ':' . $key : '';
+}
+
+/**
+ * Début du téléchargement chez MaxMind (GeoLite2 City, archive .tar.gz).
+ * L'adresse de MaxMind redirige vers un lien temporaire signé : on le retient pour que les
+ * morceaux suivants n'utilisent qu'un seul des 30 téléchargements quotidiens du compte.
+ */
+function sm_geo_maxmind_start( $gz, $key ) {
+	$url = 'https://download.maxmind.com/geoip/databases/GeoLite2-City/download?suffix=tar.gz';
+	$tmp = fopen( 'php://temp', 'w+b' );
+	list( $code, , $err, $eff, $total ) = sm_geo_http( $url, $tmp, '0-0', sm_maxmind_auth() );
+	fclose( $tmp );
+	if ( 401 === $code ) {
+		return 'MaxMind refuse les identifiants (numéro de compte ou clé de licence incorrects)';
+	}
+	if ( 206 !== $code || $total <= 0 || '' === $eff ) {
+		return 'le site MaxMind ne répond pas au serveur (' . ( $err ? $err : "réponse HTTP $code" ) . ')';
+	}
+	@unlink( $gz );
+	if ( false === @file_put_contents( $gz, '' ) ) {
+		return 'impossible de créer le fichier dans data/';
+	}
+	sm_set( $key, json_encode( array( 'url' => $eff, 'size' => $total, 'src' => 'maxmind' ) ) );
+	return array( 'taille' => $total, 'recu' => 0 );
+}
+
+/**
+ * Extrait le fichier .mmdb d'une archive .tar.gz (lecture en flux, sans tout charger en mémoire).
+ *
+ * @return true|string
+ */
+function sm_geo_untar_mmdb( $tgz, $dest ) {
+	$in = gzopen( $tgz, 'rb' );
+	if ( ! $in ) {
+		return 'décompression impossible';
+	}
+	$read = function ( $n ) use ( $in ) {
+		$buf = '';
+		while ( strlen( $buf ) < $n && ! gzeof( $in ) ) {
+			$part = gzread( $in, min( 1 << 20, $n - strlen( $buf ) ) );
+			if ( false === $part || '' === $part ) {
+				break;
+			}
+			$buf .= $part;
+		}
+		return $buf;
+	};
+	while ( true ) {
+		$head = $read( 512 );
+		if ( strlen( $head ) < 512 || '' === trim( $head, "\0" ) ) {
+			break;
+		}
+		$name = rtrim( substr( $head, 0, 100 ), "\0" );
+		$size = octdec( trim( substr( $head, 124, 12 ), "\0 " ) );
+		$pad  = ( 512 - $size % 512 ) % 512;
+		if ( '.mmdb' === substr( $name, -5 ) && in_array( $head[156], array( '0', "\0" ), true ) ) {
+			$out = fopen( $dest, 'wb' );
+			if ( ! $out ) {
+				gzclose( $in );
+				return 'décompression impossible';
+			}
+			$left = $size;
+			while ( $left > 0 ) {
+				$buf = $read( min( 1 << 20, $left ) );
+				if ( '' === $buf || false === fwrite( $out, $buf ) ) {
+					fclose( $out );
+					gzclose( $in );
+					@unlink( $dest );
+					return 'décompression interrompue (espace disque plein ?)';
+				}
+				$left -= strlen( $buf );
+			}
+			fclose( $out );
+			gzclose( $in );
+			return true;
+		}
+		// Autre fichier de l'archive (licence, copyright) : on le saute.
+		$skip = $size + $pad;
+		while ( $skip > 0 ) {
+			$buf = $read( min( 1 << 20, $skip ) );
+			if ( '' === $buf ) {
+				break 2;
+			}
+			$skip -= strlen( $buf );
+		}
+	}
+	gzclose( $in );
+	return 'aucune base .mmdb dans l\'archive MaxMind';
 }
 
 function sm_geo_step( $step, $kind = 'city' ) {
@@ -153,6 +263,10 @@ function sm_geo_step( $step, $kind = 'city' ) {
 		if ( ! is_writable( SM_DATA ) ) {
 			return 'le dossier ' . basename( dirname( SM_DATA ) ) . '/data/ n\'est pas accessible en écriture sur le serveur';
 		}
+		// Villes : GeoLite2 City de MaxMind si un compte est renseigné (plus précis en France).
+		if ( 'city' === $kind && sm_maxmind_auth() ) {
+			return sm_geo_maxmind_start( $gz, $key );
+		}
 		$last = '';
 		foreach ( array( 0, 1 ) as $back ) {
 			$url = 'https://download.db-ip.com/free/dbip-' . $kind . '-lite-' . date( 'Y-m', strtotime( "first day of -$back month" ) ) . '.mmdb.gz';
@@ -162,7 +276,7 @@ function sm_geo_step( $step, $kind = 'city' ) {
 				if ( false === @file_put_contents( $gz, '' ) ) {
 					return 'impossible de créer le fichier dans data/';
 				}
-				sm_set( $key, json_encode( array( 'url' => $url, 'size' => $len ) ) );
+				sm_set( $key, json_encode( array( 'url' => $url, 'size' => $len, 'src' => 'dbip' ) ) );
 				return array( 'taille' => $len, 'recu' => 0 );
 			}
 			$last = $err ? $err : "réponse HTTP $code";
@@ -191,7 +305,9 @@ function sm_geo_step( $step, $kind = 'city' ) {
 				$h = fopen( $gz, 'r+' );
 				ftruncate( $h, $have );
 				fclose( $h );
-				return 'morceau non reçu (' . ( $err ? $err : "réponse HTTP $code" ) . '), réessayez';
+				// Le lien signé de MaxMind expire au bout de quelques heures.
+				$again = ( 'maxmind' === ( $state['src'] ?? '' ) && in_array( $code, array( 400, 403 ), true ) ) ? 'lien expiré, relancez la mise à jour' : 'réessayez';
+				return 'morceau non reçu (' . ( $err ? $err : "réponse HTTP $code" ) . '), ' . $again;
 			}
 			$have = $now;
 		}
@@ -203,22 +319,30 @@ function sm_geo_step( $step, $kind = 'city' ) {
 			return 'téléchargement incomplet, relancez l\'installation';
 		}
 		$part = sm_geo_file( $kind ) . '.part';
-		$in   = gzopen( $gz, 'rb' );
-		$out  = fopen( $part, 'wb' );
-		if ( ! $in || ! $out ) {
-			return 'décompression impossible';
-		}
-		while ( ! gzeof( $in ) ) {
-			$buf = gzread( $in, 1 << 20 );
-			if ( false === $buf || false === fwrite( $out, $buf ) ) {
-				gzclose( $in );
-				fclose( $out );
-				@unlink( $part );
-				return 'décompression interrompue (espace disque plein ?)';
+		$src  = (string) ( $state['src'] ?? 'dbip' );
+		if ( 'maxmind' === $src ) {
+			$r = sm_geo_untar_mmdb( $gz, $part );
+			if ( true !== $r ) {
+				return $r;
 			}
+		} else {
+			$in   = gzopen( $gz, 'rb' );
+			$out  = fopen( $part, 'wb' );
+			if ( ! $in || ! $out ) {
+				return 'décompression impossible';
+			}
+			while ( ! gzeof( $in ) ) {
+				$buf = gzread( $in, 1 << 20 );
+				if ( false === $buf || false === fwrite( $out, $buf ) ) {
+					gzclose( $in );
+					fclose( $out );
+					@unlink( $part );
+					return 'décompression interrompue (espace disque plein ?)';
+				}
+			}
+			gzclose( $in );
+			fclose( $out );
 		}
-		gzclose( $in );
-		fclose( $out );
 		@unlink( $gz );
 		sm_set( $key, '' );
 		try {
@@ -231,6 +355,7 @@ function sm_geo_step( $step, $kind = 'city' ) {
 			@unlink( $part );
 			return 'impossible de mettre la base en service';
 		}
+		sm_set( 'geo_src_' . $kind, $src );
 		return array( 'ok' => true );
 	}
 

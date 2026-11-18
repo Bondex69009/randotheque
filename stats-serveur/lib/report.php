@@ -209,6 +209,8 @@ function sm_report( $site, $period, $from = '', $to = '' ) {
 	}
 	unset( $r );
 
+	$by_rando = sm_rando_actions( $site, $w );
+
 	$label_top = function ( $event, $limit = 15 ) use ( $w ) {
 		return array_map(
 			function ( $r ) {
@@ -303,6 +305,7 @@ function sm_report( $site, $period, $from = '', $to = '' ) {
 		),
 		'geo_ready' => sm_geo_is_ready(),
 		'asn_ready' => sm_asn_is_ready(),
+		'geo_src'   => (string) sm_get( 'geo_src_city', 'dbip' ),
 		'rejects'   => sm_rejects( $site, $s, $e ),
 		'labels'    => array(
 			'events'  => sm_events(),
@@ -313,6 +316,7 @@ function sm_report( $site, $period, $from = '', $to = '' ) {
 		'series'    => sm_series( $site, $s, $e ),
 		'events'    => $events,
 		'randos'    => $randos,
+		'by_rando'  => $by_rando,
 		'gpx_files' => $label_top( 'gpx' ),
 		'searches'  => $label_top( 'search', 25 ),
 		'filters'   => $label_top( 'filter', 15 ),
@@ -456,6 +460,51 @@ function sm_scroll( $w ) {
 	return array(
 		'avg'     => $n ? (int) round( $sum / $n ) : 0,
 		'buckets' => $b,
+	);
+}
+
+/**
+ * Toutes les actions rattachées à une rando (fiche ouverte au moment du clic) : de quoi filtrer
+ * par rando (ce qui y a été cliqué) ou par action (sur quelles randos : GPX, Relive, blog…).
+ */
+function sm_rando_actions( $site, $w ) {
+	$ws = 'all' !== $site ? ' AND site = ' . sm_db()->quote( $site ) : '';
+
+	// Nom de chaque rando : celui de sa fiche ouverte le plus récemment (toutes périodes).
+	$names = array();
+	foreach ( sm_all( "SELECT ref, label, MAX(id) AS last FROM hits WHERE type = 2 AND event = 'rando' AND ref <> '' AND label <> ''$ws GROUP BY ref" ) as $r ) {
+		$names[ $r['ref'] ] = $r['label'];
+	}
+
+	$counts = array();
+	foreach ( sm_all( "SELECT ref, event, COUNT(*) AS n, COUNT(DISTINCT visitor) AS v, MAX(label) AS l FROM hits WHERE $w AND type = 2 AND ref <> '' GROUP BY ref, event" ) as $r ) {
+		$counts[] = array( $r['ref'], $r['event'], (int) $r['n'], (int) $r['v'] );
+		if ( ! isset( $names[ $r['ref'] ] ) && '' !== (string) $r['l'] ) {
+			$names[ $r['ref'] ] = $r['l'];
+		}
+	}
+
+	$btns = array_map(
+		function ( $r ) {
+			return array( $r['ref'], $r['btn'], (int) $r['n'] );
+		},
+		sm_all( "SELECT ref, btn, COUNT(*) AS n FROM hits WHERE $w AND type = 2 AND ref <> '' AND btn <> '' GROUP BY ref, btn" )
+	);
+
+	// Dernières actions sur une rando (journal filtrable).
+	$log = array_map(
+		function ( $r ) {
+			return array( $r['ts'], $r['ref'], $r['event'], (string) $r['btn'], (string) $r['city'], (string) $r['device'] );
+		},
+		sm_all( "SELECT ts, ref, event, btn, city, device FROM hits WHERE $w AND type = 2 AND ref <> '' ORDER BY id DESC LIMIT 400" )
+	);
+
+	$used = array_flip( array_merge( array_column( $counts, 0 ), array_column( $log, 1 ) ) );
+	return array(
+		'names'  => (object) array_intersect_key( $names, $used ), // objet JSON même si les identifiants sont des nombres
+		'counts' => $counts,
+		'btns'   => $btns,
+		'log'    => $log,
 	);
 }
 

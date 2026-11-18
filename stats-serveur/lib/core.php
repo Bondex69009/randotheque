@@ -24,7 +24,10 @@ $GLOBALS['sm_config'] = array_merge(
 		'site_host'          => '',
 		'password_hash'      => '',
 	),
-	(array) require SM_ROOT . '/config.php'
+	(array) require SM_ROOT . '/config.php',
+	// Identifiants privés (dépôt public) : secret.php est écrit au déploiement à partir des
+	// secrets GitHub (MAXMIND_ACCOUNT_ID, MAXMIND_LICENSE_KEY), jamais versionné.
+	is_readable( SM_ROOT . '/secret.php' ) ? (array) include SM_ROOT . '/secret.php' : array()
 );
 
 function sm_cfg( $key ) {

@@ -146,6 +146,18 @@ jobs:
           local-dir: ./gerard-martine/_site/
           server-dir: ./gerard-martine/
 
+      # Identifiants privés du moteur des statistiques (dépôt public) : écrits dans secret.php
+      # (ignoré par git) juste avant l'envoi. Sans secrets MaxMind, la base des villes reste DB-IP.
+      - name: "Statistiques : écrire secret.php"
+        env:
+          MAXMIND_ACCOUNT_ID: ${{ secrets.MAXMIND_ACCOUNT_ID }}
+          MAXMIND_LICENSE_KEY: ${{ secrets.MAXMIND_LICENSE_KEY }}
+        run: |
+          php -r 'file_put_contents("stats-serveur/secret.php", "<?php\nreturn " . var_export(array(
+            "maxmind_account_id"  => (string) getenv("MAXMIND_ACCOUNT_ID"),
+            "maxmind_license_key" => (string) getenv("MAXMIND_LICENSE_KEY"),
+          ), true) . ";\n");'
+
       # Moteur des statistiques : jamais le dossier data/ (base des visites et bases des villes, créées
       # sur le serveur), ni admin/ (le tableau de bord part dans le dossier stats/ de chaque site).
       - name: "Envoyer : moteur des statistiques -> /stats/"

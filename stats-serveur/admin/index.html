@@ -12,7 +12,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,600;0,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
   <link rel="stylesheet" href="../assets/style.css">
-  <link rel="stylesheet" href="stats-admin.css?v=10">
+  <link rel="stylesheet" href="stats-admin.css?v=11">
 </head>
 <body class="sx">
   <header class="site-header">
@@ -91,6 +91,19 @@
       <section class="sx-card sx-card--wide" aria-labelledby="t-randos">
         <header class="sx-card__head"><h2 class="sx-card__title" id="t-randos">Randos les plus consultées</h2></header>
         <div class="sx-table-wrap" id="c-randos"></div>
+      </section>
+
+      <section class="sx-card sx-card--wide" aria-labelledby="t-byrando">
+        <header class="sx-card__head">
+          <h2 class="sx-card__title" id="t-byrando">Actions par rando</h2>
+          <div class="sx-filters">
+            <label class="sx-filter"><span>Action</span>
+              <select class="sx-input sx-input--sm" id="sx-rf-event"></select></label>
+            <label class="sx-filter"><span>Rando</span>
+              <select class="sx-input sx-input--sm" id="sx-rf-rando"></select></label>
+          </div>
+        </header>
+        <div id="c-byrando"></div>
       </section>
 
       <section class="sx-card sx-card--wide" aria-labelledby="t-fiche_btns">
@@ -232,6 +245,6 @@
   </main>
 
   <div class="sx-tip" id="sx-tip" role="tooltip" hidden></div>
-  <script src="stats-admin.js?v=10"></script>
+  <script src="stats-admin.js?v=11"></script>
 </body>
 </html>
