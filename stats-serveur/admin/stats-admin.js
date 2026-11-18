@@ -254,6 +254,17 @@
     const good = invert ? d < 0 : d > 0;
     return `<span class="sx-delta ${good ? 'sx-delta--up' : 'sx-delta--down'}">${d > 0 ? '▲' : '▼'} ${nf0.format(Math.abs(d))}${points ? ' pt' : ' %'}</span>`;
   }
+  // Infobulle du KPI « Actions par visite » : le détail des actions de la période
+  function actionsTip(k) {
+    const L = data.labels.events, ev = data.events || [];
+    const head = `<strong>${nf0.format(k.actions)} action${k.actions > 1 ? 's' : ''}</strong> sur ${nf0.format(k.visits)} visite${k.visits > 1 ? 's' : ''}`;
+    if (!ev.length) return `${head}<br>Aucune action sur la période.`;
+    const MAX = 12;
+    const rows = ev.slice(0, MAX).map(([e, n]) => `<span class="sx-tip__row"><span>${esc(L[e] || e)}</span><b>${nf0.format(n)}</b></span>`).join('');
+    const rest = ev.slice(MAX);
+    const more = rest.length ? `<span class="sx-tip__more">+ ${rest.length} autre${rest.length > 1 ? 's' : ''} (${nf0.format(rest.reduce((t, [, n]) => t + n, 0))})</span>` : '';
+    return `${head}${rows ? `<span class="sx-tip__list">${rows}</span>` : ''}${more}`;
+  }
   function drawKpis() {
     const k = data.kpis, p = data.prev, pts = data.series.points;
     const tiles = [
@@ -263,10 +274,10 @@
       ['GPX téléchargés', nf0.format(k.gpx), delta(k.gpx, p.gpx), spark(pts.map((x) => x.gpx)), 'Clics sur « Télécharger le GPX ».'],
       ['Durée moyenne', fmtDur(k.avg_dur), delta(k.avg_dur, p.avg_dur), '', 'Temps passé onglet visible, par visite.'],
       ['Taux de rebond', `${nf1.format(k.bounce)} %`, delta(k.bounce, p.bounce, { invert: true, points: true }), '', 'Visites sans aucune action (ni fiche, ni recherche, ni filtre…).'],
-      ['Actions par visite', nf1.format(k.per_visit), delta(k.per_visit, p.per_visit), '', 'Fiches, GPX, filtres, recherches, survols, partages…'],
+      ['Actions par visite', nf1.format(k.per_visit), delta(k.per_visit, p.per_visit), '', actionsTip(k), true],
       ['Visites avec GPX', `${nf1.format(k.gpx_rate)} %`, delta(k.gpx_rate, p.gpx_rate, { points: true }), '', 'Part des visites qui se terminent par au moins un téléchargement.'],
     ];
-    $('#sx-kpis').innerHTML = tiles.map(([t, v, d, s, help]) => `<div class="sx-kpi" data-tip="${esc(help)}">
+    $('#sx-kpis').innerHTML = tiles.map(([t, v, d, s, help, html]) => `<div class="sx-kpi" data-tip="${esc(html ? help : esc(help))}">
       <span class="sx-kpi__t">${t}</span><span class="sx-kpi__v">${v}</span>${d}${s}</div>`).join('');
   }
 
