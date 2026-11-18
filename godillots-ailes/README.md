@@ -61,8 +61,8 @@ L'administration a besoin du serveur `npm run serve` ; elle ne fonctionne pas su
 
 ## Statistiques de visite
 
-Le petit cadenas en haut à droite ouvre l'espace stats commun aux deux Randothèques
-(https://randotheque.anthony-bondon.fr/stats/admin/, mot de passe réglé dans cPanel). Le script `assets/stats.js`
+Le petit cadenas en haut à droite ouvre l'espace stats de ce site
+(https://randotheque.anthony-bondon.fr/godillots-ailes/stats/, mot de passe réglé dans cPanel). Le script `assets/stats.js`
 envoie les visites et actions, sans cookie, à `../stats/collect.php`. Détails dans le `README.md` à la racine du dépôt.
 
 ## Ajouter vos propres GPX à la main

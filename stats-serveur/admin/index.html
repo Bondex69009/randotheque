@@ -3,26 +3,26 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Statistiques | Randothèques</title>
+  <title>Statistiques</title>
   <meta name="robots" content="noindex, nofollow">
   <meta name="referrer" content="no-referrer">
   <meta name="theme-color" content="#0b0f0a">
-  <link rel="icon" href="../../godillots-ailes/assets/favicon.png" type="image/png">
+  <link rel="icon" href="../assets/favicon.png" type="image/png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,600;0,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
-  <link rel="stylesheet" href="../../godillots-ailes/assets/style.css">
-  <link rel="stylesheet" href="stats-admin.css?v=3">
+  <link rel="stylesheet" href="../assets/style.css">
+  <link rel="stylesheet" href="stats-admin.css?v=4">
 </head>
 <body class="sx">
   <header class="site-header">
     <div class="container site-header__inner">
-      <a class="brand" href="../../" aria-label="Accueil des Randothèques">
-        <img class="brand__logo" src="../../godillots-ailes/assets/logo.png" width="48" height="48" alt="">
+      <a class="brand" href="../" aria-label="Retour au site">
+        <img class="brand__logo" src="../assets/icon-192.png" width="48" height="48" alt="">
         <span class="brand__text">
           <span class="brand__title">Statistiques <span class="sx-badge">Admin</span></span>
-          <span class="brand__subtitle">Les deux Randothèques</span>
+          <span class="brand__subtitle" id="sx-site-name"></span>
         </span>
       </a>
     </div>
@@ -32,7 +32,6 @@
     <!-- Tableau de bord -->
     <div id="sx-app">
       <div class="sx-toolbar" role="group" aria-label="Choix des données">
-        <div class="sx-seg" id="sx-site" role="radiogroup" aria-label="Site"></div>
         <div class="sx-seg" id="sx-period" role="radiogroup" aria-label="Période">
           <button type="button" data-p="today">Aujourd'hui</button>
           <button type="button" data-p="yesterday">Hier</button>
@@ -187,6 +186,6 @@
 
   <div class="sx-tip" id="sx-tip" role="tooltip" hidden></div>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-  <script src="stats-admin.js?v=3"></script>
+  <script src="stats-admin.js?v=4"></script>
 </body>
 </html>

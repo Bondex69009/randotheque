@@ -1,30 +1,42 @@
 <?php
 /**
- * Statistiques des Randothèques : données de l'espace stats.
+ * Statistiques d'UNE Randothèque : données de son espace stats.
  *
- * Le dossier admin/ est protégé par mot de passe dans cPanel
- * (« Confidentialité du répertoire ») : Apache demande l'identifiant avant PHP.
+ * Ce dossier est copié dans chaque site (godillots-ailes/stats/, gerard-martine/stats/) : le site
+ * affiché est celui du dossier où il est installé. Le moteur commun (bases, réception des visites)
+ * est dans /stats/ à la racine du sous-domaine.
  *
- *   GET  api.php?a=report&site=ga|gm|all&period=…   tableau de bord
- *   GET  api.php?a=live&site=…                       visiteurs des 5 dernières minutes
- *   POST api.php?a=geo  {step, kind}                 installation des bases DB-IP, par étapes
+ * Chaque dossier stats/ est protégé par mot de passe dans cPanel (« Confidentialité du répertoire ») :
+ * Apache demande l'identifiant avant PHP.
+ *
+ *   GET  api.php?a=report&period=…      tableau de bord
+ *   GET  api.php?a=live                 visiteurs des 5 dernières minutes
+ *   POST api.php?a=geo  {step, kind}    installation des bases DB-IP, par étapes
  */
 
-require dirname( __DIR__ ) . '/lib/core.php';
-require dirname( __DIR__ ) . '/lib/track.php';
-require dirname( __DIR__ ) . '/lib/geo.php';
-require dirname( __DIR__ ) . '/lib/collect.php';
-require dirname( __DIR__ ) . '/lib/report.php';
+$sm_lib = rtrim( (string) ( $_SERVER['DOCUMENT_ROOT'] ?? '' ), '/' ) . '/stats/lib';
+require $sm_lib . '/core.php';
+require $sm_lib . '/track.php';
+require $sm_lib . '/geo.php';
+require $sm_lib . '/collect.php';
+require $sm_lib . '/report.php';
 
 header( 'X-Robots-Tag: noindex, nofollow' );
 header( 'X-Content-Type-Options: nosniff' );
 sm_require_admin();
 
 $action = (string) ( $_GET['a'] ?? '' );
-$site   = (string) ( $_GET['site'] ?? 'all' );
-$site   = 'all' === $site ? 'all' : sm_site_key( $site );
+
+// Site = dossier où se trouve cet espace (/godillots-ailes/stats/ -> ga, /gerard-martine/stats/ -> gm).
+$site   = '';
+$script = (string) ( $_SERVER['SCRIPT_NAME'] ?? '' );
+foreach ( (array) sm_cfg( 'sites' ) as $key => $info ) {
+	if ( 0 === strpos( $script, $info['path'] ) ) {
+		$site = $key;
+	}
+}
 if ( ! $site ) {
-	sm_json( array( 'error' => 'Site inconnu.' ), 400 );
+	sm_json( array( 'error' => 'Espace stats installé hors du dossier d\'un site.' ), 400 );
 }
 
 try {

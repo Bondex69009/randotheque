@@ -1,8 +1,6 @@
 # Statistiques des Randothèques (dossier /stats/ du sous-domaine).
 #   collect.php  public : reçoit les visites des deux sites
-#   admin/       espace stats, à protéger par mot de passe dans cPanel
-#                (« Confidentialité du répertoire » > stats/admin). Ne pas mettre de .htaccess
-#                dans admin/ depuis le dépôt : cPanel y écrit le sien.
+#   (les tableaux de bord sont dans godillots-ailes/stats/ et gerard-martine/stats/)
 #   lib/, data/, config.php : jamais accessibles depuis le web
 Options -Indexes
 DirectoryIndex index.html

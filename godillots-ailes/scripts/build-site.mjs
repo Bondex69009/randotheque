@@ -18,6 +18,9 @@ if (!fs.existsSync(path.join(ROOT, 'data', 'randos.js'))) {
 }
 copy('index.html', 'index.html');
 copy('compteur.html', 'compteur.html');
+// Espace stats du site (dossier stats/, à protéger par mot de passe dans cPanel) : tableau de bord commun
+// aux deux Randothèques, dans stats-serveur/admin/ à la racine du dépôt ; il n'affiche que le site où il est copié.
+fs.cpSync(path.join(ROOT, '..', 'stats-serveur', 'admin'), path.join(OUT, 'stats'), { recursive: true, filter: noHidden });
 // Les données changent à chaque mise à jour : on ajoute un numéro de version à leur adresse
 // pour que les navigateurs (et le gadget du blog) ne réutilisent pas une ancienne copie en cache.
 const version = Date.now().toString(36);

@@ -6,7 +6,6 @@
   'use strict';
 
   const API = 'api.php';
-  const SITES = { ga: 'Les Godillots Ailés', gm: 'Gérard & Martine', all: 'Les deux sites' };
 
   const $ = (s, el = document) => el.querySelector(s);
   const $$ = (s, el = document) => [...el.querySelectorAll(s)];
@@ -32,7 +31,7 @@
   };
   const ACCENT = () => css('--c-accent') || '#87f700';
 
-  const state = { site: 'all', period: '30d', from: '', to: '', metric: 'visitors' };
+  const state = { period: '30d', from: '', to: '', metric: 'visitors' };
   try { Object.assign(state, JSON.parse(sessionStorage.getItem('rt-stats-view') || '{}')); } catch { /* rien */ }
   let data = null, map = null, mapLayer = null, liveTimer = null;
 
@@ -52,14 +51,12 @@
 
   // ------------------------------------------------------------ Barre d'outils
   function paintToolbar() {
-    $('#sx-site').innerHTML = Object.entries(SITES).map(([k, name]) => `<button type="button" role="radio" data-s="${k}" aria-checked="${state.site === k}">${esc(name)}</button>`).join('');
     for (const b of $$('#sx-period [data-p]')) { b.setAttribute('role', 'radio'); b.setAttribute('aria-checked', String(state.period === b.dataset.p)); }
     const metrics = { visitors: 'Visiteurs', visits: 'Visites', randos: 'Fiches', gpx: 'GPX', actions: 'Actions' };
     $('#sx-metric').innerHTML = Object.entries(metrics).map(([k, v]) => `<button type="button" role="radio" data-m="${k}" aria-checked="${state.metric === k}">${v}</button>`).join('');
     if (state.period === 'custom') { $('#sx-from').value = state.from; $('#sx-to').value = state.to; }
   }
   const save = () => { try { sessionStorage.setItem('rt-stats-view', JSON.stringify(state)); } catch { /* rien */ } };
-  $('#sx-site').addEventListener('click', (e) => { const b = e.target.closest('[data-s]'); if (b) { state.site = b.dataset.s; save(); load(); } });
   $('#sx-period').addEventListener('click', (e) => { const b = e.target.closest('[data-p]'); if (b) { state.period = b.dataset.p; $('#sx-from').value = ''; $('#sx-to').value = ''; save(); load(); } });
   $('#sx-metric').addEventListener('click', (e) => { const b = e.target.closest('[data-m]'); if (b && data) { state.metric = b.dataset.m; save(); paintToolbar(); drawEvo(); } });
   for (const id of ['#sx-from', '#sx-to']) {
@@ -268,8 +265,7 @@
     const rows = data.randos;
     if (!rows.length) { $('#c-randos').innerHTML = empty(); return; }
     const top = Math.max(...rows.map((r) => r.views), 1);
-    const folder = { ga: 'godillots-ailes', gm: 'gerard-martine' };
-    const link = (r) => `../../${folder[r.site] || folder.ga}/#rando=${encodeURIComponent(r.id)}`;
+    const link = (r) => `../#rando=${encodeURIComponent(r.id)}`;
     $('#c-randos').innerHTML = `<table class="sx-table">
       <thead><tr><th scope="col">#</th><th scope="col">Rando</th><th scope="col" class="num">Vues</th><th scope="col" class="num">Personnes</th>
       <th scope="col" class="num">GPX</th><th scope="col" class="num" title="Téléchargements pour 100 vues">GPX / vue</th><th scope="col" class="num">3D</th><th scope="col" class="num">Partages</th><th scope="col" class="num">Audio</th></tr></thead>
@@ -422,7 +418,7 @@
   // ------------------------------------------------------------ En direct
   async function live() {
     try {
-      const l = await api('live', { query: { site: state.site } });
+      const l = await api('live');
       const d0 = new Date(), today = `${d0.getFullYear()}-${String(d0.getMonth() + 1).padStart(2, '0')}-${String(d0.getDate()).padStart(2, '0')}`;
       const feed = l.feed.slice(0, 6).map((f) => `<li><time>${f.ts.slice(0, 10) === today ? '' : `${f.ts.slice(8, 10)}/${f.ts.slice(5, 7)} `}${f.ts.slice(11, 16)}</time> ${esc(ONE[f.event] || f.event)}${f.label ? ` · <span class="sx-muted">${esc(f.label)}</span>` : ''}${f.city ? ` <small class="sx-muted">(${esc(f.city)})</small>` : ''}</li>`).join('');
       $('#sx-live').innerHTML = `<span class="sx-live__dot${l.now ? ' is-on' : ''}" aria-hidden="true"></span>
@@ -436,7 +432,10 @@
     paintToolbar();
     $('#sx-app').classList.add('is-loading');
     try {
-      data = await api('report', { query: { site: state.site, period: state.period, from: state.from, to: state.to } });
+      data = await api('report', { query: { period: state.period, from: state.from, to: state.to } });
+      const name = data.sites[data.site] || '';
+      $('#sx-site-name').textContent = name;
+      document.title = `Statistiques | ${name}`;
     } catch (err) {
       $('#sx-summary').textContent = `Impossible de charger les statistiques : ${err.message}`;
       return;

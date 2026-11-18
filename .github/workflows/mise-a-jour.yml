@@ -2,10 +2,11 @@
 #   - Les Godillots Ailés (dossier godillots-ailes/), depuis le blog du club ;
 #   - Gérard & Martine (dossier gerard-martine/), depuis les deux blogs de Gé.
 # Tout est envoyé par FTP chez o2switch, sur https://randotheque.anthony-bondon.fr/ :
-#   /godillots-ailes/   /gerard-martine/   /stats/ (statistiques)   / (page d'accueil, robots.txt, .htaccess)
+#   /godillots-ailes/ et /gerard-martine/ (chacun avec son espace stats dans stats/),
+#   /stats/ (moteur commun des statistiques), / (page d'accueil, robots.txt, .htaccess)
 #
 # Secrets du dépôt : FTP_HOST, FTP_USER, FTP_PASSWORD (compte FTP dont le répertoire est la racine
-# du sous-domaine). Le mot de passe de l'espace stats se règle dans cPanel, pas ici.
+# du sous-domaine). Les mots de passe des espaces stats se règlent dans cPanel, pas ici.
 # GitHub Pages ne sert plus qu'à rediriger les anciennes adresses des Godillots (liens partagés, gadget du blog).
 name: Mise à jour horaire
 
@@ -143,9 +144,9 @@ jobs:
           local-dir: ./gerard-martine/_site/
           server-dir: ./gerard-martine/
 
-      # Statistiques : jamais le dossier data/ (base des visites et bases des villes, créées sur le serveur),
-      # ni de .htaccess dans admin/ (cPanel y écrit celui du mot de passe).
-      - name: "Envoyer : statistiques -> /stats/"
+      # Moteur des statistiques : jamais le dossier data/ (base des visites et bases des villes, créées
+      # sur le serveur), ni admin/ (le tableau de bord part dans le dossier stats/ de chaque site).
+      - name: "Envoyer : moteur des statistiques -> /stats/"
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
           server: ${{ secrets.FTP_HOST }}
@@ -158,7 +159,7 @@ jobs:
             **/.git*
             **/.git*/**
             data/**
-            admin/.htaccess
+            admin/**
 
       - name: "Envoyer : page d'accueil et réglages du sous-domaine -> /"
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
@@ -177,7 +178,7 @@ jobs:
       - name: Vérifier que le nouveau site répond
         id: enligne
         run: |
-          for p in "" godillots-ailes/ gerard-martine/ stats/admin/; do
+          for p in "" godillots-ailes/ gerard-martine/ godillots-ailes/stats/ gerard-martine/stats/; do
             code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 20 "https://randotheque.anthony-bondon.fr/$p" || echo 000)
             echo "https://randotheque.anthony-bondon.fr/$p : $code"
           done

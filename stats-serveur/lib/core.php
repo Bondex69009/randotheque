@@ -307,7 +307,7 @@ function sm_require_admin() {
 	if ( '' === sm_auth_user() && ! sm_is_local_dev() ) {
 		sm_json(
 			array(
-				'error'     => 'Espace stats non protégé : dans cPanel, « Confidentialité du répertoire », protégez le dossier stats/admin par un mot de passe.',
+				'error'     => 'Espace stats non protégé : dans cPanel, « Confidentialité du répertoire », protégez par un mot de passe le dossier stats de ce site (godillots-ailes/stats ou gerard-martine/stats).',
 				'protect'   => true,
 			),
 			403
