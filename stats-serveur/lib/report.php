@@ -273,6 +273,7 @@ function sm_report( $site, $period, $from = '', $to = '' ) {
 			MAX(CASE WHEN is_entry = 1 THEN landing END) AS landing,
 			MAX(src_type) AS src_type, MAX(src_name) AS src_name, MAX(city) AS city, MAX(country) AS country,
 			MAX(device) AS device, MAX(browser) AS browser, MAX(os) AS os, MAX(app) AS app,
+			MAX(browser_v) AS browser_v, MAX(os_v) AS os_v, MAX(brand) AS brand, MAX(model) AS model, MAX(res) AS res, MAX(scroll) AS scroll,
 			GROUP_CONCAT(CASE WHEN type = 2 THEN event END) AS events
 		FROM hits WHERE $w AND type IN (1,2) AND session <> '' GROUP BY session ORDER BY start DESC LIMIT 40"
 	);
@@ -328,6 +329,16 @@ function sm_report( $site, $period, $from = '', $to = '' ) {
 		'browsers'  => sm_top_sessions( 'browser', $w ),
 		'os'        => sm_top_sessions( 'os', $w ),
 		'screens'   => sm_top_sessions( 'screen', $w, 10, "AND screen <> ''" ),
+		'browsers_v' => sm_top_sessions( "browser || CASE WHEN browser_v <> '' THEN ' ' || browser_v ELSE '' END", $w, 12 ),
+		'os_v'      => sm_top_sessions( "os || CASE WHEN os_v <> '' THEN ' ' || os_v ELSE '' END", $w, 12 ),
+		'brands'    => sm_top_sessions( 'brand', $w, 10, "AND brand <> ''" ),
+		'models'    => sm_top_sessions( "brand || ' ' || model", $w, 15, "AND model <> ''" ),
+		'res'       => sm_top_sessions( 'res', $w, 12, "AND res <> ''" ),
+		'dpr'       => sm_top_sessions( 'dpr', $w, 6, "AND dpr <> ''" ),
+		'net'       => sm_top_sessions( 'net', $w, 6, "AND net <> ''" ),
+		'scroll'    => sm_scroll( $w ),
+		'links'     => sm_link_labels( $w ),
+		'ui'        => $label_top( 'ui', 30 ),
 		'langs'     => sm_top_sessions( 'lang', $w, 10, "AND lang <> ''" ),
 		'themes'    => sm_top_sessions( 'theme', $w, 5, "AND theme <> ''" ),
 		'apps'      => sm_top_sessions( 'app', $w, 2 ),
@@ -357,7 +368,8 @@ function sm_live( $site ) {
 	$people = sm_all(
 		"SELECT h.site, h.session, MAX(h.city) AS city, MAX(h.country) AS country, MAX(h.device) AS device,
 			MAX(h.browser) AS browser, MAX(h.os) AS os, MAX(h.src_type) AS src_type, MAX(h.src_name) AS src_name,
-			MAX(h.app) AS app, MAX(h.ts) AS last,
+			MAX(h.app) AS app, MAX(h.ts) AS last, MAX(h.browser_v) AS browser_v, MAX(h.os_v) AS os_v,
+			MAX(h.brand) AS brand, MAX(h.model) AS model, MAX(h.res) AS res,
 			(SELECT MIN(ts) FROM hits s WHERE s.session = h.session) AS start,
 			(SELECT COUNT(*) FROM hits s WHERE s.session = h.session AND s.type = 2) AS actions,
 			(SELECT event || '|' || label FROM hits s WHERE s.session = h.session AND s.type = 2 ORDER BY s.id DESC LIMIT 1) AS doing
@@ -419,4 +431,40 @@ function sm_rejects( $site, DateTimeImmutable $s, DateTimeImmutable $e ) {
 			sm_all( "SELECT detail, SUM(n) AS n FROM rejects WHERE $w AND reason = 'datacenter' GROUP BY detail ORDER BY n DESC LIMIT 10" )
 		),
 	);
+}
+
+/**
+ * Profondeur de lecture des pages (jusqu'où elles ont été descendues).
+ */
+function sm_scroll( $w ) {
+	$b = array( 'Haut de page' => 0, 'Jusqu\'au quart' => 0, 'Jusqu\'à la moitié' => 0, 'Jusqu\'aux trois quarts' => 0, 'Jusqu\'en bas' => 0 );
+	$sum = 0;
+	$n   = 0;
+	foreach ( sm_all( "SELECT scroll FROM hits WHERE $w AND type = 1 AND duration > 0" ) as $r ) {
+		$v    = (int) $r['scroll'];
+		$sum += $v;
+		++$n;
+		$k = $v < 5 ? 'Haut de page' : ( $v < 25 ? 'Jusqu\'au quart' : ( $v < 50 ? 'Jusqu\'à la moitié' : ( $v < 90 ? 'Jusqu\'aux trois quarts' : 'Jusqu\'en bas' ) ) );
+		++$b[ $k ];
+	}
+	return array(
+		'avg'     => $n ? (int) round( $sum / $n ) : 0,
+		'buckets' => $b,
+	);
+}
+
+/**
+ * Liens externes suivis, par destination : les randos (ou sites) les plus cliquées pour chacune.
+ */
+function sm_link_labels( $w ) {
+	$out = array();
+	foreach ( array( 'blog', 'photos', 'relive', 'drive', 'route', 'video', 'ext_site', 'outbound' ) as $kind ) {
+		$out[ $kind ] = array_map(
+			function ( $r ) {
+				return array( $r['k'], (int) $r['n'] );
+			},
+			sm_all( "SELECT label AS k, COUNT(*) AS n FROM hits WHERE $w AND type = 2 AND event = '$kind' AND label <> '' GROUP BY label ORDER BY n DESC LIMIT 8" )
+		);
+	}
+	return $out;
 }

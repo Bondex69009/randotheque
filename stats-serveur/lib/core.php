@@ -107,6 +107,23 @@ function sm_db() {
 		CREATE TABLE IF NOT EXISTS login_fails (k TEXT NOT NULL, ts INTEGER NOT NULL);
 "
 	);
+	// Colonnes ajoutées au fil des versions (une base déjà créée en ligne les reçoit ici).
+	$have = array_column( $db->query( 'PRAGMA table_info(hits)' )->fetchAll(), 'name' );
+	$add  = array(
+		'browser_v' => "TEXT NOT NULL DEFAULT ''",
+		'os_v'      => "TEXT NOT NULL DEFAULT ''",
+		'brand'     => "TEXT NOT NULL DEFAULT ''",
+		'model'     => "TEXT NOT NULL DEFAULT ''",
+		'res'       => "TEXT NOT NULL DEFAULT ''",
+		'dpr'       => "TEXT NOT NULL DEFAULT ''",
+		'net'       => "TEXT NOT NULL DEFAULT ''",
+		'scroll'    => 'INTEGER NOT NULL DEFAULT 0',
+	);
+	foreach ( $add as $col => $def ) {
+		if ( ! in_array( $col, $have, true ) ) {
+			$db->exec( "ALTER TABLE hits ADD COLUMN $col $def" );
+		}
+	}
 	return $db;
 }
 
@@ -239,23 +256,6 @@ function sm_ip_day_key( $ip ) {
 	return substr( hash( 'sha256', sm_salt() . '|ip|' . sm_ip_net( $ip ) ), 0, 16 );
 }
 
-function sm_is_admin_ip( $ip ) {
-	return (bool) sm_q( 'SELECT 1 FROM admin_ips WHERE k = ?', array( sm_admin_key( $ip ) ) )->fetchColumn();
-}
-
-/**
- * Note l'adresse de l'administrateur connecté : ses visites ne sont plus comptées,
- * et celles du jour depuis cette adresse sont retirées.
- */
-function sm_remember_admin_ip() {
-	$ip = sm_ip();
-	if ( ! $ip ) {
-		return;
-	}
-	sm_q( 'INSERT OR REPLACE INTO admin_ips (k, seen) VALUES (?, ?)', array( sm_admin_key( $ip ), time() ) );
-	sm_q( 'DELETE FROM hits WHERE ipk = ? AND day = ?', array( sm_ip_day_key( $ip ), date( 'Y-m-d' ) ) );
-}
-
 /* -------------------------------------------------------------------------
  * CORS : seuls les sites déclarés dans config.php peuvent parler au serveur
  * ---------------------------------------------------------------------- */
@@ -308,7 +308,6 @@ function sm_login( $password ) {
 	}
 	$token = bin2hex( random_bytes( 32 ) );
 	sm_q( 'INSERT INTO tokens (hash, expires) VALUES (?, ?)', array( hash( 'sha256', $token ), time() + 30 * 86400 ) );
-	sm_remember_admin_ip();
 	return array( 'token' => $token );
 }
 
@@ -330,8 +329,6 @@ function sm_require_admin() {
 	if ( ! $token || ! sm_q( 'SELECT 1 FROM tokens WHERE hash = ? AND expires > ?', array( hash( 'sha256', $token ), time() ) )->fetchColumn() ) {
 		sm_json( array( 'error' => 'Connectez-vous.', 'login' => true ), 401 );
 	}
-	// L'administrateur peut changer d'adresse (4G, autre wifi) : on la note à chaque ouverture.
-	sm_remember_admin_ip();
 }
 
 /**

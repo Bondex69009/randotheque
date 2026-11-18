@@ -42,13 +42,18 @@ Un espace par site, qui ne montre que ses visites (petit cadenas en haut à droi
 https://randotheque.anthony-bondon.fr/godillots-ailes/stats/ et https://randotheque.anthony-bondon.fr/gerard-martine/stats/.
 Visiteurs, visites, fiches ouvertes, GPX téléchargés, survols 3D, duels VS, partages, recherches,
 filtres, sources de trafic, villes (carte), appareils, navigateurs, affluence, durée des visites, journal des visites,
-affichages du compteur sur le blog et faux visiteurs écartés.
+affichages du compteur sur le blog, faux visiteurs écartés et visiteurs en temps réel.
 
 - **Sans cookie, RGPD** : rien n'est écrit sur l'appareil des visiteurs ; les IP ne sont jamais enregistrées
   (empreinte anonyme dont la clé change chaque jour) ; données effacées après 25 mois. Pas de bandeau cookie.
 - **Faux visiteurs écartés** : robots, outils automatiques, navigateurs non standard, pays hors de la liste
   `allowed_countries` de `stats-serveur/config.php`, centres de données (AWS, OVH, Hetzner…).
-- **Administrateur** : son adresse est notée à chaque ouverture de l'espace stats et n'est plus comptée.
+- **Toutes les interactions** : fiches, GPX, survols 3D, duels, partages, recherches, filtres, audios, et chaque lien
+  externe rangé par destination (article du blog, album photos, vidéo Relive, Google Drive, itinéraire, autres sites),
+  plus tous les autres clics et réglages (boutons, fond de carte…) et la profondeur de lecture des pages.
+- **Appareils** : navigateur et version, système et version, marque et modèle (quand le navigateur le donne),
+  résolution et densité d'écran, type de réseau.
+- **Administrateur** : compté comme tout le monde.
 - **Mot de passe** : un champ sur la page, le même pour les deux sites. Seule son empreinte bcrypt est conservée
   (`password_hash` dans `stats-serveur/config.php`, avec la commande pour le changer). 8 essais ratés bloquent
   l'adresse un quart d'heure. Une fois connecté, le navigateur reste connecté 30 jours.

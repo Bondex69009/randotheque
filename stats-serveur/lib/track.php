@@ -233,3 +233,93 @@ function sm_lang( $l ) {
 	$l = strtolower( substr( preg_replace( '/[^a-zA-Z-]/', '', (string) $l ), 0, 2 ) );
 	return 2 === strlen( $l ) ? $l : '';
 }
+
+/**
+ * Détails de l'appareil : version du navigateur et du système, marque et modèle.
+ * $ch : « Client Hints » envoyés par Chrome / Edge / Samsung Internet (modèle exact, version réelle
+ * du système), absents sur Safari et Firefox : on se rabat alors sur le User-Agent.
+ */
+function sm_device_details( $ua, array $ch, $touch ) {
+	$clean = function ( $s, $max = 40 ) {
+		return mb_substr( trim( preg_replace( '/[^\p{L}\p{N} ._\-+()]/u', '', (string) $s ) ), 0, $max );
+	};
+	$os = sm_os( $ua, $touch );
+
+	// Version du navigateur (numéro principal).
+	$bv = '';
+	foreach ( array( '~Edg(?:e|A|iOS)?/(\d+)~', '~OPR/(\d+)~', '~SamsungBrowser/(\d+)~', '~(?:Firefox|FxiOS)/(\d+)~', '~CriOS/(\d+)~', '~Chrome/(\d+)~', '~Version/(\d+(?:\.\d+)?)~' ) as $re ) {
+		if ( preg_match( $re, $ua, $m ) ) {
+			$bv = $m[1];
+			break;
+		}
+	}
+	if ( ! empty( $ch['bv'] ) && preg_match( '/^(\d+)/', (string) $ch['bv'], $m ) ) {
+		$bv = $m[1];
+	}
+
+	// Version du système.
+	$ov = '';
+	$pv = (string) ( $ch['pv'] ?? '' );
+	if ( 'Windows' === $os ) {
+		$major = (int) $pv;
+		$ov    = '' !== $pv ? ( $major >= 13 ? '11' : '10' ) : ( preg_match( '~Windows NT 10~', $ua ) ? '10 ou 11' : '' );
+	} elseif ( 'macOS' === $os ) {
+		$ov = '' !== $pv ? preg_replace( '/^(\d+(?:\.\d+)?).*/', '$1', $pv ) : '';
+	} elseif ( 'Android' === $os ) {
+		$ov = '' !== $pv ? preg_replace( '/^(\d+).*/', '$1', $pv ) : ( preg_match( '~Android (\d+)~', $ua, $m ) && '10' !== $m[1] ? $m[1] : '' );
+	} elseif ( preg_match( '~(?:iPhone OS|CPU OS) (\d+)(?:_(\d+))?~', $ua, $m ) ) {
+		$ov = $m[1] . ( isset( $m[2] ) ? '.' . $m[2] : '' );
+	} elseif ( preg_match( '~Version/(\d+)~', $ua, $m ) && 'iPadOS' === $os ) {
+		$ov = $m[1];
+	}
+
+	// Marque et modèle.
+	$model = $clean( $ch['model'] ?? '' );
+	if ( '' === $model && preg_match( '~Android [\d.]+; ([^;)]+)\)~', $ua, $m ) && 'K' !== trim( $m[1] ) ) {
+		$model = $clean( preg_replace( '~ Build/.*~', '', $m[1] ) );
+	}
+	$brand = '';
+	if ( in_array( $os, array( 'iOS (iPhone)', 'iPadOS', 'macOS' ), true ) ) {
+		$brand = 'Apple';
+		$model = 'iOS (iPhone)' === $os ? 'iPhone' : ( 'iPadOS' === $os ? 'iPad' : 'Mac' );
+	} elseif ( '' !== $model ) {
+		$brands = array(
+			'/^SM-|^Galaxy|samsung/i'          => 'Samsung',
+			'/^Pixel/i'                        => 'Google',
+			'/^(Redmi|POCO|Mi |M2|2\d{3}|Xiaomi)/i' => 'Xiaomi',
+			'/^(CPH|OPPO)/i'                   => 'Oppo',
+			'/^RMX|realme/i'                   => 'Realme',
+			'/^(moto|XT\d)/i'                  => 'Motorola',
+			'/OnePlus|^(GM|HD|IN|KB|LE|NE|PJ)\d{4}/i' => 'OnePlus',
+			'/^(HUAWEI|ELE-|VOG-|ANE-|MAR-|LYA-|JNY-)/i' => 'Huawei',
+			'/^(Nokia|TA-)/i'                  => 'Nokia',
+			'/^(V\d{4}|vivo)/i'                => 'Vivo',
+			'/^(A\d{3}|Nothing)/i'             => 'Nothing',
+			'/^(SO-|XQ-|Xperia)/i'             => 'Sony',
+			'/^(LM-|LG)/i'                     => 'LG',
+			'/^(Infinix|TECNO)/i'              => 'Transsion',
+			'/^(Lenovo|TB-)/i'                 => 'Lenovo',
+			'/^Fairphone|^FP\d/i'              => 'Fairphone',
+		);
+		foreach ( $brands as $re => $name ) {
+			if ( preg_match( $re, $model ) ) {
+				$brand = $name;
+				break;
+			}
+		}
+		if ( '' === $brand ) {
+			$brand = 'Autre Android';
+		}
+	} elseif ( 'Windows' === $os ) {
+		$brand = 'PC Windows';
+	} elseif ( in_array( $os, array( 'Linux', 'ChromeOS' ), true ) ) {
+		$brand = $os;
+	}
+
+	return array(
+		'browser_v' => $bv,
+		'os_v'      => $ov,
+		'brand'     => $brand,
+		'model'     => $model,
+	);
+}

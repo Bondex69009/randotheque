@@ -12,7 +12,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,600;0,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
   <link rel="stylesheet" href="../assets/style.css">
-  <link rel="stylesheet" href="stats-admin.css?v=7">
+  <link rel="stylesheet" href="stats-admin.css?v=8">
 </head>
 <body class="sx">
   <header class="site-header">
@@ -34,7 +34,7 @@
       <form class="sx-login__card" id="sx-login-form">
         <svg class="sx-login__icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="2.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
         <h1 class="sx-login__title" id="sx-login-title">Espace statistiques</h1>
-        <p class="sx-login__lead">Réservé aux gestionnaires du site. Une fois connecté, votre adresse internet n'est plus comptée dans les visites.</p>
+        <p class="sx-login__lead">Réservé aux gestionnaires du site.</p>
         <label class="sx-label" for="sx-password">Mot de passe</label>
         <input class="sx-input" id="sx-password" type="password" autocomplete="current-password" required>
         <p class="sx-login__error" id="sx-login-error" role="alert"></p>
@@ -92,6 +92,17 @@
         <header class="sx-card__head"><h2 class="sx-card__title" id="t-randos">Randos les plus consultées</h2></header>
         <div class="sx-table-wrap" id="c-randos"></div>
       </section>
+
+      <div class="sx-grid">
+        <section class="sx-card" aria-labelledby="t-links">
+          <header class="sx-card__head"><h2 class="sx-card__title" id="t-links">Liens externes : blog, photos, Relive…</h2></header>
+          <div id="c-links"></div>
+        </section>
+        <section class="sx-card" aria-labelledby="t-ui">
+          <header class="sx-card__head"><h2 class="sx-card__title" id="t-ui">Tous les autres clics et réglages</h2></header>
+          <div id="c-ui"></div>
+        </section>
+      </div>
 
       <div class="sx-grid sx-grid--3">
         <section class="sx-card" aria-labelledby="t-search">
@@ -151,12 +162,39 @@
         </section>
       </div>
 
+      <div class="sx-grid sx-grid--3">
+        <section class="sx-card" aria-labelledby="t-browsers_v">
+          <header class="sx-card__head"><h2 class="sx-card__title" id="t-browsers_v">Versions des navigateurs</h2></header>
+          <div id="c-browsers_v"></div>
+        </section>
+        <section class="sx-card" aria-labelledby="t-os_v">
+          <header class="sx-card__head"><h2 class="sx-card__title" id="t-os_v">Systèmes et versions</h2></header>
+          <div id="c-os_v"></div>
+        </section>
+        <section class="sx-card" aria-labelledby="t-brands">
+          <header class="sx-card__head"><h2 class="sx-card__title" id="t-brands">Marques d'appareils</h2></header>
+          <div id="c-brands"></div>
+        </section>
+        <section class="sx-card" aria-labelledby="t-models">
+          <header class="sx-card__head"><h2 class="sx-card__title" id="t-models">Modèles de téléphones et tablettes</h2></header>
+          <div id="c-models"></div>
+        </section>
+        <section class="sx-card" aria-labelledby="t-res">
+          <header class="sx-card__head"><h2 class="sx-card__title" id="t-res">Résolutions d'écran</h2></header>
+          <div id="c-res"></div>
+        </section>
+        <section class="sx-card" aria-labelledby="t-net">
+          <header class="sx-card__head"><h2 class="sx-card__title" id="t-net">Connexion et densité d'écran</h2></header>
+          <div id="c-net"></div>
+        </section>
+      </div>
+
       <section class="sx-card sx-card--wide" aria-labelledby="t-heat">
         <header class="sx-card__head"><h2 class="sx-card__title" id="t-heat">Jours et heures d'affluence</h2></header>
         <div id="c-heat"></div>
       </section>
 
-      <div class="sx-grid">
+      <div class="sx-grid sx-grid--3">
         <section class="sx-card" aria-labelledby="t-dur">
           <header class="sx-card__head"><h2 class="sx-card__title" id="t-dur">Durée des visites</h2></header>
           <div id="c-dur"></div>
@@ -165,6 +203,10 @@
           <header class="sx-card__head"><h2 class="sx-card__title" id="t-depth">Actions par visite</h2></header>
           <div id="c-depth"></div>
         </section>
+        <section class="sx-card" aria-labelledby="t-scroll">
+          <header class="sx-card__head"><h2 class="sx-card__title" id="t-scroll">Profondeur de lecture</h2></header>
+          <div id="c-scroll"></div>
+        </section>
       </div>
 
       <section class="sx-card sx-card--wide" aria-labelledby="t-recent">
@@ -172,14 +214,10 @@
         <div class="sx-table-wrap" id="c-recent"></div>
       </section>
 
-      <div class="sx-grid sx-grid--3">
+      <div class="sx-grid">
         <section class="sx-card" aria-labelledby="t-widget">
           <header class="sx-card__head"><h2 class="sx-card__title" id="t-widget">Compteur sur le blog</h2></header>
           <div id="c-widget"></div>
-        </section>
-        <section class="sx-card" aria-labelledby="t-outbound">
-          <header class="sx-card__head"><h2 class="sx-card__title" id="t-outbound">Liens suivis vers d'autres sites</h2></header>
-          <div id="c-outbound"></div>
         </section>
         <section class="sx-card" aria-labelledby="t-rejects">
           <header class="sx-card__head"><h2 class="sx-card__title" id="t-rejects">Faux visiteurs écartés</h2></header>
@@ -188,13 +226,13 @@
       </div>
 
       <footer class="sx-foot">
-        <p><strong>Vie privée.</strong> Aucun cookie ni stockage sur l'appareil des visiteurs. Les adresses IP ne sont jamais enregistrées : elles servent sur le moment à trouver la ville et à calculer une empreinte anonyme dont la clé change chaque jour (un visiteur qui revient un autre jour compte comme nouveau). Les robots, outils automatiques, navigateurs non standard, visites depuis des pays inhabituels ou des centres de données sont écartés, ainsi que l'adresse de l'administrateur connecté. Données effacées au bout de 25 mois. Conforme aux conditions de la CNIL pour se passer de bandeau cookie.</p>
+        <p><strong>Vie privée.</strong> Aucun cookie ni stockage sur l'appareil des visiteurs. Les adresses IP ne sont jamais enregistrées : elles servent sur le moment à trouver la ville et à calculer une empreinte anonyme dont la clé change chaque jour (un visiteur qui revient un autre jour compte comme nouveau). Les robots, outils automatiques, navigateurs non standard, visites depuis des pays inhabituels ou des centres de données sont écartés. Données effacées au bout de 25 mois. Conforme aux conditions de la CNIL pour se passer de bandeau cookie.</p>
         <p id="sx-geo-note"></p>
       </footer>
     </div>
   </main>
 
   <div class="sx-tip" id="sx-tip" role="tooltip" hidden></div>
-  <script src="stats-admin.js?v=7"></script>
+  <script src="stats-admin.js?v=8"></script>
 </body>
 </html>

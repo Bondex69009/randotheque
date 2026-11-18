@@ -37,7 +37,15 @@ function sm_events() {
 		'ailleurs' => 'Recherches « Chercher aussi sur »',
 		'ext'      => 'Fiches externes ouvertes',
 		'install'  => 'Installations de l\'appli',
-		'outbound' => 'Liens vers d\'autres sites',
+		'blog'     => 'Articles du blog ouverts',
+		'photos'   => 'Albums photos ouverts',
+		'relive'   => 'Vidéos Relive lancées',
+		'drive'    => 'Fichiers Google Drive ouverts',
+		'route'    => 'Itinéraires vers le départ',
+		'video'    => 'Vidéos lancées',
+		'ext_site' => 'Fiches sur d\'autres sites',
+		'outbound' => 'Autres liens externes',
+		'ui'       => 'Autres clics et réglages',
 	);
 }
 
@@ -76,11 +84,7 @@ function sm_collect() {
 		sm_reject( $site, 'fake', 'Faux navigateur' );
 	}
 
-	// L'administrateur (adresse notée à sa connexion) n'est jamais compté.
 	$ip = sm_ip();
-	if ( $ip && sm_is_admin_ip( $ip ) ) {
-		sm_reject( $site, 'admin' );
-	}
 
 	$kind = (string) ( $data['t'] ?? '' );
 
@@ -104,7 +108,8 @@ function sm_collect() {
 		$id = (int) ( $data['id'] ?? 0 );
 		if ( $id > 0 && hash_equals( sm_sign( $id ), (string) ( $data['k'] ?? '' ) ) ) {
 			$seconds = min( 7200, max( 0, (int) ( $data['d'] ?? 0 ) ) );
-			sm_q( 'UPDATE hits SET duration = ? WHERE id = ? AND duration < ?', array( $seconds, $id, $seconds ) );
+			$scroll  = min( 100, max( 0, (int) ( $data['sd'] ?? 0 ) ) );
+			sm_q( 'UPDATE hits SET duration = MAX(duration, ?), scroll = MAX(scroll, ?) WHERE id = ?', array( $seconds, $scroll, $id ) );
 		}
 		sm_done();
 	}
@@ -163,7 +168,7 @@ function sm_collect() {
 
 	if ( $same_visit ) {
 		$row['is_entry'] = 0;
-		foreach ( array( 'session', 'src_type', 'src_name', 'campaign', 'device', 'browser', 'os', 'country', 'city', 'lat', 'lon', 'lang', 'screen', 'theme', 'app' ) as $col ) {
+		foreach ( array( 'session', 'src_type', 'src_name', 'campaign', 'device', 'browser', 'os', 'country', 'city', 'lat', 'lon', 'lang', 'screen', 'theme', 'app', 'browser_v', 'os_v', 'brand', 'model', 'res', 'dpr', 'net' ) as $col ) {
 			$row[ $col ] = $last[ $col ];
 		}
 		if ( 1 === $row['type'] ) {
@@ -191,6 +196,17 @@ function sm_collect() {
 		$row['screen']   = sm_screen( $data['w'] ?? 0 );
 		$row['theme']    = 'dark' === ( $data['th'] ?? '' ) ? 'sombre' : ( 'light' === ( $data['th'] ?? '' ) ? 'clair' : '' );
 		$row['app']      = empty( $data['a'] ) ? 0 : 1;
+		$dev             = sm_device_details( $ua, is_array( $data['ch'] ?? null ) ? $data['ch'] : array(), $touch );
+		$row['browser_v'] = $dev['browser_v'];
+		$row['os_v']      = $dev['os_v'];
+		$row['brand']     = $dev['brand'];
+		$row['model']     = $dev['model'];
+		$w = (int) ( $data['w'] ?? 0 );
+		$h = (int) ( $data['sh'] ?? 0 );
+		$row['res']       = $w > 0 && $h > 0 && $w < 10000 && $h < 10000 ? $w . '×' . $h : '';
+		$dpr              = (float) ( $data['dpr'] ?? 0 );
+		$row['dpr']       = $dpr > 0 && $dpr < 10 ? rtrim( rtrim( number_format( $dpr, 2, '.', '' ), '0' ), '.' ) . 'x' : '';
+		$row['net']       = in_array( $data['net'] ?? '', array( 'slow-2g', '2g', '3g', '4g' ), true ) ? strtoupper( str_replace( 'slow-', 'lent ', $data['net'] ) ) : '';
 		if ( 2 === $row['type'] ) {
 			$row['is_entry'] = 0; // Une action sans page vue récente n'ouvre pas une visite.
 		}

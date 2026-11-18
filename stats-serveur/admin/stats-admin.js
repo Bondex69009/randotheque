@@ -30,7 +30,9 @@
     rando: 'Fiche ouverte', gpx: 'GPX téléchargé', fly: 'Survol 3D', fly_duel: 'Survol 3D en duel', vs: 'Comparaison VS',
     share: 'Partage', png: 'Image PNG', ibp: 'Calcul IBP', search: 'Recherche', filter: 'Filtre', map: 'Vue carte',
     audio: 'Audio écouté', evo: 'Évolution du compteur', embed: 'Code du compteur', ailleurs: 'Chercher aussi sur',
-    ext: 'Fiche externe', install: 'Appli installée', outbound: 'Lien sortant',
+    ext: 'Fiche externe', install: 'Appli installée', outbound: 'Lien externe',
+    blog: 'Article du blog', photos: 'Album photos', relive: 'Vidéo Relive', drive: 'Google Drive', route: 'Itinéraire vers le départ',
+    video: 'Vidéo', ext_site: 'Fiche sur un autre site', ui: 'Clic',
   };
   const ACCENT = () => css('--c-accent') || '#87f700';
 
@@ -321,7 +323,13 @@
     const vs = data.vs.length ? `<h3 class="sx-sub">Duels VS</h3>${bars(data.vs, { max: 6, color: CAT[1] })}` : '';
     const ail = data.ailleurs.length ? `<h3 class="sx-sub">Chercher aussi sur</h3>${bars(data.ailleurs, { max: 6, color: CAT[2] })}` : '';
     $('#c-vs').innerHTML = vs + ail || empty();
-    $('#c-outbound').innerHTML = bars(data.outbound, { max: 12, color: CAT[3] });
+    // Liens externes : par destination, puis les randos (ou sites) les plus cliquées pour chacune.
+    const KINDS = { blog: 'Articles du blog', photos: 'Albums photos', relive: 'Vidéos Relive', drive: 'Audios et fichiers Google Drive', route: 'Itinéraires vers le départ', video: 'Vidéos', ext_site: 'Fiches sur d\'autres sites', outbound: 'Autres sites' };
+    const byKind = Object.keys(KINDS).map((k) => [KINDS[k], (data.events.find((e) => e[0] === k) || [k, 0])[1]]);
+    const detail = Object.keys(KINDS).filter((k) => (data.links[k] || []).length)
+      .map((k, i) => `<h3 class="sx-sub">${KINDS[k]}</h3>${bars(data.links[k], { max: 6, color: CAT[(i + 1) % CAT.length] })}`).join('');
+    $('#c-links').innerHTML = byKind.some((r) => r[1]) ? bars(byKind, { color: CAT[0] }) + detail : empty();
+    $('#c-ui').innerHTML = bars(data.ui, { max: 30, color: CAT[6] });
   }
 
   function drawSources() {
@@ -335,6 +343,12 @@
     $('#c-referrers').innerHTML = parts.join('');
   }
 
+  const deviceText = (r) => [
+    [r.browser, r.browser_v].filter(Boolean).join(' '),
+    [r.os, r.os_v].filter(Boolean).join(' '),
+    r.model && r.brand !== 'Apple' ? `${r.brand && !/^(Autre|PC)/.test(r.brand) ? `${r.brand} ` : ''}${r.model}` : '',
+    r.res || '',
+  ].filter(Boolean).join(' · ');
   const flag = (cc) => (/^[A-Z]{2}$/.test(cc || '') ? String.fromCodePoint(...[...cc].map((c) => 127397 + c.charCodeAt(0))) : '');
   const countryName = (cc) => { try { return new Intl.DisplayNames(['fr'], { type: 'region' }).of(cc); } catch { return cc; } };
   function drawGeo() {
@@ -354,6 +368,12 @@
     $('#c-langs').innerHTML = `${bars(data.langs.map(([k, v]) => [lang(k), v]), { max: 5, color: CAT[2] })}
       <h3 class="sx-sub">Pays</h3>${bars(data.countries.map(([k, v]) => [`${flag(k)} ${countryName(k)}`, v]), { max: 6, color: CAT[3] })}`;
     const apps = data.apps.map(([k, v]) => [String(k) === '1' ? 'Appli installée' : 'Navigateur', v]);
+    $('#c-browsers_v').innerHTML = bars(data.browsers_v, { color: CAT[0] });
+    $('#c-os_v').innerHTML = bars(data.os_v, { color: CAT[2] });
+    $('#c-brands').innerHTML = donut(data.brands);
+    $('#c-models').innerHTML = bars(data.models.map(([k, v]) => [k.replace(/^(Autre Android|Autre) /, ''), v]), { max: 15, color: CAT[1] });
+    $('#c-res').innerHTML = bars(data.res, { color: CAT[3] });
+    $('#c-net').innerHTML = `${bars(data.net.map(([k, v]) => [`Réseau ${k}`, v]), { color: CAT[5] })}<h3 class="sx-sub">Densité d'écran</h3>${bars(data.dpr.map(([k, v]) => [`${k}${parseFloat(k) >= 2 ? ' (écran Retina / HD)' : ''}`, v]), { color: CAT[4] })}`;
     $('#c-misc').innerHTML = `${bars(apps, { color: CAT[4] })}<h3 class="sx-sub">Thème du système</h3>${bars(data.themes.map(([k, v]) => [k === 'sombre' ? 'Sombre' : 'Clair', v]), { color: CAT[6] })}`;
   }
 
@@ -385,7 +405,7 @@
         const chips = Object.entries(counts).map(([e, n]) => `<span class="sx-chip sx-chip--${e}" title="${esc(L[e] || e)}">${esc(short[e] || e)}${n > 1 ? ` ×${n}` : ''}</span>`).join('') || '<span class="sx-muted">aucune action</span>';
         return `<tr><td class="nowrap">${when(r.start)}${data.site === 'all' ? `<br><small class="sx-muted">${esc(data.sites[r.site] || r.site)}</small>` : ''}</td>
           <td>${flag(r.country)} ${esc(r.city || 'Inconnue')}</td>
-          <td class="nowrap"><span aria-hidden="true">${dev[r.device] || ''}</span> ${esc(r.browser)} <small class="sx-muted">${esc(r.os)}${r.app ? ' · appli' : ''}</small></td>
+          <td><span aria-hidden="true">${dev[r.device] || ''}</span> ${esc(deviceText(r))}${r.app ? ' <small class="sx-muted">· appli</small>' : ''}${r.scroll ? ` <small class="sx-muted">· lu à ${r.scroll} %</small>` : ''}</td>
           <td>${esc(r.src_type === 'direct' ? 'Accès direct' : r.src_name)}</td>
           <td class="num">${fmtDur(r.dur)}</td><td class="sx-chips">${chips}</td></tr>`;
       }).join('')}</tbody></table>`;
@@ -395,6 +415,7 @@
     // Tranches dans l'ordre (les clés « 0 », « 1 » d'un objet JS passeraient devant les autres)
     const DUR = ['Moins de 10 s', '10 à 30 s', '30 s à 1 min', '1 à 3 min', '3 à 10 min', '10 à 30 min', 'Plus de 30 min'];
     $('#c-dur').innerHTML = columns(DUR.map((k) => [k, data.durations[k] || 0]));
+    $('#c-scroll').innerHTML = `<p class="sx-note" style="margin:0 0 var(--space-3)">En moyenne, les pages sont lues jusqu'à <strong>${data.scroll.avg} %</strong> de leur hauteur.</p>${columns(Object.entries(data.scroll.buckets), { unit: 'pages vues' })}`;
     $('#c-depth').innerHTML = columns(['0', '1', '2-3', '4-6', '7-10', '11+'].map((k) => [k === '0' ? 'Aucune' : k, data.depth[k] || 0]), { unit: 'visites' });
     const w = data.widget;
     $('#c-widget').innerHTML = w.total
@@ -449,7 +470,7 @@
       const doing = (p) => (p.event ? `${esc(ONE[p.event] || p.event)}${p.label ? ` · <span class="sx-muted">${esc(p.label)}</span>` : ''}` : '<span class="sx-muted">regarde la liste des randos</span>');
       const rows = l.people.map((p) => `<li class="sx-now__p${p.idle > 120 ? ' is-idle' : ''}">
           <span class="sx-now__who"><span aria-hidden="true">${dev[p.device] || ''}</span> ${flag(p.country)} <strong>${esc(p.city || 'Ville inconnue')}</strong>
-            <small class="sx-muted">${esc(p.browser)} · ${esc(p.os)}${p.app ? ' · appli' : ''}</small></span>
+            <small class="sx-muted">${esc(deviceText(p))}${p.app ? ' · appli' : ''}</small></span>
           <span class="sx-now__doing">${doing(p)}</span>
           <span class="sx-now__meta"><span>${esc(src(p))}</span><span>depuis ${ago(p.since)}</span><span>${p.actions} action${p.actions > 1 ? 's' : ''}</span></span>
         </li>`).join('');
