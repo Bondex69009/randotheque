@@ -15,3 +15,8 @@ data/admin.json
 data/tracks/
 _site/
 data/randogps.json
+
+# Serveur de statistiques : mot de passe et base (jamais dans le dépôt)
+stats-serveur/secret.php
+stats-serveur/data/*
+!stats-serveur/data/.gitkeep

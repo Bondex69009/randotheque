@@ -1,0 +1,16 @@
+# Statistiques des Randothèques : seul api.php est accessible depuis le web.
+DirectoryIndex api.php
+Options -Indexes
+
+<IfModule mod_rewrite.c>
+	RewriteEngine On
+	# Jeton de l'espace stats (en-tête Authorization) transmis à PHP
+	RewriteCond %{HTTP:Authorization} .
+	RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+	RewriteRule ^(lib|data)(/|$) - [F,L]
+	RewriteRule ^(config|secret)\.php$ - [F,L]
+</IfModule>
+
+<FilesMatch "^(config|secret)\.php$">
+	Require all denied
+</FilesMatch>

@@ -1,0 +1,88 @@
+# Envoie le serveur de statistiques (dossier stats-serveur/) par FTP chez o2switch.
+# Il sert les DEUX Randothèques (Godillots Ailés et Gérard & Martine).
+#
+# Secrets à créer dans Settings > Secrets and variables > Actions de ce dépôt :
+#   FTP_HOST              nom du serveur o2switch (xxx.o2switch.net) ou son IP,
+#                         PAS anthony-bondon.fr (qui passe par Cloudflare)
+#   FTP_USER              compte FTP dédié au sous-domaine stats-rando (cPanel > Comptes FTP),
+#                         qui arrive directement dans la racine du sous-domaine
+#   FTP_PASSWORD          son mot de passe
+#   STATS_ADMIN_PASSWORD  le mot de passe de l'espace stats des deux sites
+#
+# Le mot de passe n'est jamais dans le dépôt (public) : seule son empreinte
+# (bcrypt) part sur le serveur, dans secret.php, interdit d'accès depuis le web.
+# Le dossier data/ (la base des visites et celle des villes) n'est jamais
+# envoyé ni effacé par ce déploiement.
+
+name: Serveur de statistiques
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'stats-serveur/**'
+      - '.github/workflows/stats-serveur.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: stats-serveur
+  cancel-in-progress: false
+
+env:
+  # Destination, relative au dossier où le compte FTP atterrit. Doit finir par « / ».
+  DOSSIER_DISTANT: ./
+
+jobs:
+  deployer:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Vérifier les secrets
+        env:
+          HOTE: ${{ secrets.FTP_HOST }}
+          UTILISATEUR: ${{ secrets.FTP_USER }}
+          MDP: ${{ secrets.FTP_PASSWORD }}
+          ADMIN: ${{ secrets.STATS_ADMIN_PASSWORD }}
+        run: |
+          set -eu
+          for nom in HOTE UTILISATEUR MDP ADMIN; do
+            eval "valeur=\${$nom:-}"
+            if [ -z "$valeur" ]; then
+              echo "::error::Secret manquant. Créez FTP_HOST, FTP_USER, FTP_PASSWORD et STATS_ADMIN_PASSWORD dans Settings > Secrets and variables > Actions."
+              exit 1
+            fi
+          done
+
+      - name: Écrire l'empreinte du mot de passe (secret.php)
+        env:
+          ADMIN: ${{ secrets.STATS_ADMIN_PASSWORD }}
+        run: |
+          set -eu
+          php -r '$h = password_hash(getenv("ADMIN"), PASSWORD_DEFAULT); echo "<?php\nreturn array( \"password_hash\" => " . var_export($h, true) . " );\n";' > stats-serveur/secret.php
+          php -l stats-serveur/secret.php
+          for f in stats-serveur/*.php stats-serveur/lib/*.php; do php -l "$f"; done
+
+      - name: Envoyer par FTP
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_HOST }}
+          username: ${{ secrets.FTP_USER }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          protocol: ftps
+          local-dir: ./stats-serveur/
+          server-dir: ${{ env.DOSSIER_DISTANT }}
+          exclude: |
+            **/.git*
+            **/.git*/**
+            data/**
+
+      - name: Vérifier le serveur en ligne
+        run: |
+          code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 20 "https://stats-rando.anthony-bondon.fr/api.php" || echo 000)
+          echo "api.php : $code (404 attendu : « Statistiques des Randothèques. »)"
+          secret=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 20 "https://stats-rando.anthony-bondon.fr/secret.php" || echo 000)
+          echo "secret.php : $secret (403 attendu)"
+          if [ "$secret" = "200" ]; then echo "::warning::secret.php répond 200 : le .htaccess n'est pas actif (rien ne s'affiche, mais data/ ne serait pas protégé non plus)."; fi
+          if [ "$code" = "000" ]; then echo "::warning::Pas de réponse : sous-domaine ou DNS pas encore en place."; fi
