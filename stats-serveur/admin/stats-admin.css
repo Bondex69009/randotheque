@@ -10,6 +10,7 @@
 .sx-note { color: var(--c-text-muted); font-size: var(--fs-sm); margin: var(--space-4) 0 0; }
 .sx-sub { font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: 0.06em; color: var(--c-text-faint); margin: var(--space-5) 0 var(--space-2); font-weight: 700; }
 .sx-sub:first-child { margin-top: 0; }
+#sx-app[hidden], .sx-login[hidden] { display: none; }
 #sx-app { display: grid; gap: var(--space-5); transition: opacity 0.2s; }
 #sx-app.is-loading { opacity: 0.55; pointer-events: none; }
 

@@ -48,6 +48,12 @@ return array(
 	// si le sous-domaine passe un jour en nuage orange chez Cloudflare). Vide : connexion directe.
 	'proxy_header'    => '',
 
+	// Mot de passe des espaces stats (le même pour les deux sites) : seulement son empreinte bcrypt,
+	// le mot de passe lui-même n'est écrit nulle part. Pour le changer :
+	//   php -r 'echo password_hash("nouveau-mot-de-passe", PASSWORD_BCRYPT, ["cost" => 12]);'
+	// et coller le résultat ici. 8 essais ratés bloquent l'adresse pendant un quart d'heure.
+	'password_hash'   => '$2y$12$d2zWdsF2yEQj.4IfJe1Ef.bu4vTyu73qb8z6NY5ubt4gluG3mlQrm',
+
 	// Durée sans activité après laquelle une visite est terminée (minutes).
 	'session_minutes' => 30,
 

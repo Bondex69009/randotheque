@@ -22,6 +22,7 @@ $GLOBALS['sm_config'] = array_merge(
 		'datacenter_pattern' => '',
 		'proxy_header'       => '',
 		'site_host'          => '',
+		'password_hash'      => '',
 	),
 	(array) require SM_ROOT . '/config.php'
 );
@@ -102,6 +103,8 @@ function sm_db() {
 		CREATE TABLE IF NOT EXISTS rejects (day TEXT NOT NULL, site TEXT NOT NULL, reason TEXT NOT NULL, detail TEXT NOT NULL DEFAULT '', n INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (day, site, reason, detail));
 		CREATE TABLE IF NOT EXISTS settings (k TEXT PRIMARY KEY, v TEXT NOT NULL);
 		CREATE TABLE IF NOT EXISTS admin_ips (k TEXT PRIMARY KEY, seen INTEGER NOT NULL);
+		CREATE TABLE IF NOT EXISTS tokens (hash TEXT PRIMARY KEY, expires INTEGER NOT NULL);
+		CREATE TABLE IF NOT EXISTS login_fails (k TEXT NOT NULL, ts INTEGER NOT NULL);
 "
 	);
 	return $db;
@@ -163,6 +166,8 @@ function sm_daily_maintenance() {
 	$months = max( 1, min( 25, (int) sm_cfg( 'retention' ) ) );
 	sm_q( 'DELETE FROM hits WHERE ts < ?', array( date( 'Y-m-d 00:00:00', strtotime( "-$months months" ) ) ) );
 	sm_q( 'DELETE FROM admin_ips WHERE seen < ?', array( time() - 180 * 86400 ) );
+	sm_q( 'DELETE FROM tokens WHERE expires < ?', array( time() ) );
+	sm_q( 'DELETE FROM login_fails WHERE ts < ?', array( time() - 86400 ) );
 	sm_q( 'DELETE FROM rejects WHERE day < ?', array( date( 'Y-m-d', strtotime( "-$months months" ) ) ) );
 }
 
@@ -276,43 +281,56 @@ function sm_cors() {
 }
 
 /* -------------------------------------------------------------------------
- * Espace stats : protégé par mot de passe dans cPanel (Confidentialité du répertoire)
+ * Espace stats : un champ mot de passe sur la page, puis un jeton (pas de cookie).
+ * Seule l'empreinte bcrypt du mot de passe est conservée (config.php : password_hash).
  * ---------------------------------------------------------------------- */
 
-/**
- * Nom de l'utilisateur authentifié par Apache (protection cPanel du dossier admin/).
- */
-function sm_auth_user() {
-	foreach ( array( 'REMOTE_USER', 'REDIRECT_REMOTE_USER', 'PHP_AUTH_USER', 'AUTHENTICATE_UID' ) as $k ) {
-		if ( ! empty( $_SERVER[ $k ] ) ) {
-			return (string) $_SERVER[ $k ];
-		}
+function sm_password_hash() {
+	return (string) sm_cfg( 'password_hash' );
+}
+
+function sm_login( $password ) {
+	$ip   = sm_ip();
+	$k    = sm_admin_key( $ip );
+	$fail = (int) sm_q( 'SELECT COUNT(*) FROM login_fails WHERE k = ? AND ts > ?', array( $k, time() - 900 ) )->fetchColumn();
+	if ( $fail >= 8 ) {
+		return array( 'error' => 'Trop d\'essais. Réessayez dans un quart d\'heure.', 'code' => 429 );
 	}
-	return '';
+	$hash = sm_password_hash();
+	if ( '' === $hash ) {
+		return array( 'error' => 'Mot de passe non configuré (config.php : password_hash).', 'code' => 503 );
+	}
+	if ( ! password_verify( (string) $password, $hash ) ) {
+		// L'empreinte des essais ratés ne sert qu'au blocage ; elle ne marque pas l'IP comme admin.
+		sm_q( 'INSERT INTO login_fails (k, ts) VALUES (?, ?)', array( $k, time() ) );
+		usleep( 400000 );
+		return array( 'error' => 'Mot de passe incorrect.', 'code' => 401 );
+	}
+	$token = bin2hex( random_bytes( 32 ) );
+	sm_q( 'INSERT INTO tokens (hash, expires) VALUES (?, ?)', array( hash( 'sha256', $token ), time() + 30 * 86400 ) );
+	sm_remember_admin_ip();
+	return array( 'token' => $token );
 }
 
-/** Test en local (php -S sur cet ordinateur) : pas de protection Apache. */
-function sm_is_local_dev() {
-	$host = strtolower( (string) strtok( (string) ( $_SERVER['HTTP_HOST'] ?? '' ), ':' ) );
-	return in_array( (string) ( $_SERVER['REMOTE_ADDR'] ?? '' ), array( '127.0.0.1', '::1' ), true )
-		&& in_array( $host, array( 'localhost', '127.0.0.1' ), true );
+/** Jeton envoyé par la page dans l'en-tête X-Stats-Token (jamais filtré par Apache, contrairement à Authorization). */
+function sm_token() {
+	$t = (string) ( $_SERVER['HTTP_X_STATS_TOKEN'] ?? '' );
+	return preg_match( '/^[a-f0-9]{64}$/i', $t ) ? strtolower( $t ) : '';
 }
 
-/**
- * Accès réservé : sans la protection cPanel, les chiffres ne s'affichent pas
- * (sécurité par défaut, au cas où la protection serait retirée par erreur).
- * L'adresse de l'administrateur est notée à chaque ouverture : ses visites ne comptent plus.
- */
+function sm_logout() {
+	$token = sm_token();
+	if ( $token ) {
+		sm_q( 'DELETE FROM tokens WHERE hash = ?', array( hash( 'sha256', $token ) ) );
+	}
+}
+
 function sm_require_admin() {
-	if ( '' === sm_auth_user() && ! sm_is_local_dev() ) {
-		sm_json(
-			array(
-				'error'     => 'Espace stats non protégé : dans cPanel, « Confidentialité du répertoire », protégez par un mot de passe le dossier stats de ce site (godillots-ailes/stats ou gerard-martine/stats).',
-				'protect'   => true,
-			),
-			403
-		);
+	$token = sm_token();
+	if ( ! $token || ! sm_q( 'SELECT 1 FROM tokens WHERE hash = ? AND expires > ?', array( hash( 'sha256', $token ), time() ) )->fetchColumn() ) {
+		sm_json( array( 'error' => 'Connectez-vous.', 'login' => true ), 401 );
 	}
+	// L'administrateur peut changer d'adresse (4G, autre wifi) : on la note à chaque ouverture.
 	sm_remember_admin_ip();
 }
 

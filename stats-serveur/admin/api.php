@@ -6,9 +6,11 @@
  * affiché est celui du dossier où il est installé. Le moteur commun (bases, réception des visites)
  * est dans /stats/ à la racine du sous-domaine.
  *
- * Chaque dossier stats/ est protégé par mot de passe dans cPanel (« Confidentialité du répertoire ») :
- * Apache demande l'identifiant avant PHP.
+ * Accès par mot de passe (champ sur la page) : POST ?a=login renvoie un jeton, envoyé ensuite
+ * dans l'en-tête X-Stats-Token. Même mot de passe pour les deux sites.
  *
+ *   POST api.php?a=login  {password}    connexion -> jeton
+ *   POST api.php?a=logout               déconnexion
  *   GET  api.php?a=report&period=…      tableau de bord
  *   GET  api.php?a=live                 visiteurs des 5 dernières minutes
  *   POST api.php?a=geo  {step, kind}    installation des bases DB-IP, par étapes
@@ -29,9 +31,25 @@ require $sm_lib . '/report.php';
 
 header( 'X-Robots-Tag: noindex, nofollow' );
 header( 'X-Content-Type-Options: nosniff' );
-sm_require_admin();
+header( 'Cache-Control: no-store' );
 
 $action = (string) ( $_GET['a'] ?? '' );
+
+if ( 'login' === $action ) {
+	if ( 'POST' !== ( $_SERVER['REQUEST_METHOD'] ?? '' ) ) {
+		sm_done( 405 );
+	}
+	$res = sm_login( (string) ( sm_body()['password'] ?? '' ) );
+	if ( isset( $res['error'] ) ) {
+		sm_json( array( 'error' => $res['error'] ), $res['code'] );
+	}
+	sm_json( $res );
+}
+if ( 'logout' === $action ) {
+	sm_logout();
+	sm_done();
+}
+sm_require_admin();
 
 // Site = dossier où se trouve cet espace (/godillots-ailes/stats/ -> ga, /gerard-martine/stats/ -> gm).
 $site   = '';

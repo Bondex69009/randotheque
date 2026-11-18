@@ -33,15 +33,12 @@ pour son ancienne adresse.
 4. **GitHub**, ce dépôt > *Settings > Secrets and variables > Actions* : `FTP_HOST` (`xxx.o2switch.net`),
    `FTP_USER` (`nom@anthony-bondon.fr`), `FTP_PASSWORD`.
 5. *Actions* > *Mise à jour horaire* > *Run workflow*. Le premier envoi (environ 4 000 fichiers) prend un moment.
-6. **cPanel > Confidentialité du répertoire** : protéger par mot de passe les dossiers
-   `randotheque.anthony-bondon.fr/godillots-ailes/stats` et `randotheque.anthony-bondon.fr/gerard-martine/stats`
-   (un utilisateur et un mot de passe pour chacun, identiques ou non).
-7. Ouvrir l'un des deux espaces stats et cliquer en bas sur **Installer les bases des villes et des hébergeurs**
+6. Ouvrir l'un des deux espaces stats et cliquer en bas sur **Installer les bases des villes et des hébergeurs**
    (bases DB-IP gratuites, communes aux deux sites, à refaire une fois par mois).
 
 ## Statistiques de visite
 
-Un espace par site, qui ne montre que ses visites (petit cadenas en haut à droite de chaque site) :
+Un espace par site, qui ne montre que ses visites (petit cadenas en haut à droite de chaque site, puis mot de passe) :
 https://randotheque.anthony-bondon.fr/godillots-ailes/stats/ et https://randotheque.anthony-bondon.fr/gerard-martine/stats/.
 Visiteurs, visites, fiches ouvertes, GPX téléchargés, survols 3D, duels VS, partages, recherches,
 filtres, sources de trafic, villes (carte), appareils, navigateurs, affluence, durée des visites, journal des visites,
@@ -52,8 +49,9 @@ affichages du compteur sur le blog et faux visiteurs écartés.
 - **Faux visiteurs écartés** : robots, outils automatiques, navigateurs non standard, pays hors de la liste
   `allowed_countries` de `stats-serveur/config.php`, centres de données (AWS, OVH, Hetzner…).
 - **Administrateur** : son adresse est notée à chaque ouverture de l'espace stats et n'est plus comptée.
-- **Mots de passe** : gérés par cPanel (protection Apache du dossier `stats/` de chaque site). Sans cette
-  protection, l'espace refuse d'afficher les chiffres.
+- **Mot de passe** : un champ sur la page, le même pour les deux sites. Seule son empreinte bcrypt est conservée
+  (`password_hash` dans `stats-serveur/config.php`, avec la commande pour le changer). 8 essais ratés bloquent
+  l'adresse un quart d'heure. Une fois connecté, le navigateur reste connecté 30 jours.
 
 Fichiers : `stats-serveur/collect.php` reçoit les visites envoyées par `assets/stats.js` de chaque site ;
 `stats-serveur/admin/` contient le tableau de bord et son `api.php`, copiés par `npm run site` dans le dossier `stats/`
@@ -62,4 +60,4 @@ est créé sur le serveur et n'est jamais envoyé ni effacé par le déploiement
 
 **En local** : construire les deux sites (`npm run site` dans chaque dossier), puis servir un dossier qui reproduit
 le sous-domaine (`godillots-ailes/_site` en `godillots-ailes/`, `gerard-martine/_site` en `gerard-martine/`,
-`stats-serveur` en `stats/`) avec `php -S localhost:8095 -t <dossier>`. En local, l'espace stats s'ouvre sans mot de passe.
+`stats-serveur` en `stats/`) avec `php -S localhost:8095 -t <dossier>`.

@@ -1,11 +1,14 @@
 /* Randothèques – espace statistiques des deux sites (réservé aux gestionnaires).
-   Le dossier stats/admin/ est protégé par mot de passe dans cPanel : le navigateur le demande
-   avant même d'afficher cette page, rien n'est à gérer ici.
+   Accès par un champ mot de passe : le serveur renvoie un jeton, gardé dans ce navigateur
+   (celui de l'administrateur seulement) et envoyé dans l'en-tête X-Stats-Token.
    Graphiques dessinés en SVG/HTML, sans bibliothèque ; carte des villes avec Leaflet. */
 (() => {
   'use strict';
 
   const API = 'api.php';
+  const KEY = 'rt-stats-token';
+  let token = null;
+  try { token = localStorage.getItem(KEY); } catch { /* navigation privée */ }
 
   const $ = (s, el = document) => el.querySelector(s);
   const $$ = (s, el = document) => [...el.querySelectorAll(s)];
@@ -40,14 +43,49 @@
     const qs = new URLSearchParams({ a: action, ...query }).toString();
     const res = await fetch(`${API}?${qs}`, {
       method, credentials: 'same-origin',
-      headers: body ? { 'Content-Type': 'application/json' } : {},
+      headers: { ...(token ? { 'X-Stats-Token': token } : {}), ...(body ? { 'Content-Type': 'application/json' } : {}) },
       body: body ? JSON.stringify(body) : undefined,
     });
     if (res.status === 204) return null;
     const json = await res.json().catch(() => ({}));
+    if (res.status === 401 && action !== 'login') { logout(false); throw new Error(json.error || 'Connectez-vous.'); }
     if (!res.ok) throw new Error(json.error || `Erreur ${res.status}`);
     return json;
   }
+
+  // ------------------------------------------------------------ Connexion
+  function showLogin(msg = '') {
+    $('#sx-app').hidden = true;
+    $('#sx-logout').hidden = true;
+    $('#sx-login').hidden = false;
+    $('#sx-login-error').textContent = msg;
+    $('#sx-password').focus();
+  }
+  function logout(callServer = true) {
+    if (callServer && token) api('logout', { method: 'POST' }).catch(() => {});
+    token = null;
+    try { localStorage.removeItem(KEY); } catch { /* rien */ }
+    clearInterval(liveTimer);
+    showLogin();
+  }
+  $('#sx-login-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = $('button[type=submit]', e.target);
+    btn.disabled = true;
+    $('#sx-login-error').textContent = '';
+    try {
+      const res = await api('login', { method: 'POST', body: { password: $('#sx-password').value } });
+      token = res.token;
+      try { localStorage.setItem(KEY, token); } catch { /* rien */ }
+      $('#sx-password').value = '';
+      start();
+    } catch (err) {
+      $('#sx-login-error').textContent = err.message === 'Failed to fetch' ? 'Serveur de statistiques injoignable.' : err.message;
+    } finally {
+      btn.disabled = false;
+    }
+  });
+  $('#sx-logout').addEventListener('click', () => logout());
 
   // ------------------------------------------------------------ Barre d'outils
   function paintToolbar() {
@@ -437,7 +475,7 @@
       $('#sx-site-name').textContent = name;
       document.title = `Statistiques | ${name}`;
     } catch (err) {
-      $('#sx-summary').textContent = `Impossible de charger les statistiques : ${err.message}`;
+      if (token) $('#sx-summary').textContent = `Impossible de charger les statistiques : ${err.message}`;
       return;
     } finally {
       $('#sx-app').classList.remove('is-loading');
@@ -448,6 +486,9 @@
   }
 
   function start() {
+    $('#sx-login').hidden = true;
+    $('#sx-app').hidden = false;
+    $('#sx-logout').hidden = false;
     load();
     clearInterval(liveTimer);
     liveTimer = setInterval(() => { if (document.visibilityState === 'visible') live(); }, 30000);
@@ -456,5 +497,5 @@
   let resizeT;
   addEventListener('resize', () => { clearTimeout(resizeT); resizeT = setTimeout(() => data && drawEvo(), 150); });
 
-  start();
+  if (token) start(); else showLogin();
 })();

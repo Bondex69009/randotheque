@@ -6,7 +6,7 @@
 #   /stats/ (moteur commun des statistiques), / (page d'accueil, robots.txt, .htaccess)
 #
 # Secrets du dépôt : FTP_HOST, FTP_USER, FTP_PASSWORD (compte FTP dont le répertoire est la racine
-# du sous-domaine). Les mots de passe des espaces stats se règlent dans cPanel, pas ici.
+# du sous-domaine). Le mot de passe des espaces stats est réglé dans stats-serveur/config.php.
 # GitHub Pages ne sert plus qu'à rediriger les anciennes adresses des Godillots (liens partagés, gadget du blog).
 name: Mise à jour horaire
 

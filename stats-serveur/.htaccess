@@ -1,7 +1,7 @@
 # Statistiques des Randothèques (dossier /stats/ du sous-domaine).
 #   collect.php  public : reçoit les visites des deux sites
 #   (les tableaux de bord sont dans godillots-ailes/stats/ et gerard-martine/stats/)
-#   lib/, data/, config.php : jamais accessibles depuis le web
+#   lib/, data/, config.php, secret.php : jamais accessibles depuis le web
 Options -Indexes
 DirectoryIndex index.html
 
@@ -10,9 +10,9 @@ DirectoryIndex index.html
 	RewriteCond %{HTTPS} !=on
 	RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
 	RewriteRule ^(lib|data)(/|$) - [F,L]
-	RewriteRule ^config\.php$ - [F,L]
+	RewriteRule ^(config|secret)\.php$ - [F,L]
 </IfModule>
 
-<FilesMatch "^config\.php$">
+<FilesMatch "^(config|secret)\.php$">
 	Require all denied
 </FilesMatch>
