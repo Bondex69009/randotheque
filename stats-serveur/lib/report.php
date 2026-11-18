@@ -339,6 +339,12 @@ function sm_report( $site, $period, $from = '', $to = '' ) {
 		'scroll'    => sm_scroll( $w ),
 		'links'     => sm_link_labels( $w ),
 		'ui'        => $label_top( 'ui', 30 ),
+		'fiche_btns' => array_map(
+			function ( $r ) {
+				return array( $r['k'], (int) $r['n'], (int) $r['randos'] );
+			},
+			sm_all( "SELECT btn AS k, COUNT(*) AS n, COUNT(DISTINCT CASE WHEN ref <> '' THEN ref END) AS randos FROM hits WHERE $w AND type = 2 AND btn <> '' GROUP BY btn ORDER BY n DESC LIMIT 40" )
+		),
 		'langs'     => sm_top_sessions( 'lang', $w, 10, "AND lang <> ''" ),
 		'themes'    => sm_top_sessions( 'theme', $w, 5, "AND theme <> ''" ),
 		'apps'      => sm_top_sessions( 'app', $w, 2 ),

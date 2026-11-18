@@ -118,6 +118,7 @@ function sm_db() {
 		'dpr'       => "TEXT NOT NULL DEFAULT ''",
 		'net'       => "TEXT NOT NULL DEFAULT ''",
 		'scroll'    => 'INTEGER NOT NULL DEFAULT 0',
+		'btn'       => "TEXT NOT NULL DEFAULT ''",
 	);
 	foreach ( $add as $col => $def ) {
 		if ( ! in_array( $col, $have, true ) ) {

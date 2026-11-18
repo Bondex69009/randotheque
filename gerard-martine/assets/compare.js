@@ -19,6 +19,7 @@
     const has = (id) => picked.includes(id);
     function toggle(id) {
       if (!getR(id)) return;
+      if (!has(id) && window.rtStat) window.rtStat('vs_add', getR(id).name, id);
       if (has(id)) picked = picked.filter((x) => x !== id);
       else if (picked.length < 2) picked.push(id);
       else picked = [picked[0], id]; // la 1re reste la référence, la 2e est remplacée

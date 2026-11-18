@@ -32,7 +32,7 @@
     audio: 'Audio écouté', evo: 'Évolution du compteur', embed: 'Code du compteur', ailleurs: 'Chercher aussi sur',
     ext: 'Fiche externe', install: 'Appli installée', outbound: 'Lien externe',
     blog: 'Article du blog', photos: 'Album photos', relive: 'Vidéo Relive', drive: 'Google Drive', route: 'Itinéraire vers le départ',
-    video: 'Vidéo', ext_site: 'Fiche sur un autre site', ui: 'Clic',
+    video: 'Vidéo', ext_site: 'Fiche sur un autre site', ui: 'Clic', vs_add: 'Ajout au comparateur', anim: 'Clic sur un animateur',
   };
   const ACCENT = () => css('--c-accent') || '#87f700';
 
@@ -330,6 +330,8 @@
       .map((k, i) => `<h3 class="sx-sub">${KINDS[k]}</h3>${bars(data.links[k], { max: 6, color: CAT[(i + 1) % CAT.length] })}`).join('');
     $('#c-links').innerHTML = byKind.some((r) => r[1]) ? bars(byKind, { color: CAT[0] }) + detail : empty();
     $('#c-ui').innerHTML = bars(data.ui, { max: 30, color: CAT[6] });
+    // Chaque bouton de la fiche, sous son nom exact (Partager, Survol 3D, Télécharger le GPX, Photos de…).
+    $('#c-fiche_btns').innerHTML = bars(data.fiche_btns.map(([k, n, nr]) => [k, n, `sur ${nf0.format(nr)} rando${nr > 1 ? 's' : ''} différente${nr > 1 ? 's' : ''}`]), { max: 40, color: CAT[0] });
   }
 
   function drawSources() {
@@ -396,7 +398,7 @@
     if (!rows.length) { $('#c-recent').innerHTML = empty(); return; }
     const L = data.labels.events;
     const dev = { mobile: '📱', desktop: '💻', tablet: '📲' };
-    const short = { rando: 'fiche', gpx: 'GPX', fly: '3D', fly_duel: '3D duel', vs: 'VS', share: 'partage', png: 'PNG', ibp: 'IBP', search: 'recherche', filter: 'filtre', map: 'carte', audio: 'audio', evo: 'évolution', embed: 'compteur', ailleurs: 'ailleurs', ext: 'fiche ext.', install: 'install', outbound: 'lien' };
+    const short = { rando: 'fiche', gpx: 'GPX', fly: '3D', fly_duel: '3D duel', vs: 'VS', share: 'partage', png: 'PNG', ibp: 'IBP', search: 'recherche', filter: 'filtre', map: 'carte', audio: 'audio', evo: 'évolution', embed: 'compteur', ailleurs: 'ailleurs', ext: 'fiche ext.', install: 'install', outbound: 'lien', blog: 'blog', photos: 'photos', relive: 'Relive', drive: 'Drive', route: 'itinéraire', video: 'vidéo', ext_site: 'autre site', ui: 'clic', vs_add: '+VS', anim: 'animateur' };
     const when = (ts) => new Date(ts.replace(' ', 'T')).toLocaleString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
     $('#c-recent').innerHTML = `<table class="sx-table sx-table--log"><thead><tr><th scope="col">Quand</th><th scope="col">Où</th><th scope="col">Appareil</th><th scope="col">Venu de</th><th scope="col" class="num">Durée</th><th scope="col">Parcours</th></tr></thead>
       <tbody>${rows.map((r) => {

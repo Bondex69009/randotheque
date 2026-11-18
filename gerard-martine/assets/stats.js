@@ -106,12 +106,18 @@
 
   // Une même action répétée dans la seconde (double clic) n'est comptée qu'une fois.
   var lastKey = '', lastAt = 0;
-  window.rtStat = function (event, label, id) {
+  // Bouton de la fiche rando qui vient d'être cliqué : son nom exact accompagne l'action
+  // que app.js signale juste après (GPX, survol 3D, partage, PNG, IBP, audio…).
+  var pendingBtn = null;
+  window.rtStat = function (event, label, id, btn) {
     var key = event + '|' + (id || label || '');
     var now = Date.now();
     if (key === lastKey && now - lastAt < 1000) return;
     lastKey = key; lastAt = now;
-    var data = { t: 'ev', e: String(event), l: String(label || '').slice(0, 200), id: String(id || '').slice(0, 120) };
+    if (!btn && pendingBtn && now - pendingBtn.at < 1500) btn = pendingBtn.name;
+    pendingBtn = null;
+    if (btn && !id) id = rando().id; // bouton de la fiche : rattaché à la rando ouverte
+    var data = { t: 'ev', e: String(event), l: String(label || '').slice(0, 200), id: String(id || '').slice(0, 120), b: String(btn || '').slice(0, 80) };
     if (ready) send(data, true); else queue.push(data);
   };
 
@@ -147,11 +153,28 @@
     return 'outbound';
   }
   // Boutons déjà comptés par app.js sous un nom précis.
-  var KNOWN = '[data-fly],[data-share],[data-png],[data-ibp],[data-open],[data-anim],#open-embed,#open-evo,#hero-stats,#hero-total,a[download]';
+  var KNOWN = '[data-fly],[data-share],[data-png],[data-ibp],[data-open],[data-anim],[data-cmp-detail],[data-cmp],[data-play],#open-embed,#open-evo,#hero-stats,#hero-total,a[download]';
+
+  // Nom stable d'un bouton ou lien de la fiche (sans taille de fichier, date ou nom de rando).
+  function ficheButtonName(el) {
+    if (el.matches('.photo--link')) return 'Photo de l\'article (Lire l\'article)';
+    if (el.matches('[data-play]')) return 'Résumé audio : lecture';
+    if (el.matches('[data-rate]')) return 'Résumé audio : vitesse';
+    if (el.matches('[data-seek]')) return 'Résumé audio : avance';
+    if (el.matches('[data-anim]')) return 'Nom d\'un animateur';
+    if (el.matches('[data-close]')) return 'Fermer la fiche';
+    var lab = el.querySelector('.btn__label');
+    var text = clean(lab ? lab.textContent : (el.getAttribute('aria-label') || el.textContent));
+    if (el.matches('a[href]') && /blogspot\.|blogger\.com/.test(el.href) && !/article|blog/i.test(text)) return 'Titre de l\'article (lien)';
+    if (el.matches('[data-cmp-detail]')) return /retirer/i.test(text) ? 'Retirer du comparateur' : 'Comparer avec une autre rando';
+    return text.replace(/\s*\([^)]*\)\s*$/, '');
+  }
 
   d.addEventListener('click', function (e) {
     var t = e.target && e.target.closest ? e.target : null;
     if (!t) return;
+    var fb = t.closest('#detail') && t.closest('button, a[href], [role="button"], input[type="range"]');
+    pendingBtn = fb ? { name: ficheButtonName(fb), at: Date.now() } : null;
     if (t.closest(KNOWN)) return; // déjà compté par app.js (GPX, IBP, survol 3D, partage…)
     var a = t.closest('a[href]');
     if (a) {

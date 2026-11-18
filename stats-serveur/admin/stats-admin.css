@@ -201,3 +201,6 @@
 
 /* Villes : deux colonnes sur grand écran (la carte a été retirée) */
 @media (min-width: 900px) { #c-cities .sx-bars { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: var(--space-6); } }
+
+/* Boutons de la fiche : deux colonnes sur grand écran */
+@media (min-width: 900px) { #c-fiche_btns .sx-bars { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: var(--space-6); } }

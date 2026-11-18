@@ -25,6 +25,8 @@ function sm_events() {
 		'fly'      => 'Survols 3D',
 		'fly_duel' => 'Survols 3D en duel',
 		'vs'       => 'Comparaisons VS',
+		'vs_add'   => 'Ajouts au comparateur',
+		'anim'     => 'Clics sur un animateur',
 		'share'    => 'Partages (image / vidéo)',
 		'png'      => 'Images PNG enregistrées',
 		'ibp'      => 'Calculs IBP',
@@ -156,6 +158,7 @@ function sm_collect() {
 		$row['event'] = $event;
 		$row['label'] = sm_clean_text( $data['l'] ?? '', 200 );
 		$row['ref']   = sm_clean_text( $data['id'] ?? '', 120 );
+		$row['btn']   = sm_clean_text( $data['b'] ?? '', 80 ); // bouton de la fiche rando, s'il y a lieu
 		if ( 'search' === $event ) {
 			$row['label'] = mb_strtolower( $row['label'] );
 		}

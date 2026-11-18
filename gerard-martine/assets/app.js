@@ -14,6 +14,12 @@
     return;
   }
 
+  // Hauteur réelle de l'en-tête figé (la recherche passe dessous sur petit écran)
+  const siteHeader = $('.site-header');
+  if (siteHeader && 'ResizeObserver' in window) {
+    new ResizeObserver(() => document.documentElement.style.setProperty('--header-h', `${siteHeader.offsetHeight}px`)).observe(siteHeader);
+  }
+
   const RANDOS = DATA.randos;
   const LEVELS = DATA.levels;
   const LEVEL_BY_ID = Object.fromEntries(LEVELS.map((l) => [l.id, l]));
@@ -404,9 +410,10 @@
       update();
     }));
     const n = tags.length - (state.q ? 1 : 0);
-    const badge = $('#filters-count');
-    badge.hidden = !n;
-    badge.textContent = n;
+    $$('#filters-count, #open-filters-top .badge-count').forEach((badge) => {
+      badge.hidden = !n;
+      badge.textContent = n;
+    });
   }
 
   // ------------------------------------------------------------ Dessins SVG
@@ -1640,11 +1647,14 @@
 
   // ------------------------------------------------------------ Panneau des filtres (mobile)
   const filtersEl = $('#filters'), backdrop = $('#filters-backdrop'), openBtn = $('#open-filters');
+  const openBtns = [openBtn, $('#open-filters-top')];
+  let filtersOpener = openBtn;
   const isDrawer = () => !matchMedia('(min-width: 1024px)').matches;
-  function openFilters() {
+  function openFilters(e) {
+    filtersOpener = e?.currentTarget || openBtn;
     filtersEl.classList.add('is-open');
     backdrop.hidden = false;
-    openBtn.setAttribute('aria-expanded', 'true');
+    filtersOpener.setAttribute('aria-expanded', 'true');
     document.body.style.overflow = 'hidden';
     setTimeout(() => $('#close-filters').focus(), 50);
   }
@@ -1652,11 +1662,11 @@
     if (!filtersEl.classList.contains('is-open')) return;
     filtersEl.classList.remove('is-open');
     backdrop.hidden = true;
-    openBtn.setAttribute('aria-expanded', 'false');
+    filtersOpener.setAttribute('aria-expanded', 'false');
     document.body.style.overflow = '';
-    openBtn.focus();
+    filtersOpener.focus();
   }
-  openBtn.addEventListener('click', openFilters);
+  openBtns.forEach((b) => b.addEventListener('click', openFilters));
   $('#close-filters').addEventListener('click', closeFilters);
   $('#apply-filters').addEventListener('click', () => { closeFilters(); $('#resultats').scrollIntoView({ block: 'start' }); });
   backdrop.addEventListener('click', closeFilters);
@@ -1890,6 +1900,7 @@
     if (ibp) { e.preventDefault(); sendToIbp(byId.get(ibp.dataset.ibp)); return; }
     const anim = e.target.closest('[data-anim]');
     if (anim) {
+      stat('anim', anim.dataset.anim);
       state.anims = new Set([anim.dataset.anim]);
       closeDetail();
       syncFilterInputs();
