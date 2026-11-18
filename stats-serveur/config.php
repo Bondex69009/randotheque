@@ -7,21 +7,24 @@
 return array(
 	'timezone'        => 'Europe/Paris',
 
-	// Sites suivis : clé envoyée par le script de suivi => nom et chemin sur GitHub Pages.
+	// Domaine des deux sites (même sous-domaine o2switch, un dossier chacun).
+	'site_host'       => 'randotheque.anthony-bondon.fr',
+
+	// Sites suivis : clé envoyée par le script de suivi => nom et dossier sur le sous-domaine.
 	'sites'           => array(
 		'ga' => array(
 			'name' => 'Les Godillots Ailés',
-			'path' => '/randotheque/',
+			'path' => '/godillots-ailes/',
 		),
 		'gm' => array(
 			'name' => 'Gérard & Martine',
-			'path' => '/randotheque-gerard-martine/',
+			'path' => '/gerard-martine/',
 		),
 	),
 
 	// Adresses autorisées à envoyer des visites et à lire les statistiques.
 	'allowed_origins' => array(
-		'https://bondex69009.github.io',
+		'https://randotheque.anthony-bondon.fr',
 		'http://localhost:8080',
 		'http://localhost:8090',
 		'http://127.0.0.1:8080',

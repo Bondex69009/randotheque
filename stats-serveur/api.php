@@ -235,14 +235,15 @@ function sm_insert( array $row ) {
 }
 
 /**
- * Origine d'une visite. Les deux Randothèques partagent le même domaine (github.io) :
+ * Origine d'une visite. Les deux Randothèques partagent le même domaine :
  * un visiteur venu de l'autre site est une visite « Autres sites », pas un accès direct.
  */
 function sm_site_source( $ref, array $utm, $site ) {
 	$host  = strtolower( (string) parse_url( $ref, PHP_URL_HOST ) );
 	$path  = (string) parse_url( $ref, PHP_URL_PATH );
 	$sites = (array) sm_cfg( 'sites' );
-	if ( 'bondex69009.github.io' === $host ) {
+	$self  = (string) sm_cfg( 'site_host' );
+	if ( $self === $host ) {
 		foreach ( $sites as $key => $s ) {
 			if ( $key !== $site && 0 === strpos( $path, $s['path'] ) ) {
 				return array( 'referral', 'Randothèque ' . $s['name'], '' );
@@ -250,7 +251,7 @@ function sm_site_source( $ref, array $utm, $site ) {
 		}
 		return sm_source( '', $utm, $host );
 	}
-	return sm_source( $ref, $utm, 'bondex69009.github.io' );
+	return sm_source( $ref, $utm, $self );
 }
 
 /* -------------------------------------------------------------------------

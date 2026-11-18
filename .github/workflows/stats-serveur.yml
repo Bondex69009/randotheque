@@ -1,11 +1,13 @@
-# Envoie le serveur de statistiques (dossier stats-serveur/) par FTP chez o2switch.
-# Il sert les DEUX Randothèques (Godillots Ailés et Gérard & Martine).
+# Envoie par FTP chez o2switch, sur randotheque.anthony-bondon.fr :
+#   - le serveur de statistiques (stats-serveur/ -> /stats/), commun aux DEUX Randothèques ;
+#   - la racine du sous-domaine (hebergement/racine/ -> /) : page d'accueil, robots.txt, .htaccess.
+# Les sites eux-mêmes partent dans /godillots-ailes/ et /gerard-martine/ (workflow « Mise à jour horaire » de chaque dépôt).
 #
 # Secrets à créer dans Settings > Secrets and variables > Actions de ce dépôt :
 #   FTP_HOST              nom du serveur o2switch (xxx.o2switch.net) ou son IP,
 #                         PAS anthony-bondon.fr (qui passe par Cloudflare)
-#   FTP_USER              compte FTP dédié au sous-domaine stats-rando (cPanel > Comptes FTP),
-#                         qui arrive directement dans la racine du sous-domaine
+#   FTP_USER              compte FTP (cPanel > Comptes FTP) dont le répertoire est la racine
+#                         du sous-domaine randotheque.anthony-bondon.fr
 #   FTP_PASSWORD          son mot de passe
 #   STATS_ADMIN_PASSWORD  le mot de passe de l'espace stats des deux sites
 #
@@ -21,6 +23,7 @@ on:
     branches: [main]
     paths:
       - 'stats-serveur/**'
+      - 'hebergement/**'
       - '.github/workflows/stats-serveur.yml'
   workflow_dispatch:
 
@@ -30,7 +33,7 @@ concurrency:
 
 env:
   # Destination, relative au dossier où le compte FTP atterrit. Doit finir par « / ».
-  DOSSIER_DISTANT: ./
+  DOSSIER_DISTANT: ./stats/
 
 jobs:
   deployer:
@@ -78,11 +81,22 @@ jobs:
             **/.git*/**
             data/**
 
+      - name: Envoyer la racine du sous-domaine
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_HOST }}
+          username: ${{ secrets.FTP_USER }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          protocol: ftps
+          local-dir: ./hebergement/racine/
+          server-dir: ./
+          state-name: .ftp-deploy-racine.json
+
       - name: Vérifier le serveur en ligne
         run: |
-          code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 20 "https://stats-rando.anthony-bondon.fr/api.php" || echo 000)
+          code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 20 "https://randotheque.anthony-bondon.fr/stats/api.php" || echo 000)
           echo "api.php : $code (404 attendu : « Statistiques des Randothèques. »)"
-          secret=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 20 "https://stats-rando.anthony-bondon.fr/secret.php" || echo 000)
+          secret=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 20 "https://randotheque.anthony-bondon.fr/stats/secret.php" || echo 000)
           echo "secret.php : $secret (403 attendu)"
           if [ "$secret" = "200" ]; then echo "::warning::secret.php répond 200 : le .htaccess n'est pas actif (rien ne s'affiche, mais data/ ne serait pas protégé non plus)."; fi
           if [ "$code" = "000" ]; then echo "::warning::Pas de réponse : sous-domaine ou DNS pas encore en place."; fi

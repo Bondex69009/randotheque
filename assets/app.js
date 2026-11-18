@@ -782,7 +782,7 @@
   $('#hero-total').addEventListener('click', (e) => { if (!e.target.closest('#open-embed')) openEvo(); });
 
   // ------------------------------------------------------------ Compteur à intégrer sur un blog
-  const PUBLIC_URL = 'https://bondex69009.github.io/randotheque/';
+  const PUBLIC_URL = 'https://randotheque.anthony-bondon.fr/godillots-ailes/';
   const embedDialog = $('#embed');
   const embedBase = () => (/^(localhost|127\.|\[::1\])/.test(location.hostname) || location.protocol === 'file:'
     ? PUBLIC_URL : new URL('./', location.href).href);

@@ -21,6 +21,7 @@ $GLOBALS['sm_config'] = array_merge(
 		'allowed_countries'  => array(),
 		'datacenter_pattern' => '',
 		'proxy_header'       => '',
+		'site_host'          => '',
 	),
 	(array) require SM_ROOT . '/config.php'
 );
