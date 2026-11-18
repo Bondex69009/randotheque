@@ -192,7 +192,7 @@ function sm_report( $site, $period, $from = '', $to = '' ) {
 
 	// Randos : vues, visiteurs, téléchargements et autres actions sur la fiche.
 	$randos = sm_all(
-		"SELECT ref AS id, COALESCE(MAX(CASE WHEN event = 'rando' THEN label END), MAX(label)) AS name,
+		"SELECT ref AS id, COALESCE(MAX(CASE WHEN event = 'rando' THEN label END), MAX(label)) AS name, MAX(site) AS site,
 			SUM(event = 'rando') AS views,
 			COUNT(DISTINCT CASE WHEN event = 'rando' THEN visitor END) AS people,
 			SUM(event = 'gpx') AS gpx,

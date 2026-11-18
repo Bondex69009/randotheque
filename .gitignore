@@ -1,22 +1,8 @@
-# Fichiers locaux
+# Les deux Randothèques ont chacune leur .gitignore (godillots-ailes/, gerard-martine/).
 .DS_Store
-node_modules/
 .claude/
-.admin-token
-gpx/.corbeille/
-.cache/blog/dry-run.json
-.cache/blog/last-check.json
 
-# Fichiers générés par « npm run build » (recréés à chaque mise à jour)
-data/randos.js
-data/compteur.js
-data/randos.json
-data/admin.json
-data/tracks/
-_site/
-data/randogps.json
-
-# Serveur de statistiques : mot de passe et base (jamais dans le dépôt)
-stats-serveur/secret.php
+# Statistiques : base et bases DB-IP créées sur le serveur, jamais dans le dépôt
 stats-serveur/data/*
 !stats-serveur/data/.gitkeep
+stats-serveur/secret.php

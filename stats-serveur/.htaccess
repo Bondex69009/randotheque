@@ -1,16 +1,20 @@
-# Statistiques des Randothèques : seul api.php est accessible depuis le web.
-DirectoryIndex api.php
+# Statistiques des Randothèques (dossier /stats/ du sous-domaine).
+#   collect.php  public : reçoit les visites des deux sites
+#   admin/       espace stats, à protéger par mot de passe dans cPanel
+#                (« Confidentialité du répertoire » > stats/admin). Ne pas mettre de .htaccess
+#                dans admin/ depuis le dépôt : cPanel y écrit le sien.
+#   lib/, data/, config.php : jamais accessibles depuis le web
 Options -Indexes
+DirectoryIndex index.html
 
 <IfModule mod_rewrite.c>
 	RewriteEngine On
-	# Jeton de l'espace stats (en-tête Authorization) transmis à PHP
-	RewriteCond %{HTTP:Authorization} .
-	RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+	RewriteCond %{HTTPS} !=on
+	RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
 	RewriteRule ^(lib|data)(/|$) - [F,L]
-	RewriteRule ^(config|secret)\.php$ - [F,L]
+	RewriteRule ^config\.php$ - [F,L]
 </IfModule>
 
-<FilesMatch "^(config|secret)\.php$">
+<FilesMatch "^config\.php$">
 	Require all denied
 </FilesMatch>

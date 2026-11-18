@@ -1,7 +1,12 @@
-# Mise à jour automatique de la Randothèque, toutes les heures, depuis le blog du club.
-# Le site est envoyé par FTP chez o2switch : https://randotheque.anthony-bondon.fr/godillots-ailes/
-# Secrets du dépôt : FTP_HOST, FTP_USER, FTP_PASSWORD (compte FTP qui arrive à la racine du sous-domaine).
-# GitHub Pages ne sert plus qu'à rediriger les anciennes adresses (liens partagés, gadget du blog).
+# Mise à jour automatique des deux Randothèques, toutes les heures :
+#   - Les Godillots Ailés (dossier godillots-ailes/), depuis le blog du club ;
+#   - Gérard & Martine (dossier gerard-martine/), depuis les deux blogs de Gé.
+# Tout est envoyé par FTP chez o2switch, sur https://randotheque.anthony-bondon.fr/ :
+#   /godillots-ailes/   /gerard-martine/   /stats/ (statistiques)   / (page d'accueil, robots.txt, .htaccess)
+#
+# Secrets du dépôt : FTP_HOST, FTP_USER, FTP_PASSWORD (compte FTP dont le répertoire est la racine
+# du sous-domaine). Le mot de passe de l'espace stats se règle dans cPanel, pas ici.
+# GitHub Pages ne sert plus qu'à rediriger les anciennes adresses des Godillots (liens partagés, gadget du blog).
 name: Mise à jour horaire
 
 on:
@@ -25,7 +30,7 @@ concurrency:
 jobs:
   mise-a-jour:
     runs-on: ubuntu-latest
-    timeout-minutes: 60   # le tout premier envoi FTP (2 000 fichiers) est long ; ensuite seuls les changements partent
+    timeout-minutes: 90   # le tout premier envoi FTP (environ 4 000 fichiers) est long ; ensuite seuls les changements partent
     environment:
       name: github-pages
       url: ${{ steps.deploiement.outputs.page_url }}
@@ -36,29 +41,55 @@ jobs:
         with:
           node-version: 22
 
-      - name: Récupérer les nouveautés et modifications du blog
+      # ---------------------------------------------------------------- Les Godillots Ailés
+      - name: "Godillots : nouveautés et modifications du blog"
+        working-directory: godillots-ailes
         run: node scripts/scrape-blog.mjs
 
-      - name: Générer les données du site
+      - name: "Godillots : générer les données du site"
+        working-directory: godillots-ailes
         run: node scripts/build.mjs
 
-      - name: Récupérer les randos du blog Poulx (recherche « Chercher aussi sur », hors club)
+      - name: "Godillots : randos du blog Poulx (« Chercher aussi sur »)"
+        working-directory: godillots-ailes
         run: node scripts/scrape-poulx.mjs
         continue-on-error: true
 
-      - name: Récupérer les recos du blog « Reco » des GA (recherche « Chercher aussi sur », hors base et compteur)
+      - name: "Godillots : recos du blog « Reco » des GA (« Chercher aussi sur »)"
+        working-directory: godillots-ailes
         run: node scripts/scrape-reco.mjs
         continue-on-error: true
 
+      # ---------------------------------------------------------------- Gérard & Martine
+      # Un souci sur les blogs de Gé ne doit pas bloquer la mise à jour des Godillots.
+      - name: "Gérard & Martine : nouveautés des deux blogs"
+        working-directory: gerard-martine
+        run: node scripts/scrape-blog.mjs
+        continue-on-error: true
+
+      - name: "Gérard & Martine : générer les données du site"
+        id: gm_build
+        working-directory: gerard-martine
+        run: node scripts/build.mjs
+        continue-on-error: true
+
+      - name: "Gérard & Martine : randos du blog Poulx (« Chercher aussi sur »)"
+        working-directory: gerard-martine
+        run: node scripts/scrape-poulx.mjs
+        continue-on-error: true
+
+      # ---------------------------------------------------------------- Dépôt
       - name: Enregistrer les nouveaux fichiers dans le dépôt
         run: |
           git config user.name "Randothèque (mise à jour automatique)"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A gpx/blog audio data/blog-catalog.json .cache externes
+          for d in godillots-ailes gerard-martine; do
+            git add -A $d/gpx/blog $d/audio $d/data/blog-catalog.json $d/.cache $d/externes 2>/dev/null || true
+          done
           if git diff --cached --quiet; then
             echo "Rien de nouveau."
           else
-            git commit -m "Mise à jour depuis le blog du $(TZ=Europe/Paris date '+%d/%m/%Y à %Hh%M')"
+            git commit -m "Mise à jour depuis les blogs du $(TZ=Europe/Paris date '+%d/%m/%Y à %Hh%M')"
             # Si le dépôt a bougé entre-temps, on garde nos fichiers fraîchement générés
             # (« -X theirs » désigne, pendant un rebase, le commit qu'on rejoue : le nôtre).
             for essai in 1 2 3; do
@@ -67,38 +98,95 @@ jobs:
             done
           fi
 
-      - name: Récupérer la liste des randos RandoGPS (recherche « Chercher aussi sur », hors club)
+      - name: "Godillots : liste des randos RandoGPS (« Chercher aussi sur »)"
+        working-directory: godillots-ailes
         run: node scripts/scrape-randogps.mjs
         continue-on-error: true
 
-      - name: Préparer le site
+      - name: "Gérard & Martine : liste des randos RandoGPS (« Chercher aussi sur »)"
+        working-directory: gerard-martine
+        run: node scripts/scrape-randogps.mjs
+        continue-on-error: true
+
+      - name: "Godillots : préparer le site"
+        working-directory: godillots-ailes
         run: node scripts/build-site.mjs
 
-      - name: Envoyer le site chez o2switch (FTP)
+      - name: "Gérard & Martine : préparer le site"
+        id: gm_site
+        if: steps.gm_build.outcome == 'success'
+        working-directory: gerard-martine
+        run: node scripts/build-site.mjs
+        continue-on-error: true
+
+      # ---------------------------------------------------------------- Envoi chez o2switch
+      # Chaque envoi tient son inventaire (.ftp-deploy-sync-state.json) dans son dossier distant :
+      # seuls les fichiers modifiés partent, et rien d'autre n'est jamais effacé.
+      - name: "Envoyer : Godillots Ailés -> /godillots-ailes/"
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
           server: ${{ secrets.FTP_HOST }}
           username: ${{ secrets.FTP_USER }}
           password: ${{ secrets.FTP_PASSWORD }}
           protocol: ftps
-          local-dir: ./_site/
+          local-dir: ./godillots-ailes/_site/
           server-dir: ./godillots-ailes/
+
+      - name: "Envoyer : Gérard & Martine -> /gerard-martine/"
+        if: steps.gm_site.outcome == 'success'
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_HOST }}
+          username: ${{ secrets.FTP_USER }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          protocol: ftps
+          local-dir: ./gerard-martine/_site/
+          server-dir: ./gerard-martine/
+
+      # Statistiques : jamais le dossier data/ (base des visites et bases des villes, créées sur le serveur),
+      # ni de .htaccess dans admin/ (cPanel y écrit celui du mot de passe).
+      - name: "Envoyer : statistiques -> /stats/"
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_HOST }}
+          username: ${{ secrets.FTP_USER }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          protocol: ftps
+          local-dir: ./stats-serveur/
+          server-dir: ./stats/
           exclude: |
             **/.git*
             **/.git*/**
+            data/**
+            admin/.htaccess
 
+      - name: "Envoyer : page d'accueil et réglages du sous-domaine -> /"
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_HOST }}
+          username: ${{ secrets.FTP_USER }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          protocol: ftps
+          local-dir: ./hebergement/racine/
+          server-dir: ./
+          state-name: .ftp-deploy-racine.json
+
+      # ---------------------------------------------------------------- Anciennes adresses github.io
       # Garde-fou : on ne redirige GitHub Pages que si le nouveau site répond vraiment
       # (DNS, certificat HTTPS et fichiers en place). Sinon Pages garde la version précédente.
       - name: Vérifier que le nouveau site répond
         id: enligne
         run: |
+          for p in "" godillots-ailes/ gerard-martine/ stats/admin/; do
+            code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 20 "https://randotheque.anthony-bondon.fr/$p" || echo 000)
+            echo "https://randotheque.anthony-bondon.fr/$p : $code"
+          done
           code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 20 "https://randotheque.anthony-bondon.fr/godillots-ailes/" || echo 000)
-          echo "https://randotheque.anthony-bondon.fr/godillots-ailes/ : $code"
           if [ "$code" = "200" ]; then echo "ok=true" >> "$GITHUB_OUTPUT"
           else echo "::warning::Le nouveau site ne répond pas encore ($code) : GitHub Pages n'est pas redirigé pour l'instant."; fi
 
-      # Anciennes adresses github.io : une page qui renvoie vers la même page sur le nouveau site
-      # (chemin, recherche et #rando=… conservés), y compris dans l'iframe du compteur sur le blog.
+      # Une page qui renvoie vers la même page sur le nouveau site (chemin, recherche et #rando=… conservés),
+      # y compris dans l'iframe du compteur sur le blog. (Gérard & Martine : son ancien dépôt s'en charge.)
       - name: Préparer la redirection depuis GitHub Pages
         if: steps.enligne.outputs.ok == 'true'
         run: |

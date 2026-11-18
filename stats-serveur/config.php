@@ -22,13 +22,9 @@ return array(
 		),
 	),
 
-	// Adresses autorisées à envoyer des visites et à lire les statistiques.
+	// Autres adresses autorisées à envoyer des visites (le sous-domaine lui-même l'est toujours).
 	'allowed_origins' => array(
 		'https://randotheque.anthony-bondon.fr',
-		'http://localhost:8080',
-		'http://localhost:8090',
-		'http://127.0.0.1:8080',
-		'http://127.0.0.1:8090',
 	),
 
 	// Pays d'où les visites sont comptées (codes ISO). Les autres sont considérées comme du faux
