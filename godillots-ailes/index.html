@@ -19,7 +19,7 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=IBM+Plex+Sans:wght@400;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
   <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" crossorigin="">
-  <link rel="stylesheet" href="assets/style.css?v=36">
+  <link rel="stylesheet" href="assets/style.css?v=37">
   <link rel="stylesheet" href="assets/compare.css?v=4">
 </head>
 <body>
@@ -34,18 +34,27 @@
           <span class="brand__subtitle">Les Godillots Ailés</span>
         </span>
       </a>
-      <form class="search" role="search" onsubmit="return false">
-        <label for="q" class="visually-hidden">Rechercher une randonnée</label>
-        <svg class="icon search__icon" aria-hidden="true"><use href="#i-search"/></svg>
-        <span class="search__ghost" id="q-ghost" aria-hidden="true" hidden></span>
-        <input id="q" class="search__input" type="search" autocomplete="off" spellcheck="false"
-               placeholder="Village, année, animateur, rando…"
-               role="combobox" aria-autocomplete="both" aria-expanded="false" aria-controls="q-suggest"
-               aria-describedby="q-help">
-        <kbd class="search__kbd" aria-hidden="true">/</kbd>
-        <span class="visually-hidden" id="q-help">Des suggestions s'affichent pendant la saisie : flèches haut et bas pour les parcourir, Entrée pour choisir, Tab pour compléter le mot.</span>
-        <div class="suggest" id="q-suggest" role="listbox" aria-label="Suggestions" hidden></div>
-      </form>
+      <div class="search-wrap">
+        <form class="search" role="search" onsubmit="return false">
+          <label for="q" class="visually-hidden">Rechercher une randonnée</label>
+          <svg class="icon search__icon" aria-hidden="true"><use href="#i-search"/></svg>
+          <span class="search__ghost" id="q-ghost" aria-hidden="true" hidden></span>
+          <input id="q" class="search__input" type="search" autocomplete="off" spellcheck="false"
+                 placeholder="Village, année, animateur, rando…"
+                 role="combobox" aria-autocomplete="both" aria-expanded="false" aria-controls="q-suggest"
+                 aria-describedby="q-help">
+          <kbd class="search__kbd" aria-hidden="true">/</kbd>
+          <span class="visually-hidden" id="q-help">Des suggestions s'affichent pendant la saisie : flèches haut et bas pour les parcourir, Entrée pour choisir, Tab pour compléter le mot.</span>
+          <div class="suggest" id="q-suggest" role="listbox" aria-label="Suggestions" hidden></div>
+        </form>
+        <section class="elsewhere" id="elsewhere" aria-labelledby="elsewhere-label">
+          <div class="elsewhere__bar">
+            <span class="elsewhere__label" id="elsewhere-label">Chercher aussi sur</span>
+            <div class="elsewhere__tabs" id="elsewhere-tabs"><!-- généré par ailleurs.js --></div>
+          </div>
+          <div class="elsewhere__panel" id="elsewhere-panel" hidden></div>
+        </section>
+      </div>
       <button type="button" class="icon-btn header-filters" id="open-filters-top" aria-controls="filters" aria-expanded="false" aria-label="Filtres">
         <svg class="icon" aria-hidden="true"><use href="#i-sliders"/></svg><span class="badge-count" hidden></span>
       </button>
@@ -74,13 +83,6 @@
         <img class="hero__logo" src="assets/logo.png" width="337" height="337" alt="Logo de l'A.C.R.P. Les Godillots Ailés, Caissargues">
         <p class="hero__kicker">A.C.R.P. Caissargues · depuis 1977</p>
         <h1 id="hero-title" class="hero__title">Trouvez votre<br> <span class="hl">prochaine rando</span></h1>
-        <section class="elsewhere" id="elsewhere" aria-labelledby="elsewhere-label">
-          <div class="elsewhere__bar">
-            <span class="elsewhere__label" id="elsewhere-label">Chercher aussi sur</span>
-            <div class="elsewhere__tabs" id="elsewhere-tabs"><!-- généré par ailleurs.js --></div>
-          </div>
-          <div class="elsewhere__panel" id="elsewhere-panel" hidden></div>
-        </section>
         <div class="hero__figures">
           <p class="hero-total" id="hero-total"></p>
           <div class="hero__stats-wrap">
@@ -269,7 +271,7 @@
   <script src="assets/stats.js?v=4" data-site="ga"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
   <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js" crossorigin=""></script>
-  <script src="assets/ailleurs.js?v=4"></script>
+  <script src="assets/ailleurs.js?v=5"></script>
   <script src="assets/compare.js?v=6"></script>
   <script src="assets/app.js?v=48"></script>
   <script src="assets/install.js?v=2"></script>

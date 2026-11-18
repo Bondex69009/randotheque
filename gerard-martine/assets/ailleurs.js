@@ -267,6 +267,16 @@
     }
   });
 
+  // Liste ouverte sous la recherche (en-tête) : un clic à côté ou Échap la referme.
+  document.addEventListener('click', (e) => {
+    // composedPath : chemin du clic au moment où il a eu lieu (les onglets sont redessinés pendant le clic).
+    const inside = e.composedPath().some((el) => el.id === 'elsewhere' || el.tagName === 'DIALOG');
+    if (active && !inside) { active = null; render(); }
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && active && !document.querySelector('dialog[open]')) { active = null; render(); }
+  });
+
   let timer;
   document.addEventListener('randos:search', (e) => {
     const { q, communes } = e.detail || {};
