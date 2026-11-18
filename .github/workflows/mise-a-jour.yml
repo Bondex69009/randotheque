@@ -130,6 +130,7 @@ jobs:
           username: ${{ secrets.FTP_USER }}
           password: ${{ secrets.FTP_PASSWORD }}
           protocol: ftps
+          timeout: 600000   # 10 min par opération (30 s par défaut : trop court pour les gros audios et GPX)
           local-dir: ./godillots-ailes/_site/
           server-dir: ./godillots-ailes/
 
@@ -141,6 +142,7 @@ jobs:
           username: ${{ secrets.FTP_USER }}
           password: ${{ secrets.FTP_PASSWORD }}
           protocol: ftps
+          timeout: 600000   # 10 min par opération (30 s par défaut : trop court pour les gros audios et GPX)
           local-dir: ./gerard-martine/_site/
           server-dir: ./gerard-martine/
 
@@ -153,6 +155,7 @@ jobs:
           username: ${{ secrets.FTP_USER }}
           password: ${{ secrets.FTP_PASSWORD }}
           protocol: ftps
+          timeout: 600000   # 10 min par opération (30 s par défaut : trop court pour les gros audios et GPX)
           local-dir: ./stats-serveur/
           server-dir: ./stats/
           exclude: |
@@ -168,6 +171,7 @@ jobs:
           username: ${{ secrets.FTP_USER }}
           password: ${{ secrets.FTP_PASSWORD }}
           protocol: ftps
+          timeout: 600000   # 10 min par opération (30 s par défaut : trop court pour les gros audios et GPX)
           local-dir: ./hebergement/racine/
           server-dir: ./
           state-name: .ftp-deploy-racine.json
