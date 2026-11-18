@@ -49,6 +49,16 @@ copy('gpx', 'gpx');
 if (fs.existsSync(path.join(ROOT, 'audio'))) copy('audio', 'audio');
 // Pas de traitement Jekyll par GitHub Pages
 fs.writeFileSync(path.join(OUT, '.nojekyll'), '');
+// Chez o2switch (Apache) : jamais indexé par les moteurs de recherche, même les GPX, images et fichiers
+// que la balise <meta name="robots"> des pages ne couvre pas. Les dossiers voisins ne sont pas concernés.
+fs.writeFileSync(path.join(OUT, '.htaccess'), [
+  '# Randothèque : outil interne, à ne pas indexer (écrit par scripts/build-site.mjs).',
+  'Options -Indexes',
+  '<IfModule mod_headers.c>',
+  '\tHeader always set X-Robots-Tag "noindex, nofollow"',
+  '</IfModule>',
+  '',
+].join('\n'));
 
 const size = (dir) => fs.readdirSync(dir, { withFileTypes: true })
   .reduce((s, e) => s + (e.isDirectory() ? size(path.join(dir, e.name)) : fs.statSync(path.join(dir, e.name)).size), 0);

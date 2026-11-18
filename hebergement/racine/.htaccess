@@ -11,7 +11,7 @@ DirectoryIndex index.html index.php
 
 # Outil interne : jamais indexé par les moteurs de recherche.
 <IfModule mod_headers.c>
-	Header set X-Robots-Tag "noindex, nofollow"
+	Header always set X-Robots-Tag "noindex, nofollow"
 	Header set X-Content-Type-Options "nosniff"
 	Header set Referrer-Policy "strict-origin-when-cross-origin"
 </IfModule>
