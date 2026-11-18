@@ -457,11 +457,29 @@
   async function live() {
     try {
       const l = await api('live');
+      const dev = { mobile: '📱', desktop: '💻', tablet: '📲' };
+      const ago = (sec) => (sec < 60 ? `${sec} s` : `${Math.floor(sec / 60)} min`);
+      const src = (p) => (p.src_type === 'direct' || !p.src_name ? 'Accès direct' : p.src_name);
+      const doing = (p) => (p.event ? `${esc(ONE[p.event] || p.event)}${p.label ? ` · <span class="sx-muted">${esc(p.label)}</span>` : ''}` : '<span class="sx-muted">regarde la liste des randos</span>');
+      const rows = l.people.map((p) => `<li class="sx-now__p${p.idle > 120 ? ' is-idle' : ''}">
+          <span class="sx-now__who"><span aria-hidden="true">${dev[p.device] || ''}</span> ${flag(p.country)} <strong>${esc(p.city || 'Ville inconnue')}</strong>
+            <small class="sx-muted">${esc(p.browser)} · ${esc(p.os)}${p.app ? ' · appli' : ''}</small></span>
+          <span class="sx-now__doing">${doing(p)}</span>
+          <span class="sx-now__meta"><span>${esc(src(p))}</span><span>depuis ${ago(p.since)}</span><span>${p.actions} action${p.actions > 1 ? 's' : ''}</span></span>
+        </li>`).join('');
       const d0 = new Date(), today = `${d0.getFullYear()}-${String(d0.getMonth() + 1).padStart(2, '0')}-${String(d0.getDate()).padStart(2, '0')}`;
-      const feed = l.feed.slice(0, 6).map((f) => `<li><time>${f.ts.slice(0, 10) === today ? '' : `${f.ts.slice(8, 10)}/${f.ts.slice(5, 7)} `}${f.ts.slice(11, 16)}</time> ${esc(ONE[f.event] || f.event)}${f.label ? ` · <span class="sx-muted">${esc(f.label)}</span>` : ''}${f.city ? ` <small class="sx-muted">(${esc(f.city)})</small>` : ''}</li>`).join('');
-      $('#sx-live').innerHTML = `<span class="sx-live__dot${l.now ? ' is-on' : ''}" aria-hidden="true"></span>
-        <strong>${nf0.format(l.now)}</strong> visiteur${l.now > 1 ? 's' : ''} en ce moment
-        ${feed ? `<ul class="sx-live__feed" aria-label="Dernières actions">${feed}</ul>` : ''}`;
+      const feed = l.feed.slice(0, 8).map((f) => `<li><time>${f.ts.slice(0, 10) === today ? '' : `${f.ts.slice(8, 10)}/${f.ts.slice(5, 7)} `}${f.ts.slice(11, 16)}</time> ${esc(ONE[f.event] || f.event)}${f.label ? ` · <span class="sx-muted">${esc(f.label)}</span>` : ''}${f.city ? ` <small class="sx-muted">(${esc(f.city)})</small>` : ''}</li>`).join('');
+      const top = Math.max(1, ...l.minutes);
+      const bars = l.minutes.map((n, i) => `<span style="height:${Math.max(4, (100 * n) / top)}%" data-tip="${esc(`il y a ${l.minutes.length - i} min : <strong>${n}</strong> personne${n > 1 ? 's' : ''}`)}"${n ? '' : ' class="is-zero"'}></span>`).join('');
+      $('#sx-live').innerHTML = `
+        <div class="sx-now__head">
+          <span class="sx-live__dot${l.now ? ' is-on' : ''}" aria-hidden="true"></span>
+          <span class="sx-now__n">${nf0.format(l.now)}</span>
+          <span class="sx-now__t">personne${l.now > 1 ? 's' : ''} sur le site en ce moment<small class="sx-muted">${nf0.format(l.today)} visiteur${l.today > 1 ? 's' : ''} aujourd'hui · mis à jour à ${esc(l.time)}</small></span>
+          <span class="sx-now__bars" role="img" aria-label="Personnes actives minute par minute, 30 dernières minutes">${bars}</span>
+        </div>
+        ${rows ? `<ul class="sx-now__list" aria-label="Visiteurs présents">${rows}</ul>` : '<p class="sx-muted sx-now__empty">Personne pour l\'instant. La liste se met à jour toute seule.</p>'}
+        ${feed ? `<h3 class="sx-sub">Dernières actions</h3><ul class="sx-live__feed" aria-label="Dernières actions">${feed}</ul>` : ''}`;
     } catch { /* silencieux */ }
   }
 
@@ -491,7 +509,7 @@
     $('#sx-logout').hidden = false;
     load();
     clearInterval(liveTimer);
-    liveTimer = setInterval(() => { if (document.visibilityState === 'visible') live(); }, 30000);
+    liveTimer = setInterval(() => { if (document.visibilityState === 'visible') live(); }, 10000);
   }
 
   let resizeT;

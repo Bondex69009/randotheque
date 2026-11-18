@@ -348,14 +348,49 @@ function sm_report( $site, $period, $from = '', $to = '' ) {
  * Visiteurs actifs dans les 5 dernières minutes et dernières actions.
  */
 function sm_live( $site ) {
-	$since = date( 'Y-m-d H:i:s', time() - 300 );
-	$w     = "ts >= '$since'" . ( 'all' !== $site ? ' AND site = ' . sm_db()->quote( $site ) : '' );
+	$now   = time();
+	$since = date( 'Y-m-d H:i:s', $now - 300 );
+	$ws    = 'all' !== $site ? ' AND site = ' . sm_db()->quote( $site ) : '';
+	$w     = "ts >= '$since'$ws";
+
+	// Personnes présentes (activité dans les 5 dernières minutes), avec leur visite en cours.
+	$people = sm_all(
+		"SELECT h.site, h.session, MAX(h.city) AS city, MAX(h.country) AS country, MAX(h.device) AS device,
+			MAX(h.browser) AS browser, MAX(h.os) AS os, MAX(h.src_type) AS src_type, MAX(h.src_name) AS src_name,
+			MAX(h.app) AS app, MAX(h.ts) AS last,
+			(SELECT MIN(ts) FROM hits s WHERE s.session = h.session) AS start,
+			(SELECT COUNT(*) FROM hits s WHERE s.session = h.session AND s.type = 2) AS actions,
+			(SELECT event || '|' || label FROM hits s WHERE s.session = h.session AND s.type = 2 ORDER BY s.id DESC LIMIT 1) AS doing
+		FROM hits h WHERE h.$w AND h.type IN (1,2) AND h.session <> '' GROUP BY h.session ORDER BY last DESC LIMIT 30"
+	);
+	foreach ( $people as &$p ) {
+		$p['since']   = max( 0, $now - strtotime( $p['start'] ) );
+		$p['idle']    = max( 0, $now - strtotime( $p['last'] ) );
+		$p['actions'] = (int) $p['actions'];
+		$p['app']     = (int) $p['app'];
+		list( $p['event'], $p['label'] ) = array_pad( explode( '|', (string) $p['doing'], 2 ), 2, '' );
+		unset( $p['doing'], $p['session'], $p['start'], $p['last'] );
+	}
+	unset( $p );
+
+	// Personnes actives minute par minute sur les 30 dernières minutes.
+	$from   = $now - 30 * 60;
+	$counts = array();
+	foreach ( sm_all( "SELECT strftime('%Y-%m-%d %H:%M', ts) AS m, COUNT(DISTINCT visitor) AS n FROM hits WHERE ts >= '" . date( 'Y-m-d H:i:s', $from ) . "'$ws AND type IN (1,2) GROUP BY m" ) as $r ) {
+		$counts[ $r['m'] ] = (int) $r['n'];
+	}
+	$minutes = array();
+	for ( $t = $from + 60; $t <= $now; $t += 60 ) {
+		$minutes[] = $counts[ date( 'Y-m-d H:i', $t ) ] ?? 0;
+	}
+
 	return array(
-		'now'    => (int) sm_one( "SELECT COUNT(DISTINCT visitor) FROM hits WHERE $w AND type IN (1,2)" ),
-		'people' => sm_all( "SELECT site, MAX(city) AS city, MAX(country) AS country, MAX(device) AS device, MAX(ts) AS last, SUM(type = 2) AS actions FROM hits WHERE $w AND type IN (1,2) GROUP BY visitor ORDER BY last DESC LIMIT 20" ),
-		'feed'   => sm_all(
-			'SELECT site, ts, event, label, city, device FROM hits WHERE type = 2' . ( 'all' !== $site ? ' AND site = ' . sm_db()->quote( $site ) : '' ) . ' ORDER BY ts DESC LIMIT 15'
-		),
+		'now'     => count( $people ),
+		'people'  => $people,
+		'minutes' => $minutes,
+		'today'   => (int) sm_one( "SELECT COUNT(DISTINCT visitor) FROM hits WHERE day = '" . date( 'Y-m-d' ) . "'$ws AND type IN (1,2)" ),
+		'feed'    => sm_all( "SELECT ts, event, label, city, device FROM hits WHERE type = 2$ws ORDER BY ts DESC LIMIT 12" ),
+		'time'    => date( 'H:i:s' ),
 	);
 }
 
