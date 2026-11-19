@@ -57,7 +57,7 @@ L'adresse secrète est la seule protection, donc il ne faut la donner qu'aux ges
 supprimez le fichier `.admin-token` et relancez `npm run serve`, ou imposez la vôtre avec la variable `ADMIN_TOKEN`.
 Les corrections sont enregistrées dans `data/overrides.json` et survivent aux synchronisations avec le blog.
 L'administration a besoin du serveur `npm run serve` ; elle ne fonctionne pas sur un hébergement purement statique
-(GitHub Pages, Netlify…).
+(comme la version en ligne chez o2switch).
 
 ## Statistiques de visite
 

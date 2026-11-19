@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Rassemble dans _site/ uniquement les fichiers du site public (pour GitHub Pages).
+// Rassemble dans _site/ uniquement les fichiers du site public (envoyé chez o2switch par FTP).
 // À lancer après « npm run build ».
 import fs from 'node:fs';
 import path from 'node:path';
@@ -52,8 +52,6 @@ if (fs.existsSync(path.join(ROOT, 'externes', 'reco', 'reco.json'))) {
 }
 copy('gpx', 'gpx');
 if (fs.existsSync(path.join(ROOT, 'audio'))) copy('audio', 'audio');
-// Pas de traitement Jekyll par GitHub Pages
-fs.writeFileSync(path.join(OUT, '.nojekyll'), '');
 // Chez o2switch (Apache) : jamais indexé par les moteurs de recherche, même les GPX, images et fichiers
 // que la balise <meta name="robots"> des pages ne couvre pas. Les dossiers voisins ne sont pas concernés.
 fs.writeFileSync(path.join(OUT, '.htaccess'), [

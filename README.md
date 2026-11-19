@@ -18,10 +18,13 @@ Chaque Randothèque a son propre README (scripts, calculs, administration locale
 GPX et audios dans le dépôt, régénère les deux sites et envoie tout par FTP. Seuls les fichiers modifiés partent. Un
 souci sur les blogs de Gérard & Martine ne bloque pas la mise à jour des Godillots.
 
-L'ancienne adresse des Godillots (`bondex69009.github.io/randotheque/`) est redirigée vers le nouveau site, chemin et
-`#rando=…` conservés (liens partagés, appli installée, compteur collé sur le blog). Cette redirection n'est publiée
-que lorsque le nouveau site répond. L'ancien dépôt `randotheque-gerard-martine` ne sert plus qu'à la même redirection
-pour son ancienne adresse.
+La mise en production se fait uniquement par ce FTP vers o2switch : un `git push` sur `main` suffit, ou *Run workflow*
+pour forcer un passage. La dernière étape vérifie que les pages du site répondent (avertissement sinon).
+
+GitHub Pages n'est plus utilisé. Les anciennes adresses (`bondex69009.github.io/randotheque/` et
+`bondex69009.github.io/randotheque-gerard-martine/`) servent toujours la page de redirection publiée en dernier
+(chemin et `#rando=…` conservés) : il ne faut donc pas désactiver Pages dans les réglages de ces deux dépôts tant que
+d'anciens liens circulent. L'ancien dépôt `randotheque-gerard-martine` n'a plus aucune tâche automatique.
 
 ## Mise en place chez o2switch (une seule fois)
 

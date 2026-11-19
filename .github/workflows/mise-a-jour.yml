@@ -7,7 +7,7 @@
 #
 # Secrets du dépôt : FTP_HOST, FTP_USER, FTP_PASSWORD (compte FTP dont le répertoire est la racine
 # du sous-domaine). Le mot de passe des espaces stats est réglé dans stats-serveur/config.php.
-# GitHub Pages ne sert plus qu'à rediriger les anciennes adresses des Godillots (liens partagés, gadget du blog).
+# GitHub Pages n'est plus utilisé : les anciennes adresses github.io gardent la redirection publiée en dernier.
 name: Mise à jour horaire
 
 on:
@@ -21,8 +21,6 @@ on:
 
 permissions:
   contents: write   # enregistrer les nouveaux GPX dans le dépôt
-  pages: write
-  id-token: write
 
 concurrency:
   group: randotheque
@@ -32,9 +30,6 @@ jobs:
   mise-a-jour:
     runs-on: ubuntu-latest
     timeout-minutes: 90   # le tout premier envoi FTP (environ 4 000 fichiers) est long ; ensuite seuls les changements partent
-    environment:
-      name: github-pages
-      url: ${{ steps.deploiement.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
 
@@ -188,55 +183,11 @@ jobs:
           server-dir: ./
           state-name: .ftp-deploy-racine.json
 
-      # ---------------------------------------------------------------- Anciennes adresses github.io
-      # Garde-fou : on ne redirige GitHub Pages que si le nouveau site répond vraiment
-      # (DNS, certificat HTTPS et fichiers en place). Sinon Pages garde la version précédente.
-      - name: Vérifier que le nouveau site répond
-        id: enligne
+      # ---------------------------------------------------------------- Contrôle
+      - name: Vérifier que le site répond
         run: |
           for p in "" godillots-ailes/ gerard-martine/ godillots-ailes/stats/ gerard-martine/stats/; do
             code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 20 "https://randotheque.anthony-bondon.fr/$p" || echo 000)
             echo "https://randotheque.anthony-bondon.fr/$p : $code"
+            if [ "$code" != "200" ]; then echo "::warning::https://randotheque.anthony-bondon.fr/$p répond $code"; fi
           done
-          code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 20 "https://randotheque.anthony-bondon.fr/godillots-ailes/" || echo 000)
-          # La redirection ne change jamais : une fois en ligne, inutile de republier GitHub Pages à chaque
-          # passage (le déploiement Pages échoue de temps en temps côté GitHub et envoie un mail d'échec).
-          deja=$(curl -sS --max-time 20 "https://bondex69009.github.io/randotheque/" || true)
-          if echo "$deja" | grep -q "La Randothèque a déménagé" && echo "$deja" | grep -q "randotheque.anthony-bondon.fr/godillots-ailes/"; then
-            echo "La redirection est déjà en place sur GitHub Pages : rien à republier."
-          elif [ "$code" = "200" ]; then echo "ok=true" >> "$GITHUB_OUTPUT"
-          else echo "::warning::Le nouveau site ne répond pas encore ($code) : GitHub Pages n'est pas redirigé pour l'instant."; fi
-
-      # Une page qui renvoie vers la même page sur le nouveau site (chemin, recherche et #rando=… conservés),
-      # y compris dans l'iframe du compteur sur le blog. (Gérard & Martine : son ancien dépôt s'en charge.)
-      - name: Préparer la redirection depuis GitHub Pages
-        if: steps.enligne.outputs.ok == 'true'
-        run: |
-          mkdir -p _redirect
-          cat > _redirect/index.html <<'EOF'
-          <!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="robots" content="noindex">
-          <title>La Randothèque a déménagé</title>
-          <script>
-            var base = 'https://randotheque.anthony-bondon.fr/godillots-ailes/';
-            var rest = location.pathname.replace(/^\/[^\/]+\/?/, '');
-            location.replace(base + rest + location.search + location.hash);
-          </script>
-          <meta http-equiv="refresh" content="0; url=https://randotheque.anthony-bondon.fr/godillots-ailes/"></head>
-          <body><p>La Randothèque a déménagé : <a href="https://randotheque.anthony-bondon.fr/godillots-ailes/">https://randotheque.anthony-bondon.fr/godillots-ailes/</a></p></body></html>
-          EOF
-          for f in 404 compteur stats; do cp _redirect/index.html _redirect/$f.html; done
-          touch _redirect/.nojekyll
-
-      - uses: actions/configure-pages@v5
-        if: steps.enligne.outputs.ok == 'true'
-
-      - uses: actions/upload-pages-artifact@v3
-        if: steps.enligne.outputs.ok == 'true'
-        with:
-          path: _redirect
-
-      - name: Publier la redirection sur GitHub Pages
-        if: steps.enligne.outputs.ok == 'true'
-        id: deploiement
-        uses: actions/deploy-pages@v4
-        continue-on-error: true   # un raté de Pages ne doit pas marquer toute la mise à jour en échec
