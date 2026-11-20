@@ -16,9 +16,10 @@
   const HOP_DX = 110;         // écart horizontal maximal entre deux blocs pour sauter (px)
   const HOP_DY = 150;         // écart vertical maximal (px)
   const STAY = [9000, 16000]; // temps maximal sur un même bloc avant d'aller voir ailleurs (ms)
+  // Éléments candidats ; seuls ceux dont le bord haut est réellement dessiné (fond, bordure) servent de sol
   const SELECTORS = [
-    '.card', '.hero-total', '.hero-stats > div', '.btn', '.chip', '.segmented', '.search', '.toolbar',
-    '.overview-map', '.evo', '.elsewhere', '.detail h2', 'main h1', 'main h2', 'main h3', '.site-footer', '.brand',
+    '.card', '.card__visual', '.hero-total', '.hero-stats > div', '.btn', '.chip', '.segmented', '.search', '.toolbar',
+    '.filters', '.overview-map', '.evo', '.elsewhere', '.site-footer', '.site-header',
   ].join(',');
 
   // Pauses : accessoires dessinés dans le même repère 32 × 32 que le randonneur (tourné vers la droite)
@@ -47,11 +48,40 @@
   const vh = () => window.innerHeight;
   const vw = () => document.documentElement.clientWidth;
 
+  // Sol : le bord haut doit être une vraie ligne visible (bordure, fond opaque, dégradé).
+  // Renvoie les retraits gauche/droite à respecter à cause des coins arrondis, ou null si l'élément n'a pas de sol.
+  const alpha = (c) => {
+    if (!c || c === 'transparent') return 0;
+    const m = c.match(/rgba?\(([^)]+)\)/);
+    if (!m) return 1;
+    const parts = m[1].split(/[\s,/]+/).filter(Boolean);
+    return parts.length > 3 ? parseFloat(parts[3]) * (parts[3].endsWith('%') ? 0.01 : 1) : 1;
+  };
+  const groundCache = new WeakMap();
+  const ground = (t) => {
+    const hit = groundCache.get(t);
+    const now = performance.now();
+    if (hit && now - hit.at < 3000) return hit.g;
+    const cs = getComputedStyle(t);
+    let ok = false;
+    if (!ok && parseFloat(cs.borderTopWidth) >= 1 && cs.borderTopStyle !== 'none' && alpha(cs.borderTopColor) >= 0.2) ok = true;
+    if (!ok && alpha(cs.backgroundColor) >= 0.15) ok = true;
+    if (!ok && cs.backgroundImage !== 'none') ok = true;
+    if (cs.visibility === 'hidden' || parseFloat(cs.opacity) < 0.5) ok = false;
+    const g = ok ? { l: Math.max(10, parseFloat(cs.borderTopLeftRadius) || 0), r: Math.max(10, parseFloat(cs.borderTopRightRadius) || 0) } : null;
+    groundCache.set(t, { g, at: now });
+    return g;
+  };
+  // Portion praticable du bord haut (px depuis le bord gauche de l'élément), coins arrondis exclus
+  const span = (t, r) => { const g = ground(t) || { l: 10, r: 10 }; return [g.l, r.width - g.r]; };
+
   // Un élément est praticable s'il est assez large, visible dans la fenêtre et non recouvert à l'endroit visé
   const reachable = (t, x) => {
     if (!t || !t.isConnected) return false;
     const r = t.getBoundingClientRect();
     if (r.width < 100 || r.height < 14) return false;
+    const g = ground(t);
+    if (!g || r.width - g.l - g.r < 50) return false;
     if (r.top < SIZE + 8 || r.top > vh() - 20 || r.right < 10 || r.left > vw() - 10) return false;
     const px = Math.min(Math.max(x == null ? r.left + r.width / 2 : x, r.left + 2), r.right - 2);
     if (px < 0 || px > vw()) return false;
@@ -63,16 +93,18 @@
     .filter((t) => t !== avoid && !(avoid && (t.contains(avoid) || avoid.contains(t))));
 
   // Bloc voisin : un bord haut tout proche de l'endroit où il se trouve (devant lui de préférence)
-  const nearTarget = () => {
+  const nearTarget = (aheadOnly) => {
     const near = candidates(target).map((t) => {
       const r = t.getBoundingClientRect();
       const dx = Math.max(r.left - x, 0, x - r.right);
       const dy = Math.abs(r.top - y);
       if (dx > HOP_DX || dy > HOP_DY || (dx < 4 && dy < 6)) return null;
-      const land = Math.min(Math.max(x, r.left + 14), r.right - 14);
+      const [lo, hi] = span(t, r);
+      const land = Math.min(Math.max(x, r.left + lo + 4), r.left + hi - 4);
       if (!reachable(t, land)) return null;
       const ahead = (land - x) * dir >= 0;
-      return { t, land: land - r.left + dir * rand(0, 24), score: dx + dy + (ahead ? 0 : 60) + rand(0, 30) };
+      if (aheadOnly && !ahead) return null;
+      return { t, land: Math.min(Math.max(land - r.left + dir * rand(0, 24), lo), hi), score: dx + dy + (ahead ? 0 : 60) + rand(0, 30) };
     }).filter(Boolean).sort((a, b) => a.score - b.score);
     return near[0] || null;
   };
@@ -98,11 +130,12 @@
   const rest = (on, name) => { el.classList.toggle('is-resting', on); pose(on ? name : null); };
 
   const newGoal = (r) => {
-    const margin = Math.min(14, r.width / 4);
     // Plutôt loin de là où il est : il traverse le bloc au lieu de piétiner
-    const lo = margin, hi = r.width - margin;
+    const [lo, hi] = span(target, r);
     const far = offset - lo > hi - offset ? [lo, lo + (hi - lo) * 0.35] : [hi - (hi - lo) * 0.35, hi];
-    goal = Math.random() < 0.75 ? rand(far[0], far[1]) : rand(lo, hi);
+    // Souvent jusqu'au bout du sol : arrivé au bord, il saute sur le bloc voisin s'il y en a un
+    const roll = Math.random();
+    goal = roll < 0.4 ? (far[0] === lo ? lo : hi) : roll < 0.8 ? rand(far[0], far[1]) : rand(lo, hi);
     face(goal >= offset ? 1 : -1);
   };
 
@@ -115,19 +148,20 @@
     target = list[Math.floor(Math.random() * list.length)];
     leaveAt = now + rand(STAY[0], STAY[1]);
     const r = target.getBoundingClientRect();
-    offset = rand(Math.min(14, r.width / 4), r.width - Math.min(14, r.width / 4));
+    const [lo, hi] = span(target, r);
+    offset = rand(lo, hi);
     face(Math.random() < 0.5 ? 1 : -1);
     mode = 'rest'; rest(true); until = now + rand(300, 700);
     place(r.left + offset, r.top);
     show(true);
   };
 
-  const hopToNeighbour = (now) => {
-    const n = nearTarget();
+  const hopToNeighbour = (now, aheadOnly) => {
+    const n = nearTarget(aheadOnly);
     if (!n) return false;
     const r = n.t.getBoundingClientRect();
     face(r.left + n.land >= x ? 1 : -1);
-    hop = { from: { x, y }, to: n.t, toOffset: Math.min(Math.max(n.land, 10), r.width - 10), start: now };
+    hop = { from: { x, y }, to: n.t, toOffset: n.land, start: now };
     mode = 'hop'; rest(false);
     return true;
   };
@@ -166,7 +200,8 @@
     } else {
       const r = target && target.isConnected ? target.getBoundingClientRect() : null;
       if (!r || r.width < 30) { goAway(now, 600); requestAnimationFrame(tick); return; }
-      offset = Math.min(Math.max(offset, 0), r.width);
+      const [lo, hi] = span(target, r);
+      offset = Math.min(Math.max(offset, lo), hi);
       if (mode === 'walk') {
         offset += dir * SPEED * dt;
         if ((dir > 0 && offset >= goal) || (dir < 0 && offset <= goal)) {
@@ -175,8 +210,10 @@
           if (now >= leaveAt) {
             // Assez vu ce bloc : il passe sur un voisin, ou à défaut s'éclipse pour réapparaître ailleurs
             if (!hopToNeighbour(now)) goAway(now, rand(400, 900));
+          } else if ((goal - lo < 6 || hi - goal < 6) && Math.random() < 0.8 && hopToNeighbour(now, true)) {
+            // Bout du sol : saut sur le bloc d'à côté (sinon demi-tour plus bas)
           } else if (roll < 0.22) startPause(now);
-          else if (!(roll < 0.5 && hopToNeighbour(now))) newGoal(r);
+          else if (!(roll < 0.4 && hopToNeighbour(now))) newGoal(r);
         }
       } else if (mode === 'rest' && now >= until) {
         rest(false);
@@ -187,7 +224,8 @@
         // Élément sorti de l'écran (défilement) ou recouvert : il s'efface et réapparaît ailleurs
         if (now >= nextCheck) {
           nextCheck = now + 250;
-          if (!reachable(target, r.left + offset)) goAway(now, 700);
+          // Plus de sol sous ses pieds : il saute sur un voisin, sinon il s'efface
+          if (!reachable(target, r.left + offset)) { rest(false); if (!hopToNeighbour(now)) goAway(now, 700); }
         }
       }
     }
