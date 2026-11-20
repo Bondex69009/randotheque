@@ -20,6 +20,8 @@ export const VERSION = 1;
 const DIR = path.join(CACHE_DIR, 'carrefours');
 const TRACKS = path.join(DATA_DIR, 'tracks');
 const MAX = Number(process.env.CARREFOURS_MAX || 80);
+// Temps maximal par passage : la mise en ligne du site ne doit jamais attendre ce calcul (3 min par défaut)
+const BUDGET_MS = Number(process.env.CARREFOURS_BUDGET_S || 180) * 1000;
 const NEAR = 20;        // m : distance trace / croisement
 const ARM = 25;         // m : longueur de branche pour mesurer sa direction
 const ENDPOINTS = ['https://overpass-api.de/api/interpreter', 'https://overpass.kumi.systems/api/interpreter'];
@@ -72,11 +74,11 @@ async function overpass(poly) {
   const q = `[out:json][timeout:90];way["highway"](around:${NEAR},${coords});out body;>;out skel qt;`;
   let last;
   for (const url of ENDPOINTS) {
-    for (let k = 0; k < 2; k++) {
+    for (let k = 0; k < 1; k++) {
       try {
         const res = await fetch(url, {
           method: 'POST', body: new URLSearchParams({ data: q }),
-          headers: { 'User-Agent': 'Randotheque/1.0 (guidage pas a pas)' }, signal: AbortSignal.timeout(120000),
+          headers: { 'User-Agent': 'Randotheque/1.0 (guidage pas a pas)' }, signal: AbortSignal.timeout(40000),
         });
         if (res.status === 429 || res.status >= 500) throw new Error(`HTTP ${res.status}`);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -176,10 +178,11 @@ async function main() {
   if (!payload) { console.error('data/randos.json manquant : lancez d\'abord « npm run build ».'); process.exit(1); }
   fs.mkdirSync(DIR, { recursive: true });
   let fetched = 0, failed = 0, patched = 0, osmFailed = 0;
+  const t0 = Date.now();
   const todo = payload.randos.filter((r) => !readCache(r.id));
   for (const r of todo) {
-    if (fetched >= MAX) break;
-    if (!r.region && osmFailed >= 2) continue; // OpenStreetMap saturé : ces traces attendront le prochain passage
+    if (fetched >= MAX || Date.now() - t0 > BUDGET_MS) break;
+    if (!r.region && osmFailed >= 1) continue; // OpenStreetMap saturé : ces traces attendront le prochain passage
     try {
       const pts = flatten(parseGpx(fs.readFileSync(path.join(ROOT, r.file), 'utf8')).segments);
       const net = r.region ? await bdtopo(r.bbox) : await overpass(simplifyTo(pts, 150, 5));
