@@ -1,6 +1,7 @@
 <?php
 /**
- * Statistiques des Randothèques : réception des visites et des actions (sans cookie).
+ * Statistiques des Randothèques : réception des visites et des actions
+ * (cookie visiteur rt_vid et position du navigateur rt_geo, envoyés par assets/stats.js).
  */
 
 function sm_body( $max = 16384 ) {
@@ -105,6 +106,25 @@ function sm_collect() {
 		}
 	}
 
+	// Position donnée par le navigateur juste après la page vue : elle remplace la ville
+	// trouvée par l'IP pour toute la visite.
+	if ( 'geo' === $kind ) {
+		$id  = (int) ( $data['id'] ?? 0 );
+		$gps = sm_gps_clean( $data );
+		if ( $id > 0 && $gps && hash_equals( sm_sign( $id ), (string) ( $data['k'] ?? '' ) ) ) {
+			$session = (string) sm_q( 'SELECT session FROM hits WHERE id = ?', array( $id ) )->fetchColumn();
+			if ( '' !== $session ) {
+				list( $cc, $city ) = sm_reverse_geocode( $gps[0], $gps[1] );
+				sm_q(
+					"UPDATE hits SET lat = ?, lon = ?, acc = ?, geo = 'gps', city = CASE WHEN ? <> '' THEN ? ELSE city END,
+						country = CASE WHEN ? <> '' THEN ? ELSE country END WHERE session = ?",
+					array( $gps[0], $gps[1], $gps[2], $city, $city, $cc, $cc, $session )
+				);
+			}
+		}
+		sm_done();
+	}
+
 	// Temps passé (envoyé quand le visiteur quitte ou masque la page).
 	if ( 'ping' === $kind ) {
 		$id = (int) ( $data['id'] ?? 0 );
@@ -120,7 +140,11 @@ function sm_collect() {
 	}
 
 	$now     = date( 'Y-m-d H:i:s' );
-	$visitor = substr( hash( 'sha256', sm_salt() . '|' . sm_ip_net( $ip ) . '|' . $ua . '|' . $site ), 0, 16 );
+	// Visiteur : cookie rt_vid (durable) ; sans cookie, empreinte du jour (IP + navigateur).
+	$vid     = preg_match( '/^[a-f0-9]{24}$/', (string) ( $data['v'] ?? '' ) ) ? (string) $data['v'] : '';
+	$visitor = $vid
+		? substr( hash_hmac( 'sha256', 'vid|' . $vid . '|' . $site, sm_secret() ), 0, 16 )
+		: substr( hash( 'sha256', sm_salt() . '|' . sm_ip_net( $ip ) . '|' . $ua . '|' . $site ), 0, 16 );
 	$touch   = (int) ( $data['tc'] ?? 0 );
 
 	$row = array(
@@ -171,7 +195,7 @@ function sm_collect() {
 
 	if ( $same_visit ) {
 		$row['is_entry'] = 0;
-		foreach ( array( 'session', 'src_type', 'src_name', 'campaign', 'device', 'browser', 'os', 'country', 'city', 'lat', 'lon', 'lang', 'screen', 'theme', 'app', 'browser_v', 'os_v', 'brand', 'model', 'res', 'dpr', 'net' ) as $col ) {
+		foreach ( array( 'session', 'src_type', 'src_name', 'campaign', 'device', 'browser', 'os', 'country', 'city', 'lat', 'lon', 'geo', 'acc', 'ret', 'lang', 'screen', 'theme', 'app', 'browser_v', 'os_v', 'brand', 'model', 'res', 'dpr', 'net' ) as $col ) {
 			$row[ $col ] = $last[ $col ];
 		}
 		if ( 1 === $row['type'] ) {
@@ -195,6 +219,22 @@ function sm_collect() {
 		$row['city']     = $geo[1];
 		$row['lat']      = $geo[2];
 		$row['lon']      = $geo[3];
+		$row['geo']      = '' !== $geo[1] ? 'ip' : '';
+		// Position du navigateur mémorisée dans le cookie rt_geo : plus précise que l'IP.
+		$gps = sm_gps_clean( $data['g'] ?? null );
+		if ( $gps ) {
+			list( $cc, $city ) = sm_reverse_geocode( $gps[0], $gps[1] );
+			$row['lat'] = $gps[0];
+			$row['lon'] = $gps[1];
+			$row['acc'] = $gps[2];
+			$row['geo'] = 'gps';
+			if ( '' !== $city ) {
+				$row['city']    = $city;
+				$row['country'] = $cc ? $cc : $row['country'];
+			}
+		}
+		// Nouveau visiteur ou revenant (seulement quand le cookie est accepté).
+		$row['ret'] = $vid ? ( sm_q( 'SELECT 1 FROM hits WHERE visitor = ? LIMIT 1', array( $visitor ) )->fetchColumn() ? 2 : 1 ) : 0;
 		$row['lang']     = sm_lang( $data['lang'] ?? '' );
 		$row['screen']   = sm_screen( $data['w'] ?? 0 );
 		$row['theme']    = 'dark' === ( $data['th'] ?? '' ) ? 'sombre' : ( 'light' === ( $data['th'] ?? '' ) ? 'clair' : '' );

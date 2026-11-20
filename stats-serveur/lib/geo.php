@@ -1,9 +1,11 @@
 <?php
 /**
- * Géolocalisation (pays + ville) sans service extérieur.
+ * Géolocalisation (pays + ville).
  *
- * L'adresse IP sert uniquement à retrouver la ville dans une base locale
- * (DB-IP « City Lite », licence CC BY 4.0), puis elle est oubliée.
+ * 1. Position donnée par le navigateur quand le visiteur l'a autorisée (cookie rt_geo) :
+ *    commune retrouvée par la Géoplateforme IGN (France) ou Nominatim (ailleurs).
+ * 2. Sinon, l'adresse IP, cherchée dans une base locale (DB-IP « City Lite » ou
+ *    GeoLite2 de MaxMind), puis oubliée.
  */
 
 function sm_geo_file( $kind = 'city' ) {
@@ -68,6 +70,102 @@ function sm_geo_lookup( $ip ) {
 	$lat = isset( $rec['location']['latitude'] ) ? round( (float) $rec['location']['latitude'], 2 ) : null;
 	$lon = isset( $rec['location']['longitude'] ) ? round( (float) $rec['location']['longitude'], 2 ) : null;
 	return array( substr( $cc, 0, 2 ), mb_substr( (string) $city, 0, 100 ), $lat, $lon );
+}
+
+/* -------------------------------------------------------------------------
+ * Position donnée par le navigateur (GPS / Wi-Fi) -> commune
+ * ---------------------------------------------------------------------- */
+
+/** Coordonnées valides : [lat, lon, précision en m], ou null. */
+function sm_gps_clean( $g ) {
+	if ( ! is_array( $g ) ) {
+		return null;
+	}
+	$la = isset( $g['la'] ) && is_numeric( $g['la'] ) ? (float) $g['la'] : null;
+	$lo = isset( $g['lo'] ) && is_numeric( $g['lo'] ) ? (float) $g['lo'] : null;
+	if ( null === $la || null === $lo || abs( $la ) > 90 || abs( $lo ) > 180 || ( 0.0 === $la && 0.0 === $lo ) ) {
+		return null;
+	}
+	$ac = isset( $g['ac'] ) && is_numeric( $g['ac'] ) ? (int) $g['ac'] : 0;
+	return array( round( $la, 5 ), round( $lo, 5 ), max( 0, min( 100000, $ac ) ) );
+}
+
+/** Lecture JSON d'un service de géocodage (délai court : la réponse au visiteur ne doit pas traîner). */
+function sm_http_json( $url ) {
+	$ua = 'RandothequeStats/' . SM_VERSION;
+	if ( function_exists( 'curl_init' ) ) {
+		$ch = curl_init( $url );
+		curl_setopt_array(
+			$ch,
+			array(
+				CURLOPT_RETURNTRANSFER => true,
+				CURLOPT_FOLLOWLOCATION => true,
+				CURLOPT_USERAGENT      => $ua,
+				CURLOPT_CONNECTTIMEOUT => 3,
+				CURLOPT_TIMEOUT        => 5,
+				CURLOPT_HTTPHEADER     => array( 'Accept: application/json', 'Accept-Language: fr' ),
+			)
+		);
+		$body = curl_exec( $ch );
+		$code = (int) curl_getinfo( $ch, CURLINFO_HTTP_CODE );
+		curl_close( $ch );
+	} else {
+		$ctx  = stream_context_create( array( 'http' => array( 'header' => "User-Agent: $ua\r\nAccept-Language: fr\r\n", 'timeout' => 5, 'ignore_errors' => true ) ) );
+		$body = @file_get_contents( $url, false, $ctx );
+		$code = $body ? 200 : 0;
+	}
+	$data = 200 === $code ? json_decode( (string) $body, true ) : null;
+	return is_array( $data ) ? $data : null;
+}
+
+/**
+ * Commune (et quartier / arrondissement quand il existe) d'un point : [code pays, nom].
+ * France : Géoplateforme de l'IGN (adresses BAN). Ailleurs : Nominatim (OpenStreetMap).
+ * Résultat gardé en cache par carré d'environ 100 m.
+ */
+function sm_reverse_geocode( $lat, $lon ) {
+	$key = sprintf( '%.3f,%.3f', $lat, $lon );
+	$hit = sm_q( 'SELECT cc, city FROM geocache WHERE k = ?', array( $key ) )->fetch();
+	if ( $hit ) {
+		return array( $hit['cc'], $hit['city'] );
+	}
+	$cc   = '';
+	$city = '';
+	$ign  = sm_http_json( 'https://data.geopf.fr/geocodage/reverse?' . http_build_query( array( 'lat' => $lat, 'lon' => $lon, 'index' => 'address', 'limit' => 1 ) ) );
+	$p    = $ign['features'][0]['properties'] ?? null;
+	// La BAN répond aussi près des frontières : on n'accepte que les adresses à moins de 2 km.
+	if ( is_array( $p ) && ! empty( $p['city'] ) && ( ! isset( $p['distance'] ) || $p['distance'] < 2000 ) ) {
+		$cc   = 'FR';
+		$city = (string) $p['city'];
+		if ( ! empty( $p['district'] ) && false === stripos( (string) $p['district'], 'arrondissement' ) ) {
+			$city .= ' (' . $p['district'] . ')';
+		} elseif ( ! empty( $p['district'] ) ) {
+			$city = (string) $p['district']; // « Lyon 9e Arrondissement »
+		}
+		// Outre-mer : code pays d'après le code postal.
+		$dom = array( '971' => 'GP', '972' => 'MQ', '973' => 'GF', '974' => 'RE', '975' => 'PM', '976' => 'YT' );
+		$cp  = substr( (string) ( $p['postcode'] ?? '' ), 0, 3 );
+		if ( isset( $dom[ $cp ] ) ) {
+			$cc = $dom[ $cp ];
+		}
+	} else {
+		$osm = sm_http_json( 'https://nominatim.openstreetmap.org/reverse?' . http_build_query( array( 'format' => 'jsonv2', 'lat' => $lat, 'lon' => $lon, 'zoom' => 14, 'accept-language' => 'fr' ) ) );
+		$a   = $osm['address'] ?? null;
+		if ( is_array( $a ) ) {
+			$cc   = strtoupper( (string) ( $a['country_code'] ?? '' ) );
+			$city = (string) ( $a['city'] ?? $a['town'] ?? $a['village'] ?? $a['municipality'] ?? $a['hamlet'] ?? $a['county'] ?? '' );
+			$sub  = (string) ( $a['suburb'] ?? $a['city_district'] ?? '' );
+			if ( $city && $sub && $sub !== $city ) {
+				$city .= ' (' . $sub . ')';
+			}
+		}
+	}
+	$cc   = substr( preg_replace( '/[^A-Z]/', '', $cc ), 0, 2 );
+	$city = sm_clean_text( $city, 100 );
+	if ( '' !== $city ) {
+		sm_q( 'INSERT OR REPLACE INTO geocache (k, cc, city, ts) VALUES (?, ?, ?, ?)', array( $key, $cc, $city, time() ) );
+	}
+	return array( $cc, $city );
 }
 
 /* -------------------------------------------------------------------------

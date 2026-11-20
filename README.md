@@ -6,7 +6,7 @@ Les deux Randothèques, dans un seul dépôt, en ligne chez o2switch sur **https
 | --- | --- | --- |
 | `godillots-ailes/` | `/godillots-ailes/` | Historique des randos des Godillots Ailés (A.C.R.P. Caissargues), espace stats dans `stats/` |
 | `gerard-martine/` | `/gerard-martine/` | La Randothèque de Gérard & Martine, espace stats dans `stats/` |
-| `stats-serveur/` | `/stats/` | Moteur des statistiques (PHP + SQLite, sans cookie) ; son `admin/` est copié dans le `stats/` de chaque site |
+| `stats-serveur/` | `/stats/` | Moteur des statistiques (PHP + SQLite, avec cookies) ; son `admin/` est copié dans le `stats/` de chaque site |
 | `hebergement/racine/` | `/` | Page d'accueil, `robots.txt`, `.htaccess` (HTTPS forcé, pas d'indexation) |
 
 Chaque Randothèque a son propre README (scripts, calculs, administration locale).
@@ -47,8 +47,12 @@ Visiteurs, visites, fiches ouvertes, GPX téléchargés, survols 3D, duels VS, p
 filtres, sources de trafic, villes (carte), appareils, navigateurs, affluence, durée des visites, journal des visites,
 affichages du compteur sur le blog et visiteurs en temps réel.
 
-- **Sans cookie, RGPD** : rien n'est écrit sur l'appareil des visiteurs ; les IP ne sont jamais enregistrées
-  (empreinte anonyme dont la clé change chaque jour) ; données effacées après 25 mois. Pas de bandeau cookie.
+- **Avec cookies** (intranet personnel, pas de bandeau) : `rt_vid`, identifiant aléatoire de 13 mois qui reconnaît
+  un visiteur d'un jour à l'autre (nouveaux / revenants) ; `rt_geo`, position donnée par le navigateur. La fenêtre
+  « Autoriser la position » s'affiche une seule fois ; si elle est acceptée, la position est rafraîchie sans fenêtre
+  une fois par jour et la commune (ou l'arrondissement / le quartier) est retrouvée par la Géoplateforme IGN, Nominatim
+  hors de France (cache de 6 mois par carré de ~100 m). Un refus est retenu 13 mois et la ville vient alors de l'IP.
+  Les IP ne sont pas enregistrées ; navigateur sans cookie : empreinte du jour. Données effacées après 25 mois.
 - **Faux visiteurs écartés** : robots, outils automatiques, navigateurs non standard, pays hors de la liste
   `allowed_countries` de `stats-serveur/config.php`, centres de données (AWS, OVH, Hetzner…).
 - **Toutes les interactions** : fiches, GPX, survols 3D, duels, partages, recherches, filtres, audios, et chaque lien

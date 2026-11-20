@@ -2,12 +2,12 @@
 /**
  * Statistiques des Randothèques : socle (configuration, base SQLite, sécurité).
  *
- * Mesure d'audience sans cookie, conforme aux conditions de la CNIL pour être
- * dispensée de consentement : pas d'adresse IP enregistrée, empreinte anonyme
- * dont la clé change chaque jour, données effacées après 25 mois.
+ * Mesure d'audience d'un intranet personnel, avec cookies : identifiant visiteur durable
+ * (rt_vid) et position donnée par le navigateur (rt_geo). Les adresses IP ne sont pas
+ * enregistrées (elles servent sur le moment au pays, à l'hébergeur et à la ville de repli).
  */
 
-define( 'SM_VERSION', '1.0.0' );
+define( 'SM_VERSION', '1.1.0' );
 define( 'SM_ROOT', dirname( __DIR__ ) );
 define( 'SM_DATA', SM_ROOT . '/data' );
 
@@ -67,7 +67,7 @@ function sm_db() {
 	$db->exec( 'PRAGMA synchronous = NORMAL' );
 
 	// Une ligne = une page vue (type 1), une action (type 2) ou un affichage du compteur sur le blog (type 3).
-	// Aucune adresse IP ni identifiant durable n'est enregistré.
+	// visitor : empreinte du cookie rt_vid (durable), ou empreinte du jour si le navigateur refuse les cookies.
 	$db->exec(
 		"CREATE TABLE IF NOT EXISTS hits (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -108,6 +108,7 @@ function sm_db() {
 		CREATE TABLE IF NOT EXISTS admin_ips (k TEXT PRIMARY KEY, seen INTEGER NOT NULL);
 		CREATE TABLE IF NOT EXISTS tokens (hash TEXT PRIMARY KEY, expires INTEGER NOT NULL);
 		CREATE TABLE IF NOT EXISTS login_fails (k TEXT NOT NULL, ts INTEGER NOT NULL);
+		CREATE TABLE IF NOT EXISTS geocache (k TEXT PRIMARY KEY, cc TEXT NOT NULL, city TEXT NOT NULL, ts INTEGER NOT NULL);
 "
 	);
 	// Colonnes ajoutées au fil des versions (une base déjà créée en ligne les reçoit ici).
@@ -122,6 +123,9 @@ function sm_db() {
 		'net'       => "TEXT NOT NULL DEFAULT ''",
 		'scroll'    => 'INTEGER NOT NULL DEFAULT 0',
 		'btn'       => "TEXT NOT NULL DEFAULT ''",
+		'geo'       => "TEXT NOT NULL DEFAULT ''",      // 'gps' (navigateur) ou 'ip'
+		'acc'       => 'INTEGER NOT NULL DEFAULT 0',    // précision de la position GPS, en mètres
+		'ret'       => 'INTEGER NOT NULL DEFAULT 0',    // 1 = nouveau visiteur, 2 = revenant (cookie), 0 = inconnu
 	);
 	foreach ( $add as $col => $def ) {
 		if ( ! in_array( $col, $have, true ) ) {
@@ -189,6 +193,7 @@ function sm_daily_maintenance() {
 	sm_q( 'DELETE FROM admin_ips WHERE seen < ?', array( time() - 180 * 86400 ) );
 	sm_q( 'DELETE FROM tokens WHERE expires < ?', array( time() ) );
 	sm_q( 'DELETE FROM login_fails WHERE ts < ?', array( time() - 86400 ) );
+	sm_q( 'DELETE FROM geocache WHERE ts < ?', array( time() - 180 * 86400 ) );
 	sm_q( 'DELETE FROM rejects WHERE day < ?', array( date( 'Y-m-d', strtotime( "-$months months" ) ) ) );
 }
 

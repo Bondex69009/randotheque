@@ -274,6 +274,7 @@ function sm_report( $site, $period, $from = '', $to = '' ) {
 		"SELECT session, site, MIN(ts) AS start, MAX(ts) AS last, SUM(type = 1) AS pv, SUM(duration) AS dur,
 			MAX(CASE WHEN is_entry = 1 THEN landing END) AS landing,
 			MAX(src_type) AS src_type, MAX(src_name) AS src_name, MAX(city) AS city, MAX(country) AS country,
+			MAX(geo) AS geo, MAX(acc) AS acc, MAX(lat) AS lat, MAX(lon) AS lon, MAX(ret) AS ret,
 			MAX(device) AS device, MAX(browser) AS browser, MAX(os) AS os, MAX(app) AS app,
 			MAX(browser_v) AS browser_v, MAX(os_v) AS os_v, MAX(brand) AS brand, MAX(model) AS model, MAX(res) AS res, MAX(scroll) AS scroll,
 			GROUP_CONCAT(CASE WHEN type = 2 THEN event END) AS events
@@ -283,6 +284,10 @@ function sm_report( $site, $period, $from = '', $to = '' ) {
 		$r['pv']     = (int) $r['pv'];
 		$r['dur']    = (int) $r['dur'];
 		$r['app']    = (int) $r['app'];
+		$r['acc']    = (int) $r['acc'];
+		$r['ret']    = (int) $r['ret'];
+		$r['lat']    = null === $r['lat'] ? null : (float) $r['lat'];
+		$r['lon']    = null === $r['lon'] ? null : (float) $r['lon'];
 		$r['events'] = $r['events'] ? explode( ',', $r['events'] ) : array();
 		unset( $r['session'] );
 	}
@@ -329,6 +334,9 @@ function sm_report( $site, $period, $from = '', $to = '' ) {
 		'landing'   => sm_top_sessions( 'landing', $w, 10 ),
 		'countries' => sm_top_sessions( 'country', $w, 15, "AND country <> ''" ),
 		'cities'    => $cities,
+		// Visites : nouveaux visiteurs / revenants (cookie) et précision de la localisation.
+		'loyalty'   => sm_q( "SELECT SUM(ret = 1) AS new, SUM(ret = 2) AS back, SUM(ret = 0) AS unknown FROM hits WHERE $wentry" )->fetch(),
+		'geo_kinds' => sm_q( "SELECT SUM(geo = 'gps') AS gps, SUM(geo = 'ip') AS ip, SUM(geo = '') AS none FROM hits WHERE $wentry" )->fetch(),
 		'devices'   => sm_top_sessions( 'device', $w ),
 		'browsers'  => sm_top_sessions( 'browser', $w ),
 		'os'        => sm_top_sessions( 'os', $w ),

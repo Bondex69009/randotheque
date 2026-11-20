@@ -64,7 +64,7 @@ L'administration a besoin du serveur `npm run serve` ; elle ne fonctionne pas su
 
 Le petit cadenas en haut à droite ouvre l'espace stats de ce site
 (https://randotheque.anthony-bondon.fr/gerard-martine/stats/, avec un mot de passe). Le script `assets/stats.js`
-envoie les visites et actions, sans cookie, à `../stats/collect.php`. Détails dans le `README.md` à la racine du dépôt.
+envoie les visites et actions (cookie visiteur et position du navigateur) à `../stats/collect.php`. Détails dans le `README.md` à la racine du dépôt.
 
 ## Ajouter vos propres GPX à la main
 

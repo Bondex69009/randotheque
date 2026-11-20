@@ -496,7 +496,7 @@
   let rafId = 0;
   function scheduleUpdate() { cancelAnimationFrame(rafId); rafId = requestAnimationFrame(update); }
 
-  // ------------------------------------------------------------ Statistiques (assets/stats.js, sans cookie)
+  // ------------------------------------------------------------ Statistiques (assets/stats.js, cookies rt_vid / rt_geo)
   const stat = (event, label, id) => { if (window.rtStat) window.rtStat(event, label, id); };
   const STAT_NAMES = {
     levels: 'Niveau', years: 'Année', depts: 'Département', communes: 'Village', anims: 'Animateur',

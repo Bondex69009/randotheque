@@ -1,5 +1,6 @@
-/* Randothèque – mesure d'audience maison, sans cookie ni stockage dans le navigateur.
-   Rien n'est écrit sur l'appareil du visiteur ; l'adresse IP n'est jamais enregistrée par le serveur.
+/* Randothèque – mesure d'audience maison, avec cookies (intranet personnel, pas de bandeau).
+   - rt_vid : identifiant visiteur aléatoire (13 mois), pour reconnaître un visiteur d'un jour à l'autre ;
+   - rt_geo : position donnée par le navigateur (demandée une seule fois), ou « non » si refusée.
    Les autres scripts signalent une action avec window.rtStat('gpx', 'Nom de la rando', 'id'). */
 (function () {
   'use strict';
@@ -19,8 +20,40 @@
   if (n.webdriver || /bot\b|bot\/|crawl|spider|slurp|headless|lighthouse|pagespeed|gtmetrix|pingdom|prerender|phantom|selenium|puppeteer|playwright|electron/i.test(ua)) return;
   if (!/^Mozilla\/5\.0 \(/.test(ua)) return;
 
+  // ------------------------------------------------------------ Cookies
+  var YEAR = 395 * 86400; // 13 mois
+  function getCookie(k) {
+    var m = d.cookie.match(new RegExp('(?:^|; )' + k + '=([^;]*)'));
+    return m ? decodeURIComponent(m[1]) : '';
+  }
+  function setCookie(k, v) {
+    d.cookie = k + '=' + encodeURIComponent(v) + '; Max-Age=' + YEAR + '; Path=/; SameSite=Lax' + (location.protocol === 'https:' ? '; Secure' : '');
+  }
+  function rnd() {
+    var a = new Uint8Array(12);
+    (window.crypto || window.msCrypto).getRandomValues(a);
+    return Array.prototype.map.call(a, function (b) { return ('0' + b.toString(16)).slice(-2); }).join('');
+  }
+  var VID = '';
+  if (!me.hasAttribute('data-widget')) try { // pas de cookie sur le blog (compteur intégré)
+    VID = getCookie('rt_vid');
+    if (!/^[a-f0-9]{24}$/.test(VID)) VID = rnd();
+    setCookie('rt_vid', VID); // prolongé à chaque visite
+    if (getCookie('rt_vid') !== VID) VID = ''; // cookies bloqués : le serveur se rabat sur l'empreinte du jour
+  } catch (e) { VID = ''; }
+
+  // Position mémorisée : « lat,lon,précision(m),horodatage(s) » ou « non ».
+  var GEO_FRESH = 86400; // au-delà d'un jour, la position est redemandée (sans fenêtre si déjà autorisée)
+  function savedGeo() {
+    var v = getCookie('rt_geo');
+    if (v === 'non') return 'non';
+    var p = v.split(',').map(Number);
+    return p.length === 4 && p.every(isFinite) ? { la: p[0], lo: p[1], ac: p[2], at: p[3] } : null;
+  }
+
   function send(data, beacon) {
     data.s = SITE;
+    if (VID) data.v = VID;
     var body = JSON.stringify(data);
     if (beacon && n.sendBeacon) {
       try { if (n.sendBeacon(END, new Blob([body], { type: 'text/plain' }))) return null; } catch (e) { /* repli fetch */ }
@@ -75,8 +108,10 @@
   function pageview() {
     shown = 0; startClock();
     var conn = n.connection || {};
+    var g = savedGeo();
     hints().then(function (ch) {
       var r = send({
+        g: g && g !== 'non' ? { la: g.la, lo: g.lo, ac: g.ac } : null,
         t: 'pv', r: d.referrer, u: utm, lg: standalone ? 'appli' : landing, id: h.get('rando') || h.get('vs') || '',
         tc: n.maxTouchPoints || 0, w: screen.width || 0, sh: screen.height || 0, dpr: window.devicePixelRatio || 1,
         vw: window.innerWidth || 0, net: conn.effectiveType || '', ch: ch,
@@ -84,8 +119,34 @@
       });
       if (!r) { flush(); return; }
       r.then(function (res) { return res.status === 200 ? res.json() : null; })
-        .then(function (j) { hit = j; flush(); }, flush);
+        .then(function (j) { hit = j; flush(); locate(); }, flush);
     });
+  }
+
+  // Géolocalisation du navigateur : demandée une fois (fenêtre d'autorisation), puis rafraîchie
+  // discrètement une fois par jour si le visiteur a accepté. Un refus est retenu 13 mois.
+  function locate() {
+    if (!hit || !hit.id || !n.geolocation) return;
+    var g = savedGeo();
+    if (g === 'non') return;
+    if (g && Date.now() / 1000 - g.at < GEO_FRESH) return; // déjà envoyée avec la page vue
+    var ask = function () {
+      n.geolocation.getCurrentPosition(function (pos) {
+        var c = pos.coords;
+        var la = +c.latitude.toFixed(5), lo = +c.longitude.toFixed(5), ac = Math.round(c.accuracy || 0);
+        try { setCookie('rt_geo', [la, lo, ac, Math.round(Date.now() / 1000)].join(',')); } catch (e) { /* rien */ }
+        send({ t: 'geo', id: hit.id, k: hit.k, la: la, lo: lo, ac: ac });
+      }, function (err) {
+        if (err && err.code === 1) { try { setCookie('rt_geo', 'non'); } catch (e) { /* rien */ } }
+      }, { enableHighAccuracy: false, timeout: 20000, maximumAge: 600000 });
+    };
+    // Déjà autorisée : aucune fenêtre ne s'affiche. Sinon on la montre un instant après l'arrivée.
+    if (n.permissions && n.permissions.query) {
+      n.permissions.query({ name: 'geolocation' }).then(function (p) {
+        if (p.state === 'denied') { try { setCookie('rt_geo', 'non'); } catch (e) { /* rien */ } return; }
+        if (p.state === 'granted') ask(); else setTimeout(ask, 1500);
+      }, function () { setTimeout(ask, 1500); });
+    } else setTimeout(ask, 1500);
   }
 
   // Profondeur de lecture : jusqu'où la page a été descendue (en %).

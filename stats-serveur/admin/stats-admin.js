@@ -268,7 +268,7 @@
   function drawKpis() {
     const k = data.kpis, p = data.prev, pts = data.series.points;
     const tiles = [
-      ['Visiteurs', nf0.format(k.visitors), delta(k.visitors, p.visitors), spark(pts.map((x) => x.visitors)), 'Personnes différentes, comptées jour par jour (sans cookie, impossible de reconnaître quelqu\'un d\'un jour à l\'autre).'],
+      ['Visiteurs', nf0.format(k.visitors), delta(k.visitors, p.visitors), spark(pts.map((x) => x.visitors)), 'Personnes différentes, reconnues d\'un jour à l\'autre grâce au cookie rt_vid (comptées jour par jour si le navigateur bloque les cookies).'],
       ['Visites', nf0.format(k.visits), delta(k.visits, p.visits), spark(pts.map((x) => x.visits)), 'Une visite se termine après 30 minutes sans activité.'],
       ['Fiches rando ouvertes', nf0.format(k.randos), delta(k.randos, p.randos), spark(pts.map((x) => x.randos)), 'Nombre de fois où une fiche détaillée a été ouverte.'],
       ['GPX téléchargés', nf0.format(k.gpx), delta(k.gpx, p.gpx), spark(pts.map((x) => x.gpx)), 'Clics sur « Télécharger le GPX ».'],
@@ -449,9 +449,15 @@
   const countryName = (cc) => { try { return new Intl.DisplayNames(['fr'], { type: 'region' }).of(cc); } catch { return cc; } };
   function drawGeo() {
     const cities = data.cities;
-    $('#c-cities').innerHTML = cities.length
+    const g = data.geo_kinds || {}, l = data.loyalty || {};
+    const pct = (a, t) => (t ? Math.round((100 * a) / t) : 0);
+    const gt = (+g.gps || 0) + (+g.ip || 0) + (+g.none || 0), lt = (+l.new || 0) + (+l.back || 0);
+    const note = gt
+      ? `<p class="sx-note">📍 Position précise (navigateur) : ${nf0.format(+g.gps || 0)} visite${+g.gps > 1 ? 's' : ''} (${pct(+g.gps || 0, gt)} %) · d'après l'IP : ${nf0.format(+g.ip || 0)} (${pct(+g.ip || 0, gt)} %)${+g.none ? ` · inconnue : ${nf0.format(+g.none)}` : ''}${lt ? `<br>👋 Nouveaux visiteurs : ${nf0.format(+l.new || 0)} (${pct(+l.new || 0, lt)} %) · revenants : ${nf0.format(+l.back || 0)} (${pct(+l.back || 0, lt)} %)` : ''}</p>`
+      : '';
+    $('#c-cities').innerHTML = (cities.length
       ? bars(cities.map((c) => [`${flag(c.country)} ${c.city}`, c.n]), { max: 25 })
-      : empty(data.geo_ready ? undefined : 'Base des villes pas encore installée sur le serveur (bouton en bas de page).');
+      : empty(data.geo_ready ? undefined : 'Base des villes pas encore installée sur le serveur (bouton en bas de page).')) + note;
   }
 
   function drawTech() {
@@ -500,7 +506,9 @@
         for (const e of r.events) counts[e] = (counts[e] || 0) + 1;
         const chips = Object.entries(counts).map(([e, n]) => `<span class="sx-chip sx-chip--${e}" title="${esc(L[e] || e)}">${esc(short[e] || e)}${n > 1 ? ` ×${n}` : ''}</span>`).join('') || '<span class="sx-muted">aucune action</span>';
         return `<tr><td class="nowrap">${when(r.start)}${data.site === 'all' ? `<br><small class="sx-muted">${esc(data.sites[r.site] || r.site)}</small>` : ''}</td>
-          <td>${flag(r.country)} ${esc(r.city || 'Inconnue')}</td>
+          <td>${flag(r.country)} ${esc(r.city || 'Inconnue')}${r.geo === 'gps' && r.lat != null
+            ? ` <a class="sx-muted" href="https://www.openstreetmap.org/?mlat=${r.lat}&amp;mlon=${r.lon}#map=15/${r.lat}/${r.lon}" target="_blank" rel="noopener" title="Position donnée par le navigateur${r.acc ? ` (précision ${r.acc < 1000 ? `${r.acc} m` : `${(r.acc / 1000).toFixed(1)} km`})` : ''}">📍</a>`
+            : ''}${r.ret === 2 ? ' <small class="sx-muted">· revenant</small>' : ''}</td>
           <td><span aria-hidden="true">${dev[r.device] || ''}</span> ${esc(deviceText(r))}${r.app ? ' <small class="sx-muted">· appli</small>' : ''}${r.scroll ? ` <small class="sx-muted">· lu à ${r.scroll} %</small>` : ''}</td>
           <td>${esc(r.src_type === 'direct' ? 'Accès direct' : r.src_name)}</td>
           <td class="num">${fmtDur(r.dur)}</td><td class="sx-chips">${chips}</td></tr>`;
