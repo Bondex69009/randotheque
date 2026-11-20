@@ -161,11 +161,14 @@
       down: G.down[b.i] + (G.down[b.i + 1] - G.down[b.i]) * b.t,
     };
   }
-  // Temps de marche (norme DIN 33466) puis pauses au rythme des sorties enregistrées
+  // Temps de marche (norme DIN 33466), petites pauses au rythme des sorties enregistrées, et le pique-nique
+  // (environ 1 h) s'il reste à venir : avant 12 h 30 et la rando pas finie avant midi
   function remainingMin(km, up, down) {
     const h = km / 4, v = up / 300 + down / 500;
     const walk = (Math.max(h, v) + Math.min(h, v) / 2) * 60;
-    return walk + (window.RTMeteo ? window.RTMeteo.pausesFor(walk) : walk * 0.1);
+    const M = window.RTMeteo;
+    const now = new Intl.DateTimeFormat('en-GB', { timeZone: TZ, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date()).split(':').map(Number);
+    return walk + (M ? M.pausesFor(walk) + (M.picnicFor ? M.picnicFor(now[0] * 60 + now[1], walk) : 0) : walk * 0.1);
   }
 
   // ------------------------------------------------------------ Vue plein écran

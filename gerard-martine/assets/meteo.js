@@ -184,6 +184,10 @@
     return ratio;
   }
   const pausesFor = (walkMin) => Math.round((walkMin * Math.max(0.05, clubRatio() - 1)) / 5) * 5;
+  // Pique-nique d'environ 1 h, compté quand la rando passe midi (départ avant 12 h 30, arrivée après 12 h 15
+  // sans compter le repas). Une sortie de l'après-midi ou finie avant midi n'en a pas.
+  const PICNIC = 60;
+  const picnicFor = (depMin, walkMin) => (depMin <= 12 * 60 + 30 && depMin + walkMin + pausesFor(walkMin) >= 12 * 60 + 15 ? PICNIC : 0);
   function defaultDeparture(r) {
     const saved = store.get(STORE);
     if (saved && /^\d{2}:\d{2}$/.test(saved)) return { time: saved, from: 'saved' };
@@ -275,15 +279,16 @@
   function plan(ctx) {
     const walk = ctx.r.durationMin || 0, pauses = pausesFor(walk);
     const [h, m] = ctx.dep.split(':').map(Number);
+    const picnic = picnicFor(h * 60 + m, walk);
     ctx.depMs = ctx.mid + (h * 60 + m) * 6e4;
-    ctx.arrMs = ctx.depMs + (walk + pauses) * 6e4;
+    ctx.arrMs = ctx.depMs + (walk + pauses + picnic) * 6e4;
     const margin = ctx.sun ? (ctx.sun.set - ctx.arrMs) / 6e4 : null;
     const lvl = margin == null ? 'ok' : margin < 0 ? 'bad' : margin < 60 ? 'warn' : 'ok';
     const verdict = margin == null ? ''
       : margin < 0 ? `Arrivée ${dur(-margin)} après le coucher du soleil : partez plus tôt ou prévoyez une frontale.`
         : margin < 60 ? `Juste : ${dur(margin)} de marge avant le coucher du soleil.`
           : `${dur(margin)} de marge avant le coucher du soleil.`;
-    return { walk, pauses, lvl, verdict };
+    return { walk, pauses, picnic, lvl, verdict };
   }
   // Frise de la journée (position en % de 0 h à 24 h)
   const pct = (ctx, t) => Math.max(0, Math.min(100, ((t - ctx.mid) / 864e5) * 100)).toFixed(2);
@@ -307,7 +312,7 @@
         <label class="meteo__dep">Départ <input type="time" value="${ctx.dep}" step="300" data-dep aria-describedby="meteo-dep-hint"></label>
         <p class="meteo__arr" aria-live="polite">Arrivée vers <strong data-arr></strong></p>
       </div>
-      <p class="meteo__hint" id="meteo-dep-hint">${dur(p.walk)} de marche + ${dur(p.pauses)} de pauses (rythme des sorties enregistrées)<span data-from></span>${sun ? ` · jour de ${dur((sun.set - sun.rise) / 6e4)}` : ''}</p>
+      <p class="meteo__hint" id="meteo-dep-hint"><span data-pauses></span><span data-from></span>${sun ? ` · jour de ${dur((sun.set - sun.rise) / 6e4)}` : ''}</p>
       <p class="meteo__verdict" data-verdict></p>`;
     paintPlan(ctx);
   }
@@ -318,6 +323,8 @@
     const p = plan(ctx);
     const q = (s) => box.querySelector(s);
     q('[data-arr]').textContent = hhmm(ctx.arrMs);
+    q('[data-pauses]').textContent = `${dur(p.walk)} de marche + ${dur(p.pauses)} de petites pauses`
+      + (p.picnic ? ` + ${dur(p.picnic)} de pique-nique` : ' (pas de pique-nique : la rando ne passe pas midi)');
     q('[data-from]').textContent = ctx.depFrom === 'trace' ? ' · départ à l\'heure de la trace enregistrée' : '';
     const v = q('[data-verdict]');
     v.textContent = p.verdict; v.hidden = !p.verdict;
@@ -351,5 +358,5 @@
     });
   }
 
-  window.RTMeteo = { html, mount, sunTimes, parisMidnight, picto, pausesFor };
+  window.RTMeteo = { html, mount, sunTimes, parisMidnight, picto, pausesFor, picnicFor };
 })();
