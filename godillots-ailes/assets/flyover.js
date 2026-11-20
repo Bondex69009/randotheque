@@ -423,9 +423,8 @@
   }
 
   // ---------------------------------------------------------------- Profil d'étape (SVG)
-  function profileView(box, T, S, onSeek) {
+  function profileView(box, T, S, runs, onSeek) {
     let W = 0, H = 0, x, y, mask, cur, dot, lastD = 0;
-    const seg = T.total <= 6 ? 0.5 : T.total <= 30 ? 1 : T.total <= 60 ? 2 : 5;
     function render() {
       W = Math.round(box.clientWidth); H = Math.round(box.clientHeight);
       if (W < 50 || H < 40) return;
@@ -445,11 +444,12 @@
         return out;
       };
       let bars = '', labels = '';
-      for (let a = 0; a < T.total - 1e-6; a += seg) {
-        const b = Math.min(T.total, a + seg);
-        const g = ((S.sm(b) - S.sm(a)) / ((b - a) * 1000)) * 100;
+      // Mêmes tronçons et mêmes couleurs que la trace sur la carte
+      for (const r of runs) {
+        const a = T.km[r.a], b = T.km[r.b];
+        const g = ((T.sm[r.b] - T.sm[r.a]) / ((b - a) * 1000)) * 100;
         const p = ptsBetween(a, b);
-        bars += `<polygon points="${x(a).toFixed(1)},${base} ${p.join(' ')} ${x(b).toFixed(1)},${base}" fill="${slopeColor(g)}"/>`;
+        bars += `<polygon points="${x(a).toFixed(1)},${base} ${p.join(' ')} ${x(b).toFixed(1)},${base}" fill="${r.c}"/>`;
         if (x(b) - x(a) >= 24 && Math.abs(g) >= 2) labels += `<text class="fo-p-pct" x="${((x(a) + x(b)) / 2).toFixed(1)}" y="${base - 5}" text-anchor="middle">${g > 0 ? '' : '−'}${nf0.format(Math.abs(g))}</text>`;
       }
       const line = `M${ptsBetween(0, T.total).join('L')}`;
@@ -600,7 +600,7 @@
     const playBtn = $('[data-fo="play"]'), followBtn = $('[data-fo="follow"]');
     const setPlayUi = () => { playBtn.innerHTML = playing ? ICON.pause : ICON.play; playBtn.setAttribute('aria-label', playing ? 'Pause' : 'Lecture'); };
 
-    const profile = profileView($('#fo-profile'), T, S, (km, active) => {
+    const profile = profileView($('#fo-profile'), T, S, runs, (km, active) => {
       if (km == null) return;
       seek(km);
     });
