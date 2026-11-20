@@ -1,5 +1,8 @@
 /* Randothèque – le randonneur qui se promène sur la page : il marche sur le bord haut des éléments visibles
-   (cartes, boutons, titres…), fait des pauses, change de sens et saute d'un élément à l'autre.
+   (cartes, boutons, titres…), change de sens, saute de temps en temps sur un bloc voisin et fait des pauses
+   (boire un coup, lire la carte, regarder son GPS, observer aux jumelles, refaire ses lacets).
+   S'il doit changer de coin (élément sorti de l'écran), il disparaît en fondu et réapparaît ailleurs : jamais
+   de grand saut à travers la page.
    Purement décoratif : ne capte aucun clic, se cache si l'élément est recouvert (fenêtre, menu) et ne bouge pas
    du tout quand le visiteur a demandé moins d'animations. */
 (() => {
@@ -7,20 +10,37 @@
   const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)');
   if (reduce && reduce.matches) return;
 
-  const SIZE = 30;            // taille du randonneur (px)
-  const SPEED = 34;           // vitesse de marche (px/s)
-  const HOP_MS = 750;         // durée d'un saut vers un autre élément
+  const SIZE = 46;            // taille du randonneur (px)
+  const SPEED = 42;           // vitesse de marche (px/s)
+  const HOP_MS = 650;         // durée d'un saut vers un bloc voisin
+  const HOP_DX = 70;          // écart horizontal maximal entre deux blocs pour sauter (px)
+  const HOP_DY = 110;         // écart vertical maximal (px)
   const SELECTORS = [
     '.card', '.hero-total', '.hero-stats > div', '.btn', '.chip', '.segmented', '.search', '.toolbar',
     '.overview-map', '.evo', '.elsewhere', '.detail h2', 'main h1', 'main h2', 'main h3', '.site-footer', '.brand',
   ].join(',');
 
+  // Pauses : accessoires dessinés dans le même repère 32 × 32 que le randonneur (tourné vers la droite)
+  const POSES = {
+    boire: '<g class="fidget"><path class="arm" d="M16.6 11.2L19.3 13.6L20.4 9.8"/><g transform="translate(21.6 8.8) rotate(-35)"><rect x="-1" y="-2.6" width="2" height="4.6" rx=".7"/><rect x="-.6" y="-3.4" width="1.2" height=".9" rx=".2"/></g></g>',
+    carte: '<g class="fidget"><path class="arm" d="M16.6 11.2L19 14.4L20.4 13.4"/><path class="paper" d="M19.6 10.6L23 10.2L26.4 10.8L26 15.4L22.6 14.8L19.2 15.2Z"/><path class="fold" d="M23 10.2L22.6 14.8"/><path class="trk" d="M20.4 13.8C21.6 12.4 23.6 13.6 25.2 11.8"/></g>',
+    gps: '<g class="fidget"><path class="arm" d="M16.6 11.2L18.4 14.8L20.6 12.6"/><g transform="rotate(-12 21.2 11.2)"><rect x="20" y="9.2" width="2.4" height="4" rx=".45"/><rect class="screen" x="20.45" y="9.7" width="1.5" height="1.7" rx=".2"/><path class="fold" d="M20.6 9.4V7.8"/></g></g>',
+    jumelles: '<g class="fidget"><path class="arm" d="M16.6 11.2L19.2 12.8L20.2 8.4"/><rect x="19.3" y="6" width="3.6" height="1.4" rx=".55"/><rect x="19.3" y="7.7" width="3.6" height="1.4" rx=".55"/></g>',
+    lacets: '<path class="limb" d="M14.2 20.6L15 29.4L10.6 29.6"/><path d="M8.6 29.1H11.2V30.3H8.6C8.2 30.3 8.2 29.4 8.6 29.1Z"/>'
+      + '<path class="limb" d="M14.2 20.6L20 21.8L20.4 28.8"/><path d="M19.2 28.6H21.6C22.6 28.9 23.6 29.2 23.8 29.8 23.8 30.2 23.5 30.3 23 30.3H19.3C19 30.3 18.9 29.4 19.2 28.6Z"/>'
+      + '<path class="torso" d="M14.2 20.6L19.6 15"/><path class="pack" d="M12.4 16.2C12.6 13.6 15.6 12.2 17.2 13.4L17 14.6 13.8 19.4C12.8 19.6 12.3 18 12.4 16.2Z"/>'
+      + '<circle cx="21.4" cy="12.6" r="2"/><path d="M18.6 11.4C20 10.2 23 9.6 24.4 9.8 24.8 10 24.6 10.3 24.3 10.4 22.6 10.7 20.2 11.4 19 12 18.6 12.1 18.3 11.7 18.6 11.4ZM19.6 10.9C19.3 9.4 22.4 8.4 22.9 9.9Z"/>'
+      + '<g class="lace"><path class="arm" d="M19.4 15.4L20.8 22.2L21.4 28.2"/><path class="arm" d="M19.6 15.2L22.4 21.6L22.2 28.1"/></g>',
+  };
+  const POSE_NAMES = Object.keys(POSES);
+
   const el = document.createElement('div');
   el.className = 'rt-promeneur';
   el.setAttribute('aria-hidden', 'true');
-  el.innerHTML = `<div class="rt-promeneur__flip">${window.rtHiker()}</div>`;
+  el.innerHTML = `<div class="rt-promeneur__flip">${window.rtHiker()}<svg class="rt-pose" viewBox="0 0 32 32" aria-hidden="true" focusable="false"></svg></div>`;
   document.body.appendChild(el);
   const flip = el.firstElementChild;
+  const poseSvg = flip.querySelector('.rt-pose');
 
   const rand = (a, b) => a + Math.random() * (b - a);
   const vh = () => window.innerHeight;
@@ -30,7 +50,7 @@
   const reachable = (t, x) => {
     if (!t || !t.isConnected) return false;
     const r = t.getBoundingClientRect();
-    if (r.width < 70 || r.height < 14) return false;
+    if (r.width < 100 || r.height < 14) return false;
     if (r.top < SIZE + 8 || r.top > vh() - 20 || r.right < 10 || r.left > vw() - 10) return false;
     const px = Math.min(Math.max(x == null ? r.left + r.width / 2 : x, r.left + 2), r.right - 2);
     if (px < 0 || px > vw()) return false;
@@ -38,12 +58,25 @@
     return !!hit && (hit === t || t.contains(hit));
   };
 
-  const pickTarget = (avoid) => {
-    const list = [...document.querySelectorAll(SELECTORS)].filter((t) => t !== avoid && reachable(t));
-    return list.length ? list[Math.floor(Math.random() * list.length)] : null;
+  const candidates = (avoid) => [...document.querySelectorAll(SELECTORS)]
+    .filter((t) => t !== avoid && !(avoid && (t.contains(avoid) || avoid.contains(t))));
+
+  // Bloc voisin : un bord haut tout proche de l'endroit où il se trouve (devant lui de préférence)
+  const nearTarget = () => {
+    const near = candidates(target).map((t) => {
+      const r = t.getBoundingClientRect();
+      const dx = Math.max(r.left - x, 0, x - r.right);
+      const dy = Math.abs(r.top - y);
+      if (dx > HOP_DX || dy > HOP_DY || (dx < 4 && dy < 6)) return null;
+      const land = Math.min(Math.max(x, r.left + 14), r.right - 14);
+      if (!reachable(t, land)) return null;
+      const ahead = (land - x) * dir >= 0;
+      return { t, land: land - r.left + dir * rand(0, 24), score: dx + dy + (ahead ? 0 : 60) + rand(0, 30) };
+    }).filter(Boolean).sort((a, b) => a.score - b.score);
+    return near[0] || null;
   };
 
-  // État : 'walk' (sur un élément), 'rest' (pause), 'hop' (saut), 'away' (aucun élément praticable)
+  // État : 'walk' (sur un élément), 'rest' (pause), 'hop' (saut vers un voisin), 'away' (caché)
   let target = null;
   let offset = 0;          // position horizontale sur l'élément (px depuis son bord gauche)
   let goal = 0;            // prochaine position visée sur l'élément
@@ -57,33 +90,52 @@
 
   const face = (d) => { dir = d; flip.style.transform = d < 0 ? 'scaleX(-1)' : ''; };
   const show = (on) => el.classList.toggle('is-visible', on);
-  const rest = (on) => el.classList.toggle('is-resting', on);
+  const pose = (name) => {
+    if (name) { poseSvg.innerHTML = POSES[name]; el.dataset.pose = name; } else { poseSvg.innerHTML = ''; delete el.dataset.pose; }
+  };
+  const rest = (on, name) => { el.classList.toggle('is-resting', on); pose(on ? name : null); };
 
   const newGoal = (r) => {
-    const margin = Math.min(12, r.width / 4);
+    const margin = Math.min(14, r.width / 4);
     goal = rand(margin, r.width - margin);
     face(goal >= offset ? 1 : -1);
   };
 
-  const jumpTo = (now) => {
-    const next = pickTarget(target);
-    if (!next) { mode = 'away'; show(false); until = now + 1500; return; }
-    const r = next.getBoundingClientRect();
-    const toOffset = rand(Math.min(12, r.width / 4), r.width - Math.min(12, r.width / 4));
-    if (mode === 'away' || x < -SIZE || x > vw() + SIZE || y < -SIZE || y > vh()) {
-      // Pas de saut possible depuis l'extérieur de l'écran : il apparaît directement
-      target = next; offset = toOffset; mode = 'rest'; rest(true); until = now + rand(400, 900);
-      show(true); return;
-    }
-    face(r.left + toOffset >= x ? 1 : -1);
-    hop = { from: { x, y }, to: next, toOffset, start: now };
-    mode = 'hop'; rest(false);
+  const goAway = (now, delay) => { mode = 'away'; rest(false); show(false); until = now + delay; };
+
+  // Réapparition (fondu) sur un élément visible au hasard
+  const appear = (now) => {
+    const list = candidates(null).filter((t) => reachable(t));
+    if (!list.length) { until = now + 1500; return; }
+    target = list[Math.floor(Math.random() * list.length)];
+    const r = target.getBoundingClientRect();
+    offset = rand(Math.min(14, r.width / 4), r.width - Math.min(14, r.width / 4));
+    face(Math.random() < 0.5 ? 1 : -1);
+    mode = 'rest'; rest(true); until = now + rand(500, 1100);
+    place(r.left + offset, r.top);
+    show(true);
   };
 
-  const place = (px, py) => {
+  const hopToNeighbour = (now) => {
+    const n = nearTarget();
+    if (!n) return false;
+    const r = n.t.getBoundingClientRect();
+    face(r.left + n.land >= x ? 1 : -1);
+    hop = { from: { x, y }, to: n.t, toOffset: Math.min(Math.max(n.land, 10), r.width - 10), start: now };
+    mode = 'hop'; rest(false);
+    return true;
+  };
+
+  const startPause = (now) => {
+    const name = Math.random() < 0.8 ? POSE_NAMES[Math.floor(Math.random() * POSE_NAMES.length)] : null;
+    mode = 'rest'; rest(true, name);
+    until = now + (name ? rand(2600, 5200) : rand(900, 2000));
+  };
+
+  function place(px, py) {
     x = px; y = py;
     el.style.transform = `translate3d(${Math.round(px - SIZE / 2)}px, ${Math.round(py - SIZE + 2)}px, 0)`;
-  };
+  }
 
   const tick = (now) => {
     const dt = Math.min(0.1, (now - (last || now)) / 1000);
@@ -92,46 +144,41 @@
     if (document.hidden) { requestAnimationFrame(tick); return; }
 
     if (mode === 'away') {
-      if (now >= until) jumpTo(now);
+      if (now >= until) appear(now);
     } else if (mode === 'hop') {
       const r = hop.to.getBoundingClientRect();
       const tx = r.left + hop.toOffset, ty = r.top;
       const k = Math.min(1, (now - hop.start) / HOP_MS);
       const e = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
-      const arc = Math.min(140, 40 + Math.abs(tx - hop.from.x) * 0.25 + Math.abs(ty - hop.from.y) * 0.2);
+      const arc = Math.min(45, 18 + Math.hypot(tx - hop.from.x, ty - hop.from.y) * 0.25) + Math.max(0, hop.from.y - ty) * 0.5;
       place(hop.from.x + (tx - hop.from.x) * e, hop.from.y + (ty - hop.from.y) * e - Math.sin(Math.PI * k) * arc);
       if (k >= 1) {
         target = hop.to; offset = hop.toOffset; hop = null;
-        if (!reachable(target, tx)) { mode = 'away'; until = now; }
+        if (!reachable(target, tx)) goAway(now, 600);
         else { mode = 'walk'; newGoal(r); }
       }
     } else {
       const r = target && target.isConnected ? target.getBoundingClientRect() : null;
-      if (!r || r.width < 30) { mode = 'away'; show(false); until = now + 600; requestAnimationFrame(tick); return; }
+      if (!r || r.width < 30) { goAway(now, 600); requestAnimationFrame(tick); return; }
       offset = Math.min(Math.max(offset, 0), r.width);
       if (mode === 'walk') {
         offset += dir * SPEED * dt;
         if ((dir > 0 && offset >= goal) || (dir < 0 && offset <= goal)) {
           offset = goal;
           const roll = Math.random();
-          if (roll < 0.35) { mode = 'rest'; rest(true); until = now + rand(800, 2600); }
-          else if (roll < 0.7) jumpTo(now);
-          else newGoal(r);
+          if (roll < 0.3) startPause(now);
+          else if (!(roll < 0.45 && hopToNeighbour(now))) newGoal(r);
         }
       } else if (mode === 'rest' && now >= until) {
         rest(false);
-        if (Math.random() < 0.5) jumpTo(now); else { mode = 'walk'; newGoal(r); }
+        if (!(Math.random() < 0.12 && hopToNeighbour(now))) { mode = 'walk'; newGoal(r); }
       }
       if (mode === 'walk' || mode === 'rest') {
         place(r.left + offset, r.top);
-        // Élément sorti de l'écran (défilement) ou recouvert : il part ailleurs
+        // Élément sorti de l'écran (défilement) ou recouvert : il s'efface et réapparaît ailleurs
         if (now >= nextCheck) {
           nextCheck = now + 250;
-          if (!reachable(target, r.left + offset)) {
-            rest(false);
-            if (r.top < SIZE + 8 || r.top > vh() - 20) jumpTo(now);
-            else { mode = 'away'; show(false); until = now + 800; }
-          }
+          if (!reachable(target, r.left + offset)) goAway(now, 700);
         }
       }
     }
