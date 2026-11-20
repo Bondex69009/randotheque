@@ -113,7 +113,7 @@
   function shellHtml(o) {
     return `
       <div class="fo__map" id="fo-map" role="region" aria-label="Carte en relief du parcours"></div>
-      <div class="fo__loading" id="fo-loading"><span class="fo__spinner" aria-hidden="true"></span>Chargement du relief…</div>
+      <div class="fo__loading" id="fo-loading">${window.rtHiker ? window.rtHiker() : '<span class="fo__spinner" aria-hidden="true"></span>'}Chargement du relief…</div>
       <header class="fo__top">
         <div class="fo__card fo__title">
           <p class="fo__eyebrow">Survol 3D</p>
@@ -527,7 +527,7 @@
       </div>`;
     return `
       <div class="fo__map" id="fo-map" role="region" aria-label="Carte en relief des deux parcours"></div>
-      <div class="fo__loading" id="fo-loading"><span class="fo__spinner" aria-hidden="true"></span>Chargement du relief…</div>
+      <div class="fo__loading" id="fo-loading">${window.rtHiker ? window.rtHiker() : '<span class="fo__spinner" aria-hidden="true"></span>'}Chargement du relief…</div>
       <header class="fo__top">
         <div class="fo__card fo__title">
           <p class="fo__eyebrow">Survol 3D · duel</p>

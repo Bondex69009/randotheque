@@ -410,6 +410,7 @@ h1, h2, h3 { line-height: var(--lh-tight); margin: 0; }
   border-radius: var(--radius-md); background: var(--c-accent); color: var(--c-on-accent);
 }
 .hero-total__icon .icon { width: 1.5rem; height: 1.5rem; }
+.hero-total__icon .hiker { width: 2.25rem; height: 2.25rem; }
 .hero-total__body { display: flex; flex-direction: column; line-height: var(--lh-tight); }
 .hero-total__label {
   font-size: var(--fs-xs); font-weight: var(--fw-semibold); text-transform: uppercase; letter-spacing: 0.08em; color: var(--c-text-muted);
@@ -1049,3 +1050,25 @@ h1, h2, h3 { line-height: var(--lh-tight); margin: 0; }
 }
 .admin-link:hover, .admin-link:focus-visible { opacity: 1; color: var(--c-accent); }
 .admin-link .icon { width: 0.95rem; height: 0.95rem; }
+
+/* Randonneur animé (compteur et chargements) : marche fluide, genoux qui plient, sol qui défile */
+.hiker { width: 2rem; height: 2rem; overflow: hidden; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+.hiker g, .hiker path { transform-box: view-box; }
+.hiker__head, .hiker__pack { fill: currentColor; stroke: none; }
+.hiker__hat { stroke-width: 1.4; }
+.hiker__stick { stroke-width: 1.3; }
+.hiker__ground { stroke-width: 1.2; stroke-dasharray: 2.5 2.5; opacity: 0.55; animation: hiker-ground 1.2s linear infinite; }
+.hiker__arm--b, .hiker__leg--b { opacity: 0.55; }
+.hiker__body { animation: hiker-bob 0.6s ease-in-out infinite alternate; }
+.hiker__leg { transform-origin: 15px 18px; animation: hiker-thigh 1.2s ease-in-out infinite; }
+.hiker__shin { transform-origin: 15px 23.4px; animation: hiker-knee 1.2s ease-in-out infinite; }
+.hiker__arm { transform-origin: 16.6px 11.2px; animation: hiker-arm 1.2s ease-in-out infinite; }
+.hiker__leg--b, .hiker__leg--b .hiker__shin, .hiker__arm--a { animation-delay: -0.6s; }
+@keyframes hiker-thigh { 0%, 100% { transform: rotate(-26deg); } 50% { transform: rotate(22deg); } }
+@keyframes hiker-knee { 0%, 100% { transform: rotate(4deg); } 40% { transform: rotate(8deg); } 62% { transform: rotate(58deg); } 85% { transform: rotate(18deg); } }
+@keyframes hiker-arm { 0%, 100% { transform: rotate(22deg); } 50% { transform: rotate(-20deg); } }
+@keyframes hiker-bob { from { transform: translateY(0.5px); } to { transform: translateY(-0.5px); } }
+@keyframes hiker-ground { to { stroke-dashoffset: 10; } }
+@media (prefers-reduced-motion: reduce) { .hiker *, .hiker { animation: none !important; } }
+.loader { display: grid; justify-items: center; gap: var(--space-2); color: var(--c-text-muted); font-size: var(--fs-sm); }
+.loader .hiker { width: 3rem; height: 3rem; color: var(--c-accent); }

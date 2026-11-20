@@ -1334,7 +1334,7 @@
           <button type="button" class="sh-x" data-sh-close aria-label="Fermer">${svg('close')}</button>
         </header>
         <div class="sh-body">
-          <div class="sh-stage"><canvas class="sh-canvas" aria-label="Aperçu de l'image à partager"></canvas><span class="sh-spinner" aria-hidden="true"></span></div>
+          <div class="sh-stage"><canvas class="sh-canvas" aria-label="Aperçu de l'image à partager"></canvas>${window.rtHiker ? `<span class="sh-walker">${window.rtHiker()}</span>` : '<span class="sh-spinner" aria-hidden="true"></span>'}</div>
           <div class="sh-side">
             <form class="sh-panel" onsubmit="return false"></form>
             <div class="sh-foot"></div>

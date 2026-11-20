@@ -22,6 +22,7 @@
   border: 3px solid var(--c-border-strong); border-top-color: var(--c-accent);
   animation: fo-spin 0.9s linear infinite;
 }
+.fo__loading .hiker { width: 3.5rem; height: 3.5rem; color: var(--c-accent); }
 @keyframes fo-spin { to { transform: rotate(360deg); } }
 
 .fo__card {

@@ -32,6 +32,9 @@
   border: 3px solid rgb(255 255 255 / 0.25); border-top-color: var(--c-accent, #fa0); transition: opacity 0.2s;
 }
 .sh-stage.is-loading .sh-spinner { opacity: 1; animation: sh-spin 0.8s linear infinite; }
+.sh-walker { position: absolute; display: grid; place-items: center; width: 4.5rem; height: 4.5rem; border-radius: 50%; background: rgb(0 0 0 / 0.55); color: var(--c-accent, #87f700); opacity: 0; pointer-events: none; transition: opacity 0.2s; }
+.sh-walker .hiker { width: 3.25rem; height: 3.25rem; }
+.sh-stage.is-loading .sh-walker { opacity: 1; }
 @keyframes sh-spin { to { transform: rotate(360deg); } }
 
 /* Réglages */

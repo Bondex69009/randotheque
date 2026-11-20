@@ -48,6 +48,9 @@
   const fmtDate = (d) => { try { return df.format(new Date(d + 'T12:00:00')); } catch { return d; } };
   const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const norm = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+  const HIKER = '<svg class="hiker" viewBox="0 0 32 32" aria-hidden="true" focusable="false"><path class="hiker__ground" d="M-6 30.8H38"/><g class="hiker__body"><g class="hiker__arm hiker__arm--b"><path d="M16.6 11.2l-.8 3.2.4 2.5"/></g><g class="hiker__leg hiker__leg--b"><path d="M15 18l0 5.4"/><g class="hiker__shin"><path d="M15 23.4l0 5.5h2"/></g></g><rect class="hiker__pack" x="11" y="10" width="4.4" height="6.6" rx="1.4"/><path d="M16.9 9.3L15 18"/><g class="hiker__leg hiker__leg--a"><path d="M15 18l0 5.4"/><g class="hiker__shin"><path d="M15 23.4l0 5.5h2"/></g></g><circle class="hiker__head" cx="17.8" cy="6.4" r="2.3"/><path class="hiker__hat" d="M15.2 5h5.6"/><g class="hiker__arm hiker__arm--a"><path d="M16.6 11.2l.6 3 1.6 2.2"/><path class="hiker__stick" d="M19.4 14.2l1.4 15.4"/></g></g></svg>';
+  window.rtHiker = () => HIKER;
+  const loader = (text) => `<div class="loader" role="status">${HIKER}<span>${text}</span></div>`;
   const icon = (id, cls = 'icon') => `<svg class="${cls}" aria-hidden="true"><use href="#i-${id}"/></svg>`;
   const SOURCE_LABELS = { photos: 'Randos & Photos de Gé', gr: 'Chemins en itinérance', perso: 'Ajoutées au dossier' };
   const placeOf = (r) => [r.commune, r.deptCode ? `(${r.deptCode})` : r.deptName].filter(Boolean).join(' ');
@@ -597,7 +600,7 @@
     }
     const since = (DATA.total && DATA.total.since) || Math.min(...RANDOS.map((r) => +r.date.slice(0, 4)));
     $('#hero-total').innerHTML = `
-      <span class="hero-total__icon" aria-hidden="true">${icon('distance')}</span>
+      <span class="hero-total__icon" aria-hidden="true">${HIKER}</span>
       <span class="hero-total__body">
         <span class="hero-total__label">Nos kilomètres à pied depuis ${since}</span>
         <span class="hero-total__value">${num('total')} <small>km</small></span>
@@ -1299,7 +1302,7 @@
           <div class="detail__map" id="detail-map" role="region" aria-label="Carte du parcours"></div>
           <section class="panel" aria-labelledby="profile-title">
             <h3 class="panel__title" id="profile-title">Profil altimétrique</h3>
-            <div class="profile" id="profile"><div class="state" style="padding:var(--space-8)">Chargement du profil…</div></div>
+            <div class="profile" id="profile"><div class="state" style="padding:var(--space-8)">${loader('Chargement du profil…')}</div></div>
           </section>
           ${r.description ? `<section class="panel"><h3 class="panel__title">Description</h3><p class="desc">${esc(r.description)}</p></section>` : ''}
           <section class="panel" aria-labelledby="meta-title">
@@ -1392,7 +1395,7 @@
           ${hasTrack || r.start ? `<div class="detail__map" id="detail-map" role="region" aria-label="Carte du parcours"></div>` : ''}
           ${hasTrack ? `<section class="panel" aria-labelledby="profile-title">
             <h3 class="panel__title" id="profile-title">Profil altimétrique</h3>
-            <div class="profile" id="profile"><div class="state" style="padding:var(--space-8)">Chargement du profil…</div></div>
+            <div class="profile" id="profile"><div class="state" style="padding:var(--space-8)">${loader('Chargement du profil…')}</div></div>
           </section>` : `<section class="panel"><h3 class="panel__title">Trace GPS</h3>
             <p class="desc">${esc(r.sourceName)} ne partage pas la trace librement${r.gpxNote ? ` : ${esc(r.gpxNote)}` : ''}. La carte, le profil et le survol 3D ne sont donc pas disponibles ici.</p></section>`}
           ${r.departText ? `<section class="panel"><h3 class="panel__title">Départ</h3><p class="desc">${esc(r.departText)}</p></section>` : ''}
@@ -1549,8 +1552,8 @@
   };
   const loadFlyover = () => Promise.all([
     loadAsset(`https://unpkg.com/maplibre-gl@${ML_VER}/dist/maplibre-gl.css`, true),
-    loadAsset('assets/flyover.css?v=7', true),
-    loadAsset(`https://unpkg.com/maplibre-gl@${ML_VER}/dist/maplibre-gl.js`).then(() => loadAsset('assets/flyover.js?v=7')),
+    loadAsset('assets/flyover.css?v=8', true),
+    loadAsset(`https://unpkg.com/maplibre-gl@${ML_VER}/dist/maplibre-gl.js`).then(() => loadAsset('assets/flyover.js?v=8')),
   ]);
   // Duel en survol 3D : les deux randos du comparateur en même temps, chacune dans sa couleur
   async function openFlyoverDuel(ids, colors, btn) {
@@ -1609,7 +1612,7 @@
     const label = btn && $('.btn__label', btn);
     if (btn) { btn.disabled = true; if (label) label.textContent = 'Chargement…'; }
     try {
-      await Promise.all([loadAsset('assets/share.css?v=9', true), loadAsset('assets/share.js?v=22')]);
+      await Promise.all([loadAsset('assets/share.css?v=10', true), loadAsset('assets/share.js?v=23')]);
       const track = await loadTrack(id);
       stopAudio();
       window.RTShare.open({

@@ -31,7 +31,25 @@
       flex: none; display: grid; place-items: center; width: 52px; height: 52px; border-radius: 12px;
       background: var(--accent); color: var(--on-accent);
     }
-    .icon svg { width: 28px; height: 28px; }
+    .icon svg { width: 40px; height: 40px; }
+    .hiker { width: 2rem; height: 2rem; overflow: hidden; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+    .hiker g, .hiker path { transform-box: view-box; }
+    .hiker__head, .hiker__pack { fill: currentColor; stroke: none; }
+    .hiker__hat { stroke-width: 1.4; }
+    .hiker__stick { stroke-width: 1.3; }
+    .hiker__ground { stroke-width: 1.2; stroke-dasharray: 2.5 2.5; opacity: 0.55; animation: hiker-ground 1.2s linear infinite; }
+    .hiker__arm--b, .hiker__leg--b { opacity: 0.55; }
+    .hiker__body { animation: hiker-bob 0.6s ease-in-out infinite alternate; }
+    .hiker__leg { transform-origin: 15px 18px; animation: hiker-thigh 1.2s ease-in-out infinite; }
+    .hiker__shin { transform-origin: 15px 23.4px; animation: hiker-knee 1.2s ease-in-out infinite; }
+    .hiker__arm { transform-origin: 16.6px 11.2px; animation: hiker-arm 1.2s ease-in-out infinite; }
+    .hiker__leg--b, .hiker__leg--b .hiker__shin, .hiker__arm--a { animation-delay: -0.6s; }
+    @keyframes hiker-thigh { 0%, 100% { transform: rotate(-26deg); } 50% { transform: rotate(22deg); } }
+    @keyframes hiker-knee { 0%, 100% { transform: rotate(4deg); } 40% { transform: rotate(8deg); } 62% { transform: rotate(58deg); } 85% { transform: rotate(18deg); } }
+    @keyframes hiker-arm { 0%, 100% { transform: rotate(22deg); } 50% { transform: rotate(-20deg); } }
+    @keyframes hiker-bob { from { transform: translateY(0.5px); } to { transform: translateY(-0.5px); } }
+    @keyframes hiker-ground { to { stroke-dashoffset: 10; } }
+    @media (prefers-reduced-motion: reduce) { .hiker *, .hiker { animation: none !important; } }
     .body { display: flex; flex-direction: column; min-width: 0; line-height: 1.15; }
     .label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
     .value { font-size: 34px; font-weight: 800; color: var(--accent); margin: 3px 0; font-variant-numeric: tabular-nums; white-space: nowrap; }
@@ -56,9 +74,7 @@
 </head>
 <body>
   <div class="counter" id="counter">
-    <span class="icon" aria-hidden="true">
-      <svg viewBox="0 0 24 24"><path d="M5 18c3-1 3-5 7-6s4-5 7-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-dasharray="0.1 4"/><circle cx="5" cy="18" r="2" fill="currentColor"/><circle cx="19" cy="6" r="2" fill="currentColor"/></svg>
-    </span>
+    <span class="icon" aria-hidden="true"><svg class="hiker" viewBox="0 0 32 32" aria-hidden="true" focusable="false"><path class="hiker__ground" d="M-6 30.8H38"/><g class="hiker__body"><g class="hiker__arm hiker__arm--b"><path d="M16.6 11.2l-.8 3.2.4 2.5"/></g><g class="hiker__leg hiker__leg--b"><path d="M15 18l0 5.4"/><g class="hiker__shin"><path d="M15 23.4l0 5.5h2"/></g></g><rect class="hiker__pack" x="11" y="10" width="4.4" height="6.6" rx="1.4"/><path d="M16.9 9.3L15 18"/><g class="hiker__leg hiker__leg--a"><path d="M15 18l0 5.4"/><g class="hiker__shin"><path d="M15 23.4l0 5.5h2"/></g></g><circle class="hiker__head" cx="17.8" cy="6.4" r="2.3"/><path class="hiker__hat" d="M15.2 5h5.6"/><g class="hiker__arm hiker__arm--a"><path d="M16.6 11.2l.6 3 1.6 2.2"/><path class="hiker__stick" d="M19.4 14.2l1.4 15.4"/></g></g></svg></span>
     <span class="body">
       <span class="label">Compteur global depuis 1977</span>
       <span class="value"><span id="km" aria-hidden="true">…</span> <small>km</small><span id="km-sr" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)"></span></span>
