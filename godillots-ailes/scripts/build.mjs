@@ -19,6 +19,7 @@ import {
   simplifyTo, profile, bbox, haversine, slopeBreakdown,
 } from './lib/gpx.mjs';
 import { encodePoints, encodeProfile, DECODER } from './lib/compact.mjs';
+import { readCache as readJunctions } from './carrefours.mjs';
 
 const TRACKS_DIR = path.join(DATA_DIR, 'tracks');
 const GEO_CACHE_FILE = path.join(CACHE_DIR, 'geo.json');
@@ -355,7 +356,9 @@ async function main() {
   }
   for (const r of randos) if (r.hidden) tracks.delete(r.id);
   for (const [id, t] of tracks) {
-    fs.writeFileSync(path.join(TRACKS_DIR, `${id}.js`), `window.__rtTrack&&__rtTrack(${JSON.stringify(id)},${JSON.stringify(t)});`);
+    // 3e argument : croisements le long de la trace (scripts/carrefours.mjs), pour le guidage du mode terrain
+    const jn = readJunctions(id);
+    fs.writeFileSync(path.join(TRACKS_DIR, `${id}.js`), `window.__rtTrack&&__rtTrack(${JSON.stringify(id)},${JSON.stringify(t)}${jn ? `,${JSON.stringify({ j: jn.j })}` : ''});`);
   }
   // Liste complète (y compris masquées) pour l'interface d'administration
   writeJSON(path.join(DATA_DIR, 'admin.json'), {

@@ -180,8 +180,13 @@
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </button>
         <div class="terrain__heading"><h2 id="terrain-title" class="terrain__title"></h2><p class="terrain__gps" data-t-gps role="status">GPS en attente…</p></div>
+        <button type="button" class="terrain__voice" data-t-voice aria-pressed="false" hidden>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4Z" fill="currentColor"/><path class="terrain__voice-on" d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path class="terrain__voice-off" d="m16 9 5 6m0-6-5 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          <span data-t-voice-label>Voix coupée</span>
+        </button>
       </div>
       <div class="terrain__map" data-t-map></div>
+      <div class="guide" data-guide aria-live="polite" hidden></div>
       <div class="terrain__alert" data-t-alert role="alert" hidden></div>
       <button type="button" class="terrain__follow" data-t-follow aria-pressed="true" title="Garder ma position au centre">
         <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4" fill="currentColor"/><path d="M12 2v3m0 14v3M2 12h3m14 0h3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2"/></svg>
@@ -196,6 +201,7 @@
         </dl>
         <p class="terrain__sun" data-t-sun></p>
         <div class="terrain__offline" data-t-offline></div>
+        <details class="guide-sheet"><summary>Feuille de route : toutes les consignes</summary><ol class="guide-list" data-guide-list></ol></details>
         <label class="terrain__wake"><input type="checkbox" data-t-wake> Garder l'écran allumé</label>
       </section>`;
     document.body.appendChild(dlg);
@@ -243,9 +249,23 @@
     V.me = L.marker(latlngs[0], { icon: L.divIcon({ className: '', html: '<div class="terrain-me"><i></i></div>', iconSize: [26, 26] }), interactive: false, keyboard: false });
     V.map.fitBounds(V.line.getBounds().pad(0.1));
     V.map.on('dragstart', () => setFollow(false));
+    // Guidage pas à pas (assets/guidage.js) : consignes tirées de la forme de la trace
+    if (V.guide) { V.guide.destroy(); V.guide = null; }
+    if (window.RTGuide) {
+      const extra = T.trackExtra ? T.trackExtra(id) : null;
+      V.guide = window.RTGuide.create({ G: V.G, root: dlg, map: V.map, L, junctions: extra && extra.j });
+      paintVoice();
+    }
     // La taille de la carte n'est connue qu'une fois le plein écran posé (et change en tournant le téléphone)
     if (V.ro) V.ro.disconnect();
-    if ('ResizeObserver' in window) { V.ro = new ResizeObserver(() => V.map && V.map.invalidateSize({ pan: false })); V.ro.observe(mapEl); }
+    if ('ResizeObserver' in window) {
+      const sheet = dlg.querySelector('.terrain__sheet');
+      V.ro = new ResizeObserver(() => {
+        if (V.map) V.map.invalidateSize({ pan: false });
+        dlg.style.setProperty('--terrain-sheet-h', `${sheet.offsetHeight}px`); // alerte posée juste au-dessus
+      });
+      V.ro.observe(mapEl); V.ro.observe(sheet);
+    }
     requestAnimationFrame(() => { if (V.map) { V.map.invalidateSize({ pan: false }); V.map.fitBounds(V.line.getBounds().pad(0.1)); } });
     paintSun();
     paintOffline();
@@ -296,6 +316,7 @@
       alert.hidden = false; alert.className = 'terrain__alert terrain__alert--info';
       alert.textContent = `Vous êtes à ${nf1.format(loc.dist / 1000)} km de la trace.`;
       V.lastIdx = null;
+      if (V.guide) V.guide.update(null, { tooFar: true });
       return;
     }
     V.lastIdx = loc.idx;
@@ -317,6 +338,27 @@
     } else {
       alert.hidden = true;
     }
+    if (V.guide) V.guide.update(loc, { off: V.offCount >= 3 });
+  }
+
+  function paintVoice() {
+    const V = view, b = V.dlg.querySelector('[data-t-voice]');
+    if (!V.guide || !window.RTGuide.hasVoice()) { b.hidden = true; return; }
+    const on = V.guide.voiceOn();
+    b.hidden = false;
+    b.setAttribute('aria-pressed', String(on));
+    b.querySelector('[data-t-voice-label]').textContent = on ? 'Voix active' : 'Voix coupée';
+    b.title = on ? 'Couper le guidage vocal' : 'Activer le guidage vocal (consignes à voix haute)';
+  }
+  async function toggleVoice() {
+    const V = view;
+    if (!V.guide) return;
+    const on = !V.guide.voiceOn();
+    V.guide.setVoice(on);
+    paintVoice();
+    // Voix active : l'écran doit rester allumé (le navigateur suspend le GPS écran éteint)
+    if (on) { const w = V.dlg.querySelector('[data-t-wake]'); if (!w.checked) { w.checked = true; setWake(true); } }
+    T.stat('ui', on ? 'Guidage vocal activé' : 'Guidage vocal coupé');
   }
 
   function paintSun(eta) {
@@ -385,6 +427,7 @@
     if (!view) return;
     stopGps();
     setWake(false);
+    if (view.guide) { view.guide.destroy(); view.guide = null; }
     if (view.map) { view.map.remove(); view.map = null; }
     document.documentElement.classList.remove('is-terrain');
     if (view.dlg.open) view.dlg.close();
@@ -394,6 +437,8 @@
     if (!view || !view.dlg.contains(e.target)) return;
     if (e.target.closest('[data-t-close]')) close();
     else if (e.target.closest('[data-t-follow]')) setFollow(!view.follow);
+    else if (e.target.closest('[data-t-voice]')) toggleVoice();
+    else if (e.target.closest('[data-guide-go]')) setFollow(false);
     else if (e.target.closest('[data-t-save]')) onSave(e.target.closest('[data-t-save]'));
     else if (e.target.closest('[data-t-remove]')) removeOffline(view.r.id).then(paintOffline);
   });

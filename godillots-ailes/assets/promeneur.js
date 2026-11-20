@@ -3,8 +3,9 @@
    (boire un coup, lire la carte, regarder son GPS, observer aux jumelles, refaire ses lacets).
    S'il doit changer de coin (élément sorti de l'écran), il disparaît en fondu et réapparaît ailleurs : jamais
    de grand saut à travers la page.
-   Purement décoratif : ne capte aucun clic, se cache si l'élément est recouvert (fenêtre, menu) et ne bouge pas
-   du tout quand le visiteur a demandé moins d'animations.
+   Décoratif : se cache si l'élément est recouvert (fenêtre, menu) et ne bouge pas du tout quand le visiteur a
+   demandé moins d'animations. Un clic (ou un toucher) sur lui : il s'arrête, marche sur place et chante la
+   vieille comptine de marche dans une bulle, avec une petite mélodie ; un kilomètre de plus à chaque fois.
    Autonome (dessin et styles inclus) : le même fichier sert sur le blog des Godillots, chargé par le code
    d'intégration du compteur avec l'attribut data-blog ; il part alors du compteur et se promène sur les widgets,
    les articles et les photos du blog. */
@@ -37,6 +38,22 @@
 .rt-promeneur { position: fixed; left: 0; top: 0; z-index: ${BLOG ? 9999 : 50}; width: 46px; height: 46px; pointer-events: none;
   color: var(--c-accent, #87f700); opacity: 0; transition: opacity .35s; will-change: transform; filter: drop-shadow(0 1px 1px rgb(0 0 0 / .6)); }
 .rt-promeneur.is-visible { opacity: 1; }
+.rt-hit { position: absolute; left: 12px; top: 6px; width: 24px; height: 38px; border-radius: 12px; pointer-events: none; cursor: pointer; }
+.rt-promeneur.is-visible .rt-hit { pointer-events: auto; }
+.rt-promeneur.is-singing .rt-promeneur__flip { animation: rtp-hop .44s ease-in-out infinite alternate; }
+@keyframes rtp-hop { from { transform: translateY(0); } to { transform: translateY(-3px); } }
+.rt-bulle { position: absolute; left: 50%; bottom: calc(100% + 6px); transform: translateX(-50%) scale(.6); transform-origin: 50% 100%;
+  min-width: 11.5rem; max-width: 15rem; padding: .5rem .75rem .55rem; border-radius: 14px; background: #fffdf5; color: #1f2a17;
+  font: 600 13px/1.35 "Plus Jakarta Sans", system-ui, sans-serif; text-align: center; box-shadow: 0 6px 22px rgb(0 0 0 / .35);
+  opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s; }
+.rt-bulle::after { content: ""; position: absolute; left: 50%; top: 100%; margin-left: -7px; border: 7px solid transparent; border-top-color: #fffdf5; }
+.rt-promeneur.is-singing .rt-bulle { opacity: 1; transform: translateX(-50%) scale(1); }
+.rt-bulle b { display: block; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: #3a8500; margin-bottom: 2px; }
+.rt-bulle span { display: block; opacity: .35; transition: opacity .15s, color .15s; }
+.rt-bulle span.is-on { opacity: 1; color: #000; }
+.rt-note { position: absolute; left: 60%; top: -4px; font: 700 15px/1 system-ui, sans-serif; color: currentColor; pointer-events: none;
+  animation: rtp-note 1.4s ease-out forwards; }
+@keyframes rtp-note { from { opacity: 1; transform: translate(0, 0) rotate(0); } to { opacity: 0; transform: translate(18px, -38px) rotate(20deg); } }
 .rt-promeneur__flip { position: relative; width: 100%; height: 100%; }
 .rt-promeneur .hiker { display: block; width: 100%; height: 100%; overflow: hidden; fill: currentColor; stroke: none; }
 .rt-promeneur .hiker g, .rt-promeneur .hiker path, .rt-pose g, .rt-pose path { transform-box: view-box; }
@@ -93,7 +110,7 @@
   const el = document.createElement('div');
   el.className = 'rt-promeneur';
   el.setAttribute('aria-hidden', 'true');
-  el.innerHTML = `<div class="rt-promeneur__flip">${HIKER}<svg class="rt-pose" viewBox="0 0 32 32" aria-hidden="true" focusable="false"></svg></div>`;
+  el.innerHTML = `<div class="rt-promeneur__flip">${HIKER}<svg class="rt-pose" viewBox="0 0 32 32" aria-hidden="true" focusable="false"></svg></div><div class="rt-bulle" aria-live="polite"></div><span class="rt-hit" title="Fais-moi chanter !"></span>`;
   document.body.appendChild(el);
   const flip = el.firstElementChild;
   const poseSvg = flip.querySelector('.rt-pose');
@@ -246,13 +263,79 @@
     el.style.transform = `translate3d(${Math.round(px - SIZE / 2)}px, ${Math.round(py - SIZE + 2)}px, 0)`;
   }
 
+  // ------------------------------------------------------------ La chanson (comptine traditionnelle)
+  const NOMBRES = ['Un', 'Deux', 'Trois', 'Quatre', 'Cinq', 'Six', 'Sept', 'Huit', 'Neuf', 'Dix'];
+  let couplet = 1;
+  try { couplet = Math.max(1, +sessionStorage.getItem('rt-chanson') || 1); } catch { /* indisponible */ }
+  const bulle = el.querySelector('.rt-bulle');
+  // Petite mélodie de marche (notes en Hz, une par syllabe ; la dernière de chaque vers est tenue)
+  const C = 262, D = 294, E = 330, F = 349, G = 392, A = 440;
+  const AIR = [[C, C, C, E, G, G, E], [G, G, E, G, G, E], [C, C, C, E, G, G, A], [G, F, E, D, D, C]];
+  let audio = null;
+  function jouer(onLine) {
+    let t0 = 0;
+    try {
+      audio = audio || new (window.AudioContext || window.webkitAudioContext)();
+      if (audio.state === 'suspended') audio.resume();
+      t0 = audio.currentTime + 0.08;
+    } catch { audio = null; }
+    let t = 0;
+    AIR.forEach((vers, v) => {
+      setTimeout(() => onLine(v), t * 1000);
+      vers.forEach((f, k) => {
+        const len = k === vers.length - 1 ? 0.46 : 0.23;
+        if (audio) {
+          const o = audio.createOscillator(), g = audio.createGain();
+          o.type = 'triangle'; o.frequency.value = f;
+          const s0 = t0 + t;
+          g.gain.setValueAtTime(0, s0);
+          g.gain.linearRampToValueAtTime(0.16, s0 + 0.02);
+          g.gain.exponentialRampToValueAtTime(0.001, s0 + len * 0.95);
+          o.connect(g).connect(audio.destination);
+          o.start(s0); o.stop(s0 + len);
+        }
+        if (k === 2 || k === vers.length - 1) setTimeout(note, (t + 0.05) * 1000);
+        t += len;
+      });
+      t += 0.12;
+    });
+    return t;
+  }
+  function note() {
+    const n = document.createElement('i');
+    n.className = 'rt-note'; n.textContent = Math.random() < 0.5 ? '♪' : '♫';
+    el.appendChild(n);
+    setTimeout(() => n.remove(), 1500);
+  }
+  function chanter() {
+    if (mode === 'sing' || mode === 'away' || mode === 'hop') return;
+    const n = couplet, nb = NOMBRES[n - 1] || String(n), km = `kilomètre${n > 1 ? 's' : ''}`;
+    const vers = [`${nb} ${km} à pied,`, 'ça use, ça use,', `${nb} ${km} à pied,`, 'ça use les souliers !'];
+    bulle.innerHTML = `<b>♪ En avant, marche !</b>${vers.map((l) => `<span>${l}</span>`).join('')}`;
+    const lines = bulle.querySelectorAll('span');
+    rest(false); el.classList.add('is-singing');
+    mode = 'sing';
+    const dur = jouer((v) => lines.forEach((l, i) => l.classList.toggle('is-on', i === v)));
+    until = performance.now() + dur * 1000 + 900;
+    couplet = n + 1;
+    try { sessionStorage.setItem('rt-chanson', String(couplet)); } catch { /* indisponible */ }
+    if (window.rtStat) window.rtStat('ui', 'Randonneur qui chante');
+  }
+  // Seul son corps est cliquable (petite zone) : il ne gêne pas les boutons sur lesquels il marche
+  el.querySelector('.rt-hit').addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); chanter(); });
+
   const tick = (now) => {
     const dt = Math.min(0.1, (now - (last || now)) / 1000);
     last = now;
 
     if (document.hidden) { requestAnimationFrame(tick); return; }
 
-    if (mode === 'away') {
+    if (mode === 'sing') {
+      // Il chante en marchant sur place, posé sur son bloc
+      const r = target && target.isConnected ? target.getBoundingClientRect() : null;
+      if (r) place(r.left + offset, topOf(target, r));
+      if (now >= until) { el.classList.remove('is-singing'); mode = 'walk'; leaveAt = Math.max(leaveAt, now + 4000); if (r) newGoal(r); }
+    } else if (mode === 'away') {
       if (now >= until) appear(now);
     } else if (mode === 'hop') {
       const r = hop.to.getBoundingClientRect();

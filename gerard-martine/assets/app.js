@@ -914,8 +914,10 @@
   // ------------------------------------------------------------ Chargement d'une trace
   const trackCache = new Map();
   const trackWaiters = new Map();
-  window.__rtTrack = (id, pts) => {
+  const trackExtra = new Map(); // croisements (guidage du mode terrain)
+  window.__rtTrack = (id, pts, extra) => {
     trackCache.set(id, pts);
+    if (extra) trackExtra.set(id, extra);
     (trackWaiters.get(id) || []).forEach((fn) => fn(pts));
     trackWaiters.delete(id);
   };
@@ -1974,7 +1976,7 @@
   // Mode terrain et randos emportées hors ligne (assets/terrain.js)
   if (window.RTTerrain) {
     window.RTTerrain.init({
-      getR: (id) => byId.get(id), loadTrack, ensureLeaflet, stat, levelColor: (lvl) => (lvl === 'noir' ? '#222' : levelColor(lvl)),
+      getR: (id) => byId.get(id), loadTrack, ensureLeaflet, stat, trackExtra: (id) => trackExtra.get(id), levelColor: (lvl) => (lvl === 'noir' ? '#222' : levelColor(lvl)),
       trackUrl: (id) => `data/tracks/${id}.js`, tileTemplate: IGN('GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2', 'image/png'),
     });
     // Bandeau « Emportées hors ligne » au-dessus des résultats

@@ -47,6 +47,12 @@ jobs:
         run: node scripts/build.mjs
 
       # Contrôle qualité (GPX illisibles, liens morts, traces coupées, IBP à vérifier…) : rapport dans l'espace stats
+      # Croisements le long des nouvelles traces (guidage du mode terrain), gardés dans .cache/carrefours
+      - name: "Godillots : croisements des traces"
+        working-directory: godillots-ailes
+        run: node scripts/carrefours.mjs
+        continue-on-error: true
+
       - name: "Godillots : contrôle des données"
         working-directory: godillots-ailes
         run: node scripts/controle.mjs
@@ -73,6 +79,12 @@ jobs:
         id: gm_build
         working-directory: gerard-martine
         run: node scripts/build.mjs
+        continue-on-error: true
+
+      - name: "Gérard & Martine : croisements des traces"
+        if: steps.gm_build.outcome == 'success'
+        working-directory: gerard-martine
+        run: node scripts/carrefours.mjs
         continue-on-error: true
 
       - name: "Gérard & Martine : contrôle des données"
