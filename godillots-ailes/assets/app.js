@@ -601,7 +601,7 @@
         .reduce((s, r) => s + r.distanceKm, 0);
     }
     $('#hero-total').innerHTML = `
-      <span class="hero-total__icon" aria-hidden="true">${HIKER}</span>
+      <span class="hero-total__icon" aria-hidden="true">${icon('distance')}</span>
       <span class="hero-total__body">
         <span class="hero-total__label">Compteur global depuis 1977</span>
         <span class="hero-total__value">${num('total')} <small>km</small></span>

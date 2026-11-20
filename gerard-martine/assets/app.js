@@ -600,7 +600,7 @@
     }
     const since = (DATA.total && DATA.total.since) || Math.min(...RANDOS.map((r) => +r.date.slice(0, 4)));
     $('#hero-total').innerHTML = `
-      <span class="hero-total__icon" aria-hidden="true">${HIKER}</span>
+      <span class="hero-total__icon" aria-hidden="true">${icon('distance')}</span>
       <span class="hero-total__body">
         <span class="hero-total__label">Nos kilomètres à pied depuis ${since}</span>
         <span class="hero-total__value">${num('total')} <small>km</small></span>
