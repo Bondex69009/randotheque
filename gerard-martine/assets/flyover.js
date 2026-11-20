@@ -94,6 +94,36 @@
       },
     };
   }
+  // Tronçons de couleur homogène selon la pente (pour colorer la trace parcourue)
+  function slopeRuns(T, S) {
+    const runs = [];
+    for (let i = 0; i < T.n - 1; i++) {
+      const c = slopeColor(S.grade((T.km[i] + T.km[i + 1]) / 2));
+      const r = runs[runs.length - 1];
+      if (r && r.c === c) r.b = i + 1; else runs.push({ a: i, b: i + 1, c });
+    }
+    // Absorbe les tronçons trop courts (< ~40 m) dans le précédent pour éviter le scintillement
+    const min = Math.max(1, Math.round(0.04 / T.step));
+    const out = [];
+    for (const r of runs) {
+      const prev = out[out.length - 1];
+      if (prev && (r.b - r.a < min || prev.c === r.c)) prev.b = r.b; else out.push({ ...r });
+    }
+    return out;
+  }
+  function slopeDone(T, S, runs, d) {
+    const f = clamp(d / T.step, 0, T.n - 1), features = [];
+    for (const r of runs) {
+      if (r.a >= f) break;
+      const coords = [];
+      const end = Math.min(r.b, Math.floor(f));
+      for (let i = r.a; i <= end; i++) coords.push([T.lon[i], T.lat[i]]);
+      if (f < r.b) coords.push(S.pos(d));
+      if (coords.length < 2) coords.push(coords[0]);
+      features.push({ type: 'Feature', properties: { c: r.c }, geometry: { type: 'LineString', coordinates: coords } });
+    }
+    return { type: 'FeatureCollection', features };
+  }
   const bearingOf = (a, b) => {
     const k = Math.cos((a[1] * Math.PI) / 180);
     return (Math.atan2((b[0] - a[0]) * k, b[1] - a[1]) * 180) / Math.PI;
@@ -498,6 +528,7 @@
     const pitch = 62;
     const look = clamp(total * 0.04, 0.15, 0.6);
     const lineCoords = Array.from({ length: T.n }, (_, i) => [T.lon[i], T.lat[i]]);
+    const runs = slopeRuns(T, S);
     const bounds = lineCoords.reduce((b, c) => b.extend(c), new ML.LngLatBounds(lineCoords[0], lineCoords[0]));
 
     let base = 'photo';
@@ -512,7 +543,7 @@
             dem: DEM,
             hs: (({ attribution, ...rest }) => rest)(DEM),
             route: { type: 'geojson', data: { type: 'Feature', geometry: { type: 'LineString', coordinates: lineCoords } } },
-            done: { type: 'geojson', data: { type: 'Feature', geometry: { type: 'LineString', coordinates: [lineCoords[0], lineCoords[0]] } } },
+            done: { type: 'geojson', data: slopeDone(T, S, runs, 1e-4) },
           },
           layers: [
             { id: 'bg', type: 'background', paint: { 'background-color': bgColor } },
@@ -520,9 +551,9 @@
             { id: 'hs', type: 'hillshade', source: 'hs', paint: { 'hillshade-exaggeration': 0.35, 'hillshade-shadow-color': 'rgba(0,0,0,0.55)', 'hillshade-highlight-color': 'rgba(255,255,255,0.15)' } },
             { id: 'route-casing', type: 'line', source: 'route', layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': '#000', 'line-opacity': 0.35, 'line-width': 6 } },
             { id: 'route', type: 'line', source: 'route', layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': '#ffffff', 'line-opacity': 0.55, 'line-width': 2.5, 'line-dasharray': [1.5, 1.5] } },
-            { id: 'done-glow', type: 'line', source: 'done', layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': color, 'line-opacity': 0.45, 'line-width': 14, 'line-blur': 8 } },
+            { id: 'done-glow', type: 'line', source: 'done', layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': ['get', 'c'], 'line-opacity': 0.45, 'line-width': 14, 'line-blur': 8 } },
             { id: 'done-casing', type: 'line', source: 'done', layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': bgColor, 'line-width': 7.5 } },
-            { id: 'done', type: 'line', source: 'done', layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': color, 'line-width': 5 } },
+            { id: 'done', type: 'line', source: 'done', layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': ['get', 'c'], 'line-width': 5 } },
           ],
           terrain: { source: 'dem', exaggeration: 1.5 },
           sky: {
@@ -601,7 +632,7 @@
       pr.setAttribute('aria-valuetext', `${nf1.format(d)} km, ${nf0.format(S.ele(d))} m d'altitude`);
     }
     function draw(force) {
-      map.getSource('done')?.setData({ type: 'Feature', geometry: { type: 'LineString', coordinates: S.coordsTo(Math.max(d, 1e-4)) } });
+      map.getSource('done')?.setData(slopeDone(T, S, runs, Math.max(d, 1e-4)));
       walker.setLngLat(S.pos(d));
       profile.set(d);
       for (const b of bornes) {
