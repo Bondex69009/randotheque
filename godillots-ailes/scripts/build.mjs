@@ -18,6 +18,7 @@ import {
   parseGpx, flatten, elevationStats, estimateDurationMin, recordedDuration,
   simplifyTo, profile, bbox, haversine, slopeBreakdown,
 } from './lib/gpx.mjs';
+import { encodePoints, encodeProfile, DECODER } from './lib/compact.mjs';
 
 const TRACKS_DIR = path.join(DATA_DIR, 'tracks');
 const GEO_CACHE_FILE = path.join(CACHE_DIR, 'geo.json');
@@ -196,6 +197,7 @@ async function main() {
 
   const randos = [];
   const tracks = new Map();
+  const heat = new Map(); // traces allégées pour la carte de chaleur (data/chaleur.js)
   const errors = [];
 
   await pool(files, 6, async (file) => {
@@ -245,6 +247,7 @@ async function main() {
         return row;
       }));
       const shape = simplifyTo(pts, 48, 20).map((p) => [+p.lat.toFixed(4), +p.lon.toFixed(4)]);
+      heat.set(id, encodePoints(simplifyTo(pts, 400, 12).map((p) => [p.lat, p.lon])));
 
       const ibpOfficial = (sidecar && sidecar.ibp) || (blog && blog.ibp) || null;
       randos.push({
@@ -393,7 +396,12 @@ async function main() {
     },
     randos: visible,
   };
-  fs.writeFileSync(path.join(DATA_DIR, 'randos.js'), `window.RANDOTHEQUE=${JSON.stringify(payload)};`);
+  // Version publiée : dessins des cartes écrits en compact, décodés à la fin du fichier (scripts/lib/compact.mjs)
+  const compact = { ...payload, randos: visible.map((r) => ({ ...r, shape: encodePoints(r.shape), profile: encodeProfile(r.profile) })) };
+  fs.writeFileSync(path.join(DATA_DIR, 'randos.js'), `window.RANDOTHEQUE=${JSON.stringify(compact)};\n${DECODER}\n`);
+  // Carte de chaleur : toutes les traces allégées (~12 m), chargées seulement quand on l'affiche
+  fs.writeFileSync(path.join(DATA_DIR, 'chaleur.js'), `window.__rtHeat&&__rtHeat(${JSON.stringify(
+    Object.fromEntries(visible.filter((r) => heat.has(r.id)).map((r) => [r.id, heat.get(r.id)])))});`);
   // Données minuscules pour le compteur à intégrer sur un blog (compteur.html)
   fs.writeFileSync(path.join(DATA_DIR, 'compteur.js'),
     `window.COMPTEUR=${JSON.stringify({ km: total.km, asOf: today, randos: visible.length, generatedAt: payload.generatedAt })};`);

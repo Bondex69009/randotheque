@@ -38,6 +38,10 @@ copy('sw.js', 'sw.js');
 copy('assets', 'assets', (src) => noHidden(src) && !/[\\/]admin\.(css|js)$/.test(src));
 copy('data/randos.js', 'data/randos.js');
 copy('data/tracks', 'data/tracks');
+// Carte de chaleur (toutes les traces allégées), chargée seulement quand on l'affiche
+if (fs.existsSync(path.join(ROOT, 'data', 'chaleur.js'))) copy('data/chaleur.js', 'data/chaleur.js');
+// Contrôle des données (scripts/controle.mjs), lu par l'espace stats
+if (fs.existsSync(path.join(ROOT, 'data', 'controle.json'))) copy('data/controle.json', 'data/controle.json');
 // Randos RandoGPS pour « Chercher aussi sur » (hors club ; absent si la récupération a échoué)
 if (fs.existsSync(path.join(ROOT, 'data', 'randogps.json'))) copy('data/randogps.json', 'data/randogps.json');
 // Randos du blog Poulx (hors club) : liste et traces simplifiées, sans le suivi interne

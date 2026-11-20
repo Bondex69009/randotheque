@@ -838,7 +838,23 @@
   $('#embed-code').addEventListener('focus', (e) => e.target.select());
 
   // ------------------------------------------------------------ Cartes Leaflet
-  const hasLeaflet = () => typeof window.L !== 'undefined';
+  const hasLeaflet = () => typeof window.L !== 'undefined' && !!window.L.markerClusterGroup;
+  // Leaflet n'est plus chargé avec la page (il retardait l'affichage de la liste) : il arrive à la demande
+  // (vue carte, fiche) ou dès que le navigateur est libre après le premier affichage.
+  const LEAFLET = 'https://unpkg.com/leaflet@1.9.4/dist/';
+  const CLUSTER = 'https://unpkg.com/leaflet.markercluster@1.5.3/dist/';
+  let leafletP = null;
+  function ensureLeaflet() {
+    if (hasLeaflet()) return Promise.resolve();
+    if (!leafletP) {
+      leafletP = Promise.all([
+        loadAsset(`${LEAFLET}leaflet.css`, true), loadAsset(`${CLUSTER}MarkerCluster.css`, true),
+        loadAsset(`${LEAFLET}leaflet.js`).then(() => loadAsset(`${CLUSTER}leaflet.markercluster.js`)),
+      ]).catch((e) => { leafletP = null; throw e; });
+    }
+    return leafletP;
+  }
+  window.rtEnsureLeaflet = ensureLeaflet;
   const IGN = (layer, fmt) => `https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=${layer}&STYLE=normal&TILEMATRIXSET=PM&FORMAT=${fmt}&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}`;
   function baseLayers() {
     return {
@@ -851,10 +867,14 @@
   const levelColor = (lvl) => (lvl === 'noir' ? '#111' : cssVar(`--c-lvl-${lvl || 'vert'}`)) || cssVar('--c-lime');
   const mapUnavailable = (el) => { el.innerHTML = '<div class="state"><p class="state__title">Carte indisponible</p><p class="state__text">Une connexion internet est nécessaire pour afficher les fonds de carte.</p></div>'; };
 
-  let overview = null, cluster = null;
+  let overview = null, cluster = null, heat = null;
   function renderOverviewMap() {
     const el = $('#overview-map');
-    if (!hasLeaflet()) { mapUnavailable(el); return; }
+    if (!hasLeaflet()) {
+      if (!el.firstChild) el.innerHTML = `<div class="state">${loader('Chargement de la carte…')}</div>`;
+      ensureLeaflet().then(() => { if (state.view === 'map') { el.innerHTML = ''; renderOverviewMap(); } }, () => mapUnavailable(el));
+      return;
+    }
     if (!overview) {
       overview = L.map(el, { scrollWheelZoom: true });
       const layers = baseLayers();
@@ -865,7 +885,15 @@
         iconCreateFunction: (c) => L.divIcon({ html: `<div class="cluster">${c.getChildCount()}</div>`, className: '', iconSize: [44, 44] }),
       });
       overview.addLayer(cluster);
+      // Carte de chaleur (assets/chaleur.js) : toutes les traces de la sélection superposées
+      if (window.RTChaleur) {
+        heat = window.RTChaleur.attach(overview, {
+          cluster, dataUrl: `data/chaleur.js?v=${encodeURIComponent(DATA.generatedAt || '')}`,
+          onToggle: (on) => { if (on) stat('heat', 'Carte de chaleur'); },
+        });
+      }
     }
+    if (heat) heat.setRandos(filtered);
     cluster.clearLayers();
     const markers = filtered.map((r) => {
       const m = L.marker(r.start, {
@@ -1339,8 +1367,10 @@
             ${kpi('down', 'Altitude min', fmtM(r.altMin))}
             ${kpi(r.loop ? 'loop' : 'arrow', 'Parcours', r.loop ? 'Boucle' : 'Aller simple', '', 'kpi--wide')}
           </div>
+          ${window.RTMeteo ? window.RTMeteo.html(r) : ''}
           <div class="actions">
             <button type="button" class="btn btn--primary btn--block" data-share="${r.id}" title="Image ou vidéo de la rando à partager sur les réseaux et messageries">${icon('share')}<span class="btn__label">Partager la rando</span><span class="btn__meta">image ou vidéo</span></button>
+            ${window.RTTerrain ? window.RTTerrain.button(r) : ''}
             <button type="button" class="btn btn--fly btn--block" data-fly="${r.id}" title="Rejoue la randonnée en survol 3D au-dessus du relief">${icon('play')}<span class="btn__label">Survol 3D animé</span><span class="btn__meta">relief + profil</span></button>
             ${CMP ? CMP.detailButton(r) : ''}
             <a class="btn btn--primary btn--block" href="${encodeURI(r.file)}" download="${esc(fileName)}">${icon('download')}Télécharger le GPX${r.fileSize ? ` <span class="btn__meta">(${fmtSize(r.fileSize)})</span>` : ''}</a>
@@ -1486,6 +1516,7 @@
     stat(r.external ? 'ext' : 'rando', r.name, r.external ? '' : r.id);
     $('#detail-content').innerHTML = r.external ? detailExtHtml(r) : detailHtml(r);
     setupPlayers($('#detail-content'), r);
+    if (window.RTMeteo && !r.external) window.RTMeteo.mount($('#detail-content'), r);
     if (!dialog.open) dialog.showModal();
     $('#detail-content').scrollTop = 0;
     dialog.scrollTop = 0;
@@ -1496,6 +1527,8 @@
     // Rando externe sans trace (Visorando, RandoGPS) : seulement le point de départ, s'il est connu
     if (r.external && !r.trackUrl) {
       if (!mapEl) return;
+      await ensureLeaflet().catch(() => {});
+      if (openId !== id) return;
       if (!hasLeaflet()) { mapUnavailable(mapEl); return; }
       detailMap = L.map(mapEl, { scrollWheelZoom: false });
       baseLayers()['Plan IGN'].addTo(detailMap);
@@ -1506,7 +1539,7 @@
       return;
     }
     let track;
-    try { track = await loadTrack(id); } catch {
+    try { [track] = await Promise.all([loadTrack(id), ensureLeaflet().catch(() => {})]); } catch {
       $('#profile').innerHTML = '<p class="desc">Trace introuvable. Relancez « npm run build ».</p>';
       mapUnavailable(mapEl);
       return;
@@ -1897,6 +1930,8 @@
     if (dl && openId && byId.has(openId) && /\.gpx$/i.test(dl.getAttribute('href') || '')) { const r = byId.get(openId); stat('gpx', r.name, r.id); }
     const share = e.target.closest('[data-share]');
     if (share) { openShare(share.dataset.share, share); return; }
+    const terrain = e.target.closest('[data-terrain]');
+    if (terrain && window.RTTerrain) { window.RTTerrain.open(terrain.dataset.terrain); return; }
     const fly = e.target.closest('[data-fly]');
     if (fly) { openFlyover(fly.dataset.fly, fly); return; }
     const png = e.target.closest('[data-png]');
@@ -1928,7 +1963,7 @@
   // ------------------------------------------------------------ Démarrage
   // Dégradé partagé par les mini-profils des cartes
   document.body.insertAdjacentHTML('beforeend', `<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
-    <linearGradient id="spark-grad" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="${cssVar('--c-cyan')}" stop-opacity=".28"/><stop offset="1" stop-color="${cssVar('--c-cyan')}" stop-opacity="0"/></linearGradient></defs></svg>`);
+    <linearGradient id="spark-grad" x1="0" x2="0" y1="0" y2="1"><stop offset="0" style="stop-color:var(--c-cyan)" stop-opacity=".28"/><stop offset="1" style="stop-color:var(--c-cyan)" stop-opacity="0"/></linearGradient></defs></svg>`);
   readHash();
   // Comparateur « VS » : seulement les randos du club (pas celles de « Chercher aussi sur »)
   if (window.RTCompareInit) {
@@ -1938,12 +1973,34 @@
       flyDuel: openFlyoverDuel,
     });
   }
+  // Mode terrain et randos emportées hors ligne (assets/terrain.js)
+  if (window.RTTerrain) {
+    window.RTTerrain.init({
+      getR: (id) => byId.get(id), loadTrack, ensureLeaflet, stat, levelColor: (lvl) => (lvl === 'noir' ? '#222' : levelColor(lvl)),
+      trackUrl: (id) => `data/tracks/${id}.js`, tileTemplate: IGN('GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2', 'image/png'),
+    });
+    // Bandeau « Emportées hors ligne » au-dessus des résultats
+    document.addEventListener('terrain:saved', (e) => {
+      const ids = e.detail.ids.filter((id) => byId.has(id));
+      let bar = $('#offline-bar');
+      if (!ids.length) { if (bar) bar.remove(); return; }
+      if (!bar) { bar = document.createElement('div'); bar.id = 'offline-bar'; bar.className = 'offline-bar'; $('#active-filters').before(bar); }
+      bar.innerHTML = `<span class="offline-bar__label">Emportées hors ligne</span>${ids.map((id) => byId.get(id))
+        .sort((a, b) => b.date.localeCompare(a.date))
+        .map((r) => `<button type="button" class="chip offline-bar__item" data-open="${r.id}">${esc(r.name)}</button>`).join('')}`;
+      const btn = openId && $(`[data-terrain="${openId}"] .btn__meta`, dialog);
+      if (btn) btn.textContent = ids.includes(openId) ? 'hors ligne ✓' : 'GPS + hors ligne';
+    });
+  }
   buildFilters();
   syncFilterInputs();
   renderHeroStats();
   update();
   if (openId) openDetail(openId, { push: false });
   else if (CMP && vsIds.length === 2) CMP.openFromHash(vsIds);
+  // Leaflet en tâche de fond, une fois la liste affichée (fiche et carte prêtes plus vite ensuite)
+  const idle = window.requestIdleCallback || ((fn) => setTimeout(fn, 1500));
+  idle(() => ensureLeaflet().catch(() => {}), { timeout: 4000 });
 
   // Ouverture d'une fiche externe par assets/ailleurs.js
   window.RTExternal = {

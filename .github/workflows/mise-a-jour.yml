@@ -46,6 +46,12 @@ jobs:
         working-directory: godillots-ailes
         run: node scripts/build.mjs
 
+      # Contrôle qualité (GPX illisibles, liens morts, traces coupées, IBP à vérifier…) : rapport dans l'espace stats
+      - name: "Godillots : contrôle des données"
+        working-directory: godillots-ailes
+        run: node scripts/controle.mjs
+        continue-on-error: true
+
       - name: "Godillots : randos du blog Poulx (« Chercher aussi sur »)"
         working-directory: godillots-ailes
         run: node scripts/scrape-poulx.mjs
@@ -67,6 +73,12 @@ jobs:
         id: gm_build
         working-directory: gerard-martine
         run: node scripts/build.mjs
+        continue-on-error: true
+
+      - name: "Gérard & Martine : contrôle des données"
+        if: steps.gm_build.outcome == 'success'
+        working-directory: gerard-martine
+        run: node scripts/controle.mjs
         continue-on-error: true
 
       - name: "Gérard & Martine : randos du blog Poulx (« Chercher aussi sur »)"

@@ -1072,3 +1072,60 @@ h1, h2, h3 { line-height: var(--lh-tight); margin: 0; }
 @media (prefers-reduced-motion: reduce) { .hiker *, .hiker { animation: none !important; } }
 .loader { display: grid; justify-items: center; gap: var(--space-2); color: var(--c-text-muted); font-size: var(--fs-sm); }
 .loader .hiker { width: 3rem; height: 3rem; color: var(--c-accent); }
+
+/* =====================================================================
+   Thème clair : suit le réglage du téléphone ou de l'ordinateur (« Auto »), ou le choix fait avec
+   le bouton soleil / lune de l'en-tête (assets/theme.js). Le petit script en tête de index.html pose
+   data-theme="light" ou "dark" sur <html> avant l'affichage. Sans JavaScript : thème sombre.
+   ===================================================================== */
+:root[data-theme="light"] {
+  --c-lime: #3a8500;
+  --c-lime-soft: #2e6c00;
+  --c-cyan: #007a85;
+  --c-orange: #a85800;
+  --c-indigo: #dfe6d6;
+
+  --c-bg: #f5f7f1;
+  --c-bg-raised: #ffffff;
+  --c-surface: #ffffff;
+  --c-surface-2: #eef2e8;
+  --c-surface-3: #e1e8d8;
+  --c-border: #d6decc;
+  --c-border-strong: #b5c2a8;
+  --c-text: #172010;
+  --c-text-muted: #4a5741;
+  --c-text-faint: #63705a;
+  --c-on-accent: #ffffff;
+  --c-overlay: rgb(23 32 16 / 0.45);
+
+  --c-accent-ghost: rgb(58 133 0 / 0.1);
+  --c-accent-ring: rgb(58 133 0 / 0.45);
+  --c-danger: #c62828;
+  --c-danger-hover: #a51f1f;
+  --c-danger-ghost: rgb(198 40 40 / 0.08);
+
+  --shadow-card: 0 1px 2px rgb(23 32 16 / 0.06), 0 10px 26px -18px rgb(23 32 16 / 0.35);
+  --shadow-pop: 0 30px 80px -20px rgb(23 32 16 / 0.35);
+  --glow-accent: 0 0 0 1px var(--c-accent-ring), 0 12px 32px -14px rgb(58 133 0 / 0.3);
+  color-scheme: light;
+}
+[data-theme="light"] .site-header { background: rgb(255 255 255 / 0.86); }
+[data-theme="light"] .elsewhere__panel { background: rgb(255 255 255 / 0.92); }
+[data-theme="light"] .hero-total { background: linear-gradient(135deg, rgb(58 133 0 / 0.1), rgb(0 122 133 / 0.05) 70%), #fff; box-shadow: 0 12px 34px -20px rgb(58 133 0 / 0.45); }
+[data-theme="light"] .card__visual {
+  background:
+    radial-gradient(circle at 70% 20%, rgb(58 133 0 / 0.08), transparent 55%),
+    repeating-linear-gradient(0deg, transparent 0 23px, rgb(0 0 0 / 0.035) 23px 24px),
+    repeating-linear-gradient(90deg, transparent 0 23px, rgb(0 0 0 / 0.035) 23px 24px),
+    var(--c-surface-2);
+}
+[data-theme="light"] .detail__head { background: rgb(255 255 255 / 0.95); }
+[data-theme="light"] .sync { background: rgb(255 255 255 / 0.75); }
+[data-theme="light"] .leaflet-control-attribution { background: rgb(255 255 255 / 0.8) !important; }
+[data-theme="light"] .evo-col.is-hover .evo-hit { fill: rgb(0 0 0 / 0.04); }
+[data-theme="light"] .pill { background: rgb(255 255 255 / 0.9); }
+[data-theme="light"] .meta-list .pill, [data-theme="light"] .outings .pill { background: var(--c-surface-2); }
+[data-theme="light"] .photo__cta { background: rgb(255 255 255 / 0.9); }
+[data-theme="light"] .ibp:not(.ibp--noir), [data-theme="light"] .ibp-big:not(.ibp-big--noir) { color: #10160b; }
+[data-theme="light"] .ibp--noir, [data-theme="light"] .ibp-big--noir { color: #f4f4f0; }
+[data-theme="light"] .brand__logo { filter: drop-shadow(0 1px 4px rgb(0 0 0 / 0.2)); }

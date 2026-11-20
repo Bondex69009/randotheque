@@ -237,6 +237,15 @@
         <div id="c-widget"></div>
       </section>
 
+      <section class="sx-card sx-card--wide" aria-labelledby="t-controle">
+        <header class="sx-card__head">
+          <h2 class="sx-card__title" id="t-controle">Contrôle des données</h2>
+          <label class="sx-check"><input type="checkbox" id="sx-qc-info"> Afficher aussi les simples infos</label>
+        </header>
+        <p class="sx-qc__intro" id="sx-qc-summary">Vérifié à chaque mise à jour horaire : GPX illisibles, liens GPX morts sur le blog, traces sans altitude ou coupées, IBP à vérifier, doublons…</p>
+        <div class="sx-table-wrap" id="c-controle"></div>
+      </section>
+
       <footer class="sx-foot">
         <p><strong>Mesure.</strong> Deux cookies sur l'appareil des visiteurs (13 mois) : <code>rt_vid</code>, identifiant aléatoire qui reconnaît un visiteur d'un jour à l'autre, et <code>rt_geo</code>, la position donnée par le navigateur (demandée une seule fois ; « non » si elle est refusée). Avec cette position, la commune est retrouvée par la Géoplateforme IGN (Nominatim hors de France) ; sinon la ville vient de l'adresse IP. Les adresses IP ne sont pas enregistrées. Si le navigateur bloque les cookies, le visiteur est compté jour par jour (empreinte anonyme du jour). Les robots, outils automatiques, navigateurs non standard, visites depuis des pays inhabituels ou des centres de données sont écartés. Données effacées au bout de 25 mois.</p>
         <p id="sx-geo-note"></p>
@@ -245,6 +254,6 @@
   </main>
 
   <div class="sx-tip" id="sx-tip" role="tooltip" hidden></div>
-  <script src="stats-admin.js?v=11"></script>
+  <script src="stats-admin.js?v=12"></script>
 </body>
 </html>

@@ -39,6 +39,20 @@ d'anciens liens circulent. L'ancien dépôt `randotheque-gerard-martine` n'a plu
 6. Ouvrir l'un des deux espaces stats et cliquer en bas sur **Installer les bases des villes et des hébergeurs**
    (bases DB-IP gratuites, communes aux deux sites, à refaire une fois par mois).
 
+## Outils communs aux deux sites
+
+Ces fichiers sont identiques dans `godillots-ailes/` et `gerard-martine/` (à modifier dans les deux) :
+
+| Fichier | Rôle |
+| --- | --- |
+| `assets/meteo.js` | Panneau « Météo et soleil » de la fiche : prévision Open-Meteo jusqu'à 15 jours (heure par heure pendant la rando, conseils), météo observée pour les randos passées, lever et coucher du soleil calculés sur place, heure de départ réglable et arrivée estimée (pauses au rythme des sorties enregistrées). La dernière météo reçue reste lisible sans réseau. |
+| `assets/chaleur.js` | Bouton « Carte de chaleur » sur la vue carte : toutes les traces de la sélection superposées (`data/chaleur.js`, chargé au premier clic). |
+| `assets/terrain.js` + `sw.js` | « Mode terrain » : carte plein écran, position GPS, km et D+ restants, arrivée estimée face au coucher du soleil, alerte si l'on quitte la trace. « Emporter hors ligne » garde la fiche, la trace et le fond IGN (zooms 11 à 16) dans le cache `rt-terrain:…` du navigateur ; le service worker les ressert sans réseau. |
+| `assets/theme.js` | Bouton soleil / lune : thème automatique (comme l'appareil), clair ou sombre. Les couleurs claires sont à la fin du `style.css` de chaque site. |
+| `assets/outils.css` | Styles de ces quatre outils. |
+| `scripts/lib/compact.mjs` | Écriture compacte de `data/randos.js` (formes et profils des cartes), décodée à la fin du fichier : environ 35 % de moins à télécharger. Leaflet n'est plus chargé avec la page mais à la demande. |
+| `scripts/controle.mjs` | Contrôle des données à chaque mise à jour horaire (GPX illisibles, liens GPX morts, traces coupées ou sans altitude, IBP à vérifier, doublons…) : rapport `data/controle.json`, affiché en bas de l'espace stats (« Contrôle des données »). |
+
 ## Statistiques de visite
 
 Un espace par site, qui ne montre que ses visites (petit cadenas en haut à droite de chaque site, puis mot de passe) :

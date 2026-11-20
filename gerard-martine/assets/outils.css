@@ -1,0 +1,220 @@
+/* =====================================================================
+   Randothèque – météo et soleil, carte de chaleur, mode terrain, choix du thème.
+   Même fichier dans les deux sites : seules les variables de couleur de style.css changent.
+   ===================================================================== */
+
+/* ------------------------------------------------------------- Pictos météo (assets/meteo.js) */
+.wx { display: block; flex: none; overflow: visible; }
+.wx-sun circle { fill: #ffc83d; }
+.wx-rays line { stroke: #ffc83d; stroke-width: 3.2; stroke-linecap: round; }
+.wx-rays { transform-origin: 23px 22px; animation: wx-spin 14s linear infinite; }
+.wx > .wx-sun:only-child .wx-rays { transform-origin: 32px 32px; }
+.wx-moon { fill: #f3e7b5; }
+.wx-cloud { fill: #eef3f8; stroke: #9fb0c2; stroke-width: 1.4; }
+.wx-cloud--back { fill: #cfd9e4; }
+.wx-cloud--grey { fill: #c9d3de; stroke: #8797a9; }
+.wx-cloud--dark { fill: #8392a5; stroke: #5f6d80; }
+.wx-drop { stroke: #4fb3ff; stroke-width: 3; stroke-linecap: round; animation: wx-rain 1.1s ease-in infinite; }
+.wx-drop--small { stroke-width: 2; }
+.wx-flake { fill: #fff; stroke: #8fb6d8; stroke-width: 1; animation: wx-snow 2.4s ease-in-out infinite; }
+.wx-bolt { fill: #ffd43b; stroke: #e0a800; stroke-width: 1; stroke-linejoin: round; animation: wx-flash 2.6s ease-in-out infinite; }
+.wx-fog { stroke: #b6c3d1; stroke-width: 3; stroke-linecap: round; animation: wx-fog 4s ease-in-out infinite; }
+.wx-drift { animation: wx-drift 6s ease-in-out infinite; }
+.wx-drift-slow { animation: wx-drift 9s ease-in-out infinite reverse; }
+@keyframes wx-spin { to { transform: rotate(360deg); } }
+@keyframes wx-drift { 50% { transform: translateX(2.5px); } }
+@keyframes wx-rain { 0% { transform: translateY(-4px); opacity: 0; } 30% { opacity: 1; } 100% { transform: translateY(5px); opacity: 0; } }
+@keyframes wx-snow { 0% { transform: translate(0, -4px); opacity: 0; } 30% { opacity: 1; } 100% { transform: translate(2px, 5px); opacity: 0; } }
+@keyframes wx-flash { 0%, 70%, 100% { opacity: 1; } 75%, 85% { opacity: 0.25; } }
+@keyframes wx-fog { 50% { transform: translateX(4px); } }
+@media (prefers-reduced-motion: reduce) {
+  .wx * { animation: none !important; }
+}
+
+/* ------------------------------------------------------------- Panneau « Météo et soleil » de la fiche */
+.meteo { display: flex; flex-direction: column; gap: var(--space-3); }
+.meteo__title { display: flex; align-items: baseline; gap: var(--space-2); flex-wrap: wrap; margin-bottom: 0; }
+.meteo__day { font-size: var(--fs-xs); text-transform: none; letter-spacing: 0; font-weight: var(--fw-semibold); color: var(--c-text-faint); }
+.meteo__loading, .meteo__note { display: flex; align-items: center; gap: var(--space-3); font-size: var(--fs-sm); color: var(--c-text-muted); }
+.meteo__loading .wx { opacity: 0.6; }
+.meteo__now { display: flex; align-items: center; gap: var(--space-3); }
+.meteo__main { min-width: 0; }
+.meteo__label { font-weight: var(--fw-bold); font-size: var(--fs-md); line-height: var(--lh-snug); }
+.meteo__src { display: block; font-size: var(--fs-xs); font-weight: var(--fw-medium); color: var(--c-text-faint); }
+.meteo__temps { display: flex; align-items: baseline; gap: var(--space-2); font-variant-numeric: tabular-nums; }
+.meteo__tmax { font-size: var(--fs-2xl); font-weight: var(--fw-black); }
+.meteo__tmin { font-size: var(--fs-lg); font-weight: var(--fw-semibold); color: var(--c-text-muted); }
+.meteo__facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-2); }
+.meteo__facts > div { background: var(--c-surface-2); border-radius: var(--radius-sm); padding: var(--space-2); min-width: 0; }
+.meteo__facts dt { font-size: var(--fs-xs); color: var(--c-text-muted); line-height: var(--lh-snug); }
+.meteo__facts dd { font-weight: var(--fw-bold); font-size: var(--fs-sm); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.meteo__scope { font-size: var(--fs-xs); color: var(--c-text-faint); margin-top: calc(-1 * var(--space-1)); }
+[data-hours] { display: flex; flex-direction: column; gap: var(--space-3); }
+.meteo__hours {
+  display: flex; gap: var(--space-1); overflow-x: auto; list-style: none; margin: 0; padding: 0 0 var(--space-1);
+  scrollbar-width: thin; scroll-snap-type: x proximity;
+}
+.meteo__hour {
+  flex: 1 0 3.1rem; display: flex; flex-direction: column; align-items: center; gap: 2px; scroll-snap-align: start;
+  padding: var(--space-2) var(--space-1); border-radius: var(--radius-sm); background: var(--c-surface-2);
+  font-variant-numeric: tabular-nums; font-size: var(--fs-xs);
+}
+.meteo__h { color: var(--c-text-muted); font-weight: var(--fw-semibold); }
+.meteo__t { font-weight: var(--fw-bold); font-size: var(--fs-sm); }
+.meteo__p { color: var(--c-link); }
+.meteo__advice { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-1); }
+.meteo__tip { font-size: var(--fs-sm); line-height: var(--lh-snug); padding-left: 1.1rem; position: relative; }
+.meteo__tip::before { content: ""; position: absolute; left: 0.2rem; top: 0.45em; width: 0.5rem; height: 0.5rem; border-radius: 50%; background: var(--c-success); }
+.meteo__tip--info::before { background: var(--c-link); }
+.meteo__tip--warn::before { background: var(--c-orange); }
+
+.meteo__sun { display: flex; flex-direction: column; gap: var(--space-3); padding-top: var(--space-3); border-top: var(--border-w) solid var(--c-border); }
+.sunbar { position: relative; height: 0.75rem; margin: 0 0 1.1rem; border-radius: var(--radius-pill); background: color-mix(in srgb, var(--c-indigo) 70%, var(--c-surface-2)); }
+.sunbar__day { position: absolute; top: 0; bottom: 0; border-radius: var(--radius-pill); background: linear-gradient(90deg, #ffb35c, #ffe08a 25%, #ffe08a 75%, #ff9a5c); }
+.sunbar__hike { position: absolute; top: -3px; bottom: -3px; border-radius: var(--radius-pill); border: 2px solid var(--c-text); background: color-mix(in srgb, var(--c-success) 55%, transparent); }
+.sunbar__hike--warn { background: color-mix(in srgb, var(--c-orange) 70%, transparent); }
+.sunbar__hike--bad { background: color-mix(in srgb, var(--c-danger) 75%, transparent); }
+.sunbar__tick { position: absolute; top: 100%; transform: translateX(-50%); margin-top: 3px; font-size: 0.6875rem; color: var(--c-text-faint); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.meteo__plan { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); flex-wrap: wrap; }
+.meteo__dep { display: inline-flex; align-items: center; gap: var(--space-2); font-size: var(--fs-sm); font-weight: var(--fw-semibold); }
+.meteo__dep input {
+  min-height: 2.5rem; padding: 0 var(--space-2); border-radius: var(--radius-sm); font: inherit; font-variant-numeric: tabular-nums;
+  color: var(--c-text); background: var(--c-surface-2); border: var(--border-w) solid var(--c-border-strong); color-scheme: inherit;
+}
+.meteo__dep input:focus-visible { outline: 2px solid var(--c-accent); outline-offset: 1px; }
+.meteo__arr { font-size: var(--fs-sm); }
+.meteo__arr strong { font-size: var(--fs-lg); font-variant-numeric: tabular-nums; }
+.meteo__hint { font-size: var(--fs-xs); color: var(--c-text-faint); line-height: var(--lh-snug); }
+.meteo__verdict { font-size: var(--fs-sm); font-weight: var(--fw-semibold); padding: var(--space-2) var(--space-3); border-radius: var(--radius-sm); line-height: var(--lh-snug); background: color-mix(in srgb, var(--c-success) 14%, transparent); }
+.meteo__verdict--warn { background: color-mix(in srgb, var(--c-orange) 18%, transparent); }
+.meteo__verdict--bad { background: var(--c-danger-ghost); color: var(--c-danger); }
+.meteo__facts dd { text-align: left; }
+
+/* ------------------------------------------------------------- Carte de chaleur (assets/chaleur.js) */
+.heat-layer { pointer-events: none; }
+.heat-ctrl { border: 0 !important; box-shadow: 0 2px 10px rgb(0 0 0 / 0.35) !important; }
+.heat-ctrl__btn {
+  display: inline-flex; align-items: center; gap: 0.4rem; min-height: 2.5rem; padding: 0 0.85rem;
+  border: 0; border-radius: 4px; cursor: pointer; font: 600 0.8125rem/1 var(--font-sans);
+  background: #fff; color: #1e2a1a;
+}
+.heat-ctrl__btn svg { width: 1.05rem; height: 1.05rem; color: #e8590c; }
+.heat-ctrl__btn:hover { background: #f4f4f0; }
+.heat-ctrl__btn:focus-visible { outline: 3px solid var(--c-accent); outline-offset: 2px; }
+.heat-ctrl__btn[aria-pressed="true"] { background: #e8590c; color: #fff; }
+.heat-ctrl__btn[aria-pressed="true"] svg { color: #ffe066; }
+.heat-ctrl__btn.is-loading { opacity: 0.7; cursor: progress; }
+.overview-map.is-heat .leaflet-tile-pane { filter: grayscale(0.85) brightness(0.62) contrast(1.05); }
+.heat-legend {
+  display: grid; grid-template-columns: auto 6rem auto; align-items: center; gap: 0.2rem 0.5rem;
+  padding: 0.45rem 0.65rem; border-radius: 8px; background: rgb(12 14 12 / 0.82); color: #f1f3ee;
+  font: 600 0.6875rem/1.2 var(--font-sans); box-shadow: 0 2px 10px rgb(0 0 0 / 0.35);
+}
+.heat-legend i { height: 0.5rem; border-radius: 99px; background: linear-gradient(90deg, rgb(59 91 219 / 0.75), #9c36b5, #f03e3e, #ff922b, #ffe066); }
+.heat-legend small { grid-column: 1 / -1; text-align: center; font-weight: 500; opacity: 0.8; }
+
+/* ------------------------------------------------------------- Mode terrain (assets/terrain.js) */
+.btn--terrain { color: var(--c-text); background: var(--c-surface-2); border: var(--border-w) solid var(--c-link); }
+.btn--terrain:hover { background: color-mix(in srgb, var(--c-link) 14%, var(--c-surface-2)); }
+.btn--terrain > .icon:first-child { color: var(--c-link); }
+.btn--terrain .btn__meta { font-size: var(--fs-xs); color: var(--c-text-muted); font-weight: var(--fw-medium); }
+
+.terrain {
+  position: fixed; inset: 0; width: 100%; height: 100%; max-width: none; max-height: none; margin: 0; padding: 0; border: 0;
+  background: var(--c-bg); color: var(--c-text); overflow: hidden;
+}
+.terrain::backdrop { background: var(--c-bg); }
+.terrain[open] { display: flex; flex-direction: column; }
+html.is-terrain { overflow: hidden; }
+.terrain__bar {
+  display: flex; align-items: center; gap: var(--space-3); padding: calc(env(safe-area-inset-top) + var(--space-2)) var(--space-3) var(--space-2);
+  background: var(--c-bg-raised); border-bottom: var(--border-w) solid var(--c-border); z-index: 2;
+}
+.terrain__close {
+  display: grid; place-items: center; width: 2.75rem; height: 2.75rem; flex: none; border-radius: 50%; cursor: pointer;
+  border: var(--border-w) solid var(--c-border-strong); background: var(--c-surface-2); color: var(--c-text);
+}
+.terrain__close svg { width: 1.3rem; height: 1.3rem; }
+.terrain__close:focus-visible, .terrain__follow:focus-visible, .terrain__btn:focus-visible { outline: 3px solid var(--c-accent); outline-offset: 2px; }
+.terrain__heading { min-width: 0; }
+.terrain__title { font-size: var(--fs-md); font-weight: var(--fw-bold); line-height: var(--lh-snug); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.terrain__gps { font-size: var(--fs-xs); color: var(--c-success); font-weight: var(--fw-semibold); }
+.terrain__gps.is-bad { color: var(--c-orange); }
+.terrain__map { position: relative; flex: 1 1 auto; min-height: 0; background: var(--c-map-bg); }
+.terrain__empty { padding: var(--space-6); color: var(--c-text-muted); }
+.terrain__alert {
+  position: absolute; left: 50%; top: calc(env(safe-area-inset-top) + 4.6rem); transform: translateX(-50%); z-index: 1100;
+  max-width: calc(100% - 2rem); padding: var(--space-2) var(--space-4); border-radius: var(--radius-pill);
+  background: #e03131; color: #fff; font-weight: var(--fw-bold); font-size: var(--fs-sm); box-shadow: 0 6px 24px rgb(0 0 0 / 0.4); text-align: center;
+}
+.terrain__alert--info { background: #1c7ed6; }
+.terrain__follow {
+  position: absolute; right: 0.75rem; top: calc(env(safe-area-inset-top) + 4.6rem); z-index: 1100;
+  display: grid; place-items: center; width: 3rem; height: 3rem; border-radius: 50%; cursor: pointer;
+  border: 0; background: #fff; color: #495057; box-shadow: 0 2px 12px rgb(0 0 0 / 0.35);
+}
+.terrain__follow svg { width: 1.5rem; height: 1.5rem; }
+.terrain__follow[aria-pressed="true"] { color: #1c7ed6; }
+.terrain__sheet {
+  z-index: 2; display: flex; flex-direction: column; gap: var(--space-2);
+  padding: var(--space-3) var(--space-4) calc(env(safe-area-inset-bottom) + var(--space-3));
+  background: var(--c-bg-raised); border-top: var(--border-w) solid var(--c-border); max-height: 45vh; overflow-y: auto;
+}
+.terrain__stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-2); }
+.terrain__stats > div { min-width: 0; text-align: left; }
+.terrain__stats dd { text-align: left; }
+.terrain__stats dt { font-size: var(--fs-xs); color: var(--c-text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.terrain__stats dd { font-size: var(--fs-lg); font-weight: var(--fw-black); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.terrain__sun { font-size: var(--fs-sm); font-weight: var(--fw-semibold); padding: var(--space-1) var(--space-3); border-radius: var(--radius-sm); background: color-mix(in srgb, var(--c-success) 12%, transparent); }
+.terrain__sun--info { background: var(--c-surface-2); }
+.terrain__sun--warn { background: color-mix(in srgb, var(--c-orange) 18%, transparent); }
+.terrain__sun--bad { background: var(--c-danger-ghost); color: var(--c-danger); }
+.terrain__offline { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); }
+.terrain__btn {
+  min-height: 2.75rem; padding: 0 var(--space-5); border-radius: var(--radius-pill); cursor: pointer;
+  font: var(--fw-bold) var(--fs-sm) var(--font-sans); background: var(--c-accent); color: var(--c-on-accent); border: 0;
+}
+.terrain__btn:disabled { opacity: 0.6; cursor: progress; }
+.terrain__btn--ghost { background: transparent; color: var(--c-text); border: var(--border-w) solid var(--c-border-strong); }
+.terrain__hint { flex: 1 1 14rem; font-size: var(--fs-xs); color: var(--c-text-faint); line-height: var(--lh-snug); }
+.terrain__ok { font-size: var(--fs-sm); font-weight: var(--fw-bold); color: var(--c-success); }
+.terrain__err { flex-basis: 100%; font-size: var(--fs-sm); color: var(--c-danger); }
+.terrain__progress { flex-basis: 100%; height: 0.4rem; border-radius: var(--radius-pill); background: var(--c-surface-3); overflow: hidden; }
+.terrain__progress i { display: block; height: 100%; width: 0; background: var(--c-accent); transition: width 0.2s; }
+.terrain__wake { display: inline-flex; align-items: center; gap: var(--space-2); font-size: var(--fs-sm); color: var(--c-text-muted); }
+.terrain__wake input { width: 1.15rem; height: 1.15rem; accent-color: var(--c-accent); }
+.terrain-me { position: relative; width: 26px; height: 26px; }
+.terrain-me i {
+  position: absolute; inset: 5px; border-radius: 50%; background: #1c7ed6; border: 3px solid #fff; box-shadow: 0 0 0 1px rgb(0 0 0 / 0.25), 0 2px 8px rgb(0 0 0 / 0.4);
+}
+.terrain-me::before { content: ""; position: absolute; inset: -6px; border-radius: 50%; background: rgb(28 126 214 / 0.35); animation: terrain-pulse 2s ease-out infinite; }
+@keyframes terrain-pulse { from { transform: scale(0.5); opacity: 1; } to { transform: scale(1.4); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .terrain-me::before { animation: none; } }
+@media (max-width: 420px) {
+  .terrain__stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* Bandeau des randos emportées hors ligne (au-dessus des résultats) */
+.offline-bar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); margin-bottom: var(--space-3); }
+.offline-bar__label { font-size: var(--fs-xs); font-weight: var(--fw-bold); text-transform: uppercase; letter-spacing: 0.08em; color: var(--c-link); }
+.offline-bar__item {
+  min-height: 2.25rem; padding: 0 var(--space-3); border-radius: var(--radius-pill); cursor: pointer;
+  border: var(--border-w) solid var(--c-link); background: var(--c-surface-2); color: var(--c-text);
+  font: var(--fw-semibold) var(--fs-sm) var(--font-sans);
+}
+.offline-bar__item:hover { background: color-mix(in srgb, var(--c-link) 14%, var(--c-surface-2)); }
+.terrain__stats dd, .meteo__facts dd, .terrain__stats dt, .meteo__facts dt { margin: 0; }
+
+/* ------------------------------------------------------------- Bouton du thème (assets/theme.js) */
+.theme-btn {
+  display: inline-grid; place-items: center; width: 2.5rem; height: 2.5rem; flex: none; cursor: pointer;
+  border-radius: var(--radius-pill); border: var(--border-w) solid var(--c-border-strong);
+  background: var(--c-surface-2); color: var(--c-text-muted);
+}
+.theme-btn:hover { color: var(--c-text); border-color: var(--c-accent-ring); }
+.theme-btn .icon { width: 1.15rem; height: 1.15rem; grid-area: 1 / 1; display: none; }
+.theme-btn[data-choice="auto"] .theme-btn__auto,
+.theme-btn[data-choice="light"] .theme-btn__light,
+.theme-btn[data-choice="dark"] .theme-btn__dark { display: block; }
+.theme-btn:not([data-choice]) .theme-btn__auto { display: block; }
+.theme-btn[data-choice="light"] { color: #c27c00; }

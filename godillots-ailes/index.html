@@ -7,6 +7,11 @@
   <meta name="robots" content="noindex, nofollow">
   <meta name="description" content="L'historique des randos des Godillots Ailés (A.C.R.P. Caissargues) : toutes les randonnées du club avec distance, dénivelé, temps estimé, IBP index et trace GPX à télécharger.">
   <meta name="theme-color" content="#0b0f0a">
+  <!-- Thème clair / sombre posé avant l'affichage (choix gardé sur l'appareil, sinon réglage de l'appareil) -->
+  <script>(function(){var d=document.documentElement,k='rt-theme',m=null,q=window.matchMedia&&matchMedia('(prefers-color-scheme: light)');try{m=localStorage.getItem(k)}catch(e){}
+function a(){d.setAttribute('data-theme',m==='light'||m==='dark'?m:(q&&q.matches?'light':'dark'))}a();
+window.rtTheme={get:function(){return m==='light'||m==='dark'?m:'auto'},set:function(v){m=v==='auto'?null:v;try{m?localStorage.setItem(k,m):localStorage.removeItem(k)}catch(e){}a();document.dispatchEvent(new Event('rt-theme'))}};
+if(q&&q.addEventListener)q.addEventListener('change',function(){if(!m){a();document.dispatchEvent(new Event('rt-theme'))}})})();</script>
   <link rel="icon" href="assets/favicon.png" type="image/png">
   <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
   <link rel="manifest" href="manifest.webmanifest">
@@ -16,11 +21,11 @@
   <meta name="apple-mobile-web-app-title" content="Godillots Ailés">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://unpkg.com">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=IBM+Plex+Sans:wght@400;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
-  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" crossorigin="">
-  <link rel="stylesheet" href="assets/style.css?v=42">
+  <link rel="stylesheet" href="assets/style.css?v=43">
   <link rel="stylesheet" href="assets/compare.css?v=4">
+  <link rel="stylesheet" href="assets/outils.css?v=1">
 </head>
 <body>
   <a class="skip-link" href="#resultats">Aller aux résultats</a>
@@ -70,6 +75,11 @@
           <svg class="icon header-link__icon" aria-hidden="true"><use href="#i-external"/></svg>
           <span class="header-link__label">Blog du club</span>
         </a>
+        <button type="button" class="theme-btn" id="theme-btn" aria-label="Changer de thème">
+          <svg class="icon theme-btn__auto" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 4a8 8 0 0 1 0 16Z" fill="currentColor"/></svg>
+          <svg class="icon theme-btn__light" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.2" fill="currentColor"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          <svg class="icon theme-btn__dark" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5Z" fill="currentColor"/></svg>
+        </button>
         <a class="admin-link" href="stats/" rel="nofollow" aria-label="Espace administrateur (statistiques)" title="Admin">
           <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
         </a>
@@ -269,12 +279,14 @@
 
   <script src="data/randos.js" onerror="window.RANDOTHEQUE=null"></script>
   <script src="assets/stats.js?v=5" data-site="ga"></script>
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js" crossorigin=""></script>
   <script src="assets/ailleurs.js?v=5"></script>
   <script src="assets/compare.js?v=6"></script>
-  <script src="assets/app.js?v=53"></script>
+  <script src="assets/meteo.js?v=1"></script>
+  <script src="assets/chaleur.js?v=1"></script>
+  <script src="assets/terrain.js?v=1"></script>
+  <script src="assets/app.js?v=54"></script>
   <script src="assets/promeneur.js?v=6"></script>
   <script src="assets/install.js?v=2"></script>
+  <script src="assets/theme.js?v=1"></script>
 </body>
 </html>

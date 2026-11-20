@@ -1071,3 +1071,61 @@ h1, h2, h3 { line-height: var(--lh-tight); margin: 0; }
 @media (prefers-reduced-motion: reduce) { .hiker *, .hiker { animation: none !important; } }
 .loader { display: grid; justify-items: center; gap: var(--space-2); color: var(--c-text-muted); font-size: var(--fs-sm); }
 .loader .hiker { width: 3rem; height: 3rem; color: var(--c-accent); }
+
+/* =====================================================================
+   Thème clair : suit le réglage du téléphone ou de l'ordinateur (« Auto »), ou le choix fait avec
+   le bouton soleil / lune de l'en-tête (assets/theme.js). Le petit script en tête de index.html pose
+   data-theme="light" ou "dark" sur <html> avant l'affichage. Sans JavaScript : thème sombre.
+   ===================================================================== */
+:root[data-theme="light"] {
+  --c-lime: #b85400;        /* abricot foncé : lisible sur fond clair */
+  --c-lime-soft: #9a4600;
+  --c-cyan: #0b7a6e;        /* lagon */
+  --c-orange: #8f6200;      /* soleil */
+  --c-indigo: #e4e8f3;
+  --c-rose: #c2185b;
+
+  --c-bg: #f5f7fb;
+  --c-bg-raised: #ffffff;
+  --c-surface: #ffffff;
+  --c-surface-2: #edf1f8;
+  --c-surface-3: #e0e6f1;
+  --c-border: #d4dbe9;
+  --c-border-strong: #b3bed6;
+  --c-text: #141b2e;
+  --c-text-muted: #47516b;
+  --c-text-faint: #5f6984;
+  --c-on-accent: #ffffff;
+  --c-overlay: rgb(20 27 46 / 0.45);
+
+  --c-accent-ghost: rgb(184 84 0 / 0.1);
+  --c-accent-ring: rgb(184 84 0 / 0.45);
+  --c-danger: #c62828;
+  --c-danger-hover: #a51f1f;
+  --c-danger-ghost: rgb(198 40 40 / 0.08);
+  --c-success: #1f8a4c;
+
+  --shadow-card: 0 1px 2px rgb(20 27 46 / 0.06), 0 10px 26px -18px rgb(20 27 46 / 0.35);
+  --shadow-pop: 0 30px 80px -20px rgb(20 27 46 / 0.35);
+  --glow-accent: 0 0 0 1px var(--c-accent-ring), 0 12px 32px -14px rgb(184 84 0 / 0.3);
+  color-scheme: light;
+}
+[data-theme="light"] .site-header { background: rgb(255 255 255 / 0.86); }
+[data-theme="light"] .elsewhere__panel { background: rgb(255 255 255 / 0.92); }
+[data-theme="light"] .hero-total { background: linear-gradient(135deg, rgb(184 84 0 / 0.09), rgb(11 122 110 / 0.05) 70%), #fff; box-shadow: 0 12px 34px -20px rgb(184 84 0 / 0.4); }
+[data-theme="light"] .card__visual {
+  background:
+    radial-gradient(circle at 70% 20%, rgb(184 84 0 / 0.07), transparent 55%),
+    repeating-linear-gradient(0deg, transparent 0 23px, rgb(0 0 0 / 0.035) 23px 24px),
+    repeating-linear-gradient(90deg, transparent 0 23px, rgb(0 0 0 / 0.035) 23px 24px),
+    var(--c-surface-2);
+}
+[data-theme="light"] .detail__head { background: rgb(255 255 255 / 0.95); }
+[data-theme="light"] .sync { background: rgb(255 255 255 / 0.75); }
+[data-theme="light"] .leaflet-control-attribution { background: rgb(255 255 255 / 0.8) !important; }
+[data-theme="light"] .evo-col.is-hover .evo-hit { fill: rgb(0 0 0 / 0.04); }
+[data-theme="light"] .pill { background: rgb(255 255 255 / 0.9); }
+[data-theme="light"] .meta-list .pill, [data-theme="light"] .outings .pill { background: var(--c-surface-2); }
+[data-theme="light"] .photo__cta { background: rgb(255 255 255 / 0.9); }
+[data-theme="light"] .ibp:not(.ibp--noir), [data-theme="light"] .ibp-big:not(.ibp-big--noir) { color: #10160b; }
+[data-theme="light"] .ibp--noir, [data-theme="light"] .ibp-big--noir { color: #f4f4f0; }

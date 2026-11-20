@@ -33,6 +33,7 @@
     ext: 'Fiche externe', install: 'Appli installée', outbound: 'Lien externe',
     blog: 'Article du blog', photos: 'Album photos', relive: 'Vidéo Relive', drive: 'Google Drive', route: 'Itinéraire vers le départ',
     video: 'Vidéo', ext_site: 'Fiche sur un autre site', ui: 'Clic', vs_add: 'Ajout au comparateur', anim: 'Clic sur un animateur',
+    heat: 'Carte de chaleur', terrain: 'Mode terrain', offline: 'Rando emportée hors ligne', theme: 'Thème',
   };
   const ACCENT = () => css('--c-accent') || '#87f700';
 
@@ -498,7 +499,7 @@
     if (!rows.length) { $('#c-recent').innerHTML = empty(); return; }
     const L = data.labels.events;
     const dev = { mobile: '📱', desktop: '💻', tablet: '📲' };
-    const short = { rando: 'fiche', gpx: 'GPX', fly: '3D', fly_duel: '3D duel', vs: 'VS', share: 'partage', png: 'PNG', ibp: 'IBP', search: 'recherche', filter: 'filtre', map: 'carte', audio: 'audio', evo: 'évolution', embed: 'compteur', ailleurs: 'ailleurs', ext: 'fiche ext.', install: 'install', outbound: 'lien', blog: 'blog', photos: 'photos', relive: 'Relive', drive: 'Drive', route: 'itinéraire', video: 'vidéo', ext_site: 'autre site', ui: 'clic', vs_add: '+VS', anim: 'animateur' };
+    const short = { rando: 'fiche', gpx: 'GPX', fly: '3D', fly_duel: '3D duel', vs: 'VS', share: 'partage', png: 'PNG', ibp: 'IBP', search: 'recherche', filter: 'filtre', map: 'carte', audio: 'audio', evo: 'évolution', embed: 'compteur', ailleurs: 'ailleurs', ext: 'fiche ext.', install: 'install', outbound: 'lien', blog: 'blog', photos: 'photos', relive: 'Relive', drive: 'Drive', route: 'itinéraire', video: 'vidéo', ext_site: 'autre site', ui: 'clic', vs_add: '+VS', anim: 'animateur', heat: 'chaleur', terrain: 'terrain', offline: 'hors ligne', theme: 'thème' };
     const when = (ts) => new Date(ts.replace(' ', 'T')).toLocaleString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
     $('#c-recent').innerHTML = `<table class="sx-table sx-table--log"><thead><tr><th scope="col">Quand</th><th scope="col">Où</th><th scope="col">Appareil</th><th scope="col">Venu de</th><th scope="col" class="num">Durée</th><th scope="col">Parcours</th></tr></thead>
       <tbody>${rows.map((r) => {
@@ -585,6 +586,42 @@
     } catch { /* silencieux */ }
   }
 
+  // ------------------------------------------------------------ Contrôle des données (data/controle.json du site,
+  // écrit par scripts/controle.mjs à chaque mise à jour horaire)
+  let qc = null;
+  async function drawControle() {
+    const box = $('#c-controle');
+    if (!box) return;
+    if (!qc) {
+      try {
+        const res = await fetch(`../data/controle.json?t=${Date.now()}`, { cache: 'no-store' });
+        if (!res.ok) throw new Error(res.status);
+        qc = await res.json();
+      } catch {
+        box.innerHTML = '<p class="sx-empty">Rapport pas encore disponible (il est créé à la prochaine mise à jour du site).</p>';
+        return;
+      }
+    }
+    const withInfo = $('#sx-qc-info').checked;
+    const LV = { erreur: ['Erreur', 'is-err'], attention: ['À vérifier', 'is-warn'], info: ['Info', 'is-info'] };
+    const when = new Date(qc.generatedAt).toLocaleString('fr-FR', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' });
+    $('#sx-qc-summary').innerHTML = `${nf0.format(qc.randos)} randos vérifiées le ${esc(when)} :
+      <span class="sx-qc__tag is-err">${qc.counts.erreur} erreur${qc.counts.erreur > 1 ? 's' : ''}</span>
+      <span class="sx-qc__tag is-warn">${qc.counts.attention} à vérifier</span>
+      <span class="sx-qc__tag is-info">${qc.counts.info} info${qc.counts.info > 1 ? 's' : ''}</span>`;
+    const rows = qc.problems.filter((p) => withInfo || p.level !== 'info');
+    if (!rows.length) { box.innerHTML = '<p class="sx-empty">Rien à signaler.</p>'; return; }
+    const linkify = (t) => esc(t).replace(/https?:\/\/[^\s)]+/g, (u) => `<a href="${u}" target="_blank" rel="noopener">${u.length > 60 ? `${u.slice(0, 57)}…` : u}</a>`);
+    box.innerHTML = `<table class="sx-table sx-qc"><thead><tr><th>Niveau</th><th>Problème</th><th>Rando</th><th>Détail</th></tr></thead><tbody>
+      ${rows.slice(0, 300).map((p) => `<tr>
+        <td><span class="sx-qc__tag ${LV[p.level][1]}">${LV[p.level][0]}</span></td>
+        <td>${esc(qc.labels[p.code] || p.code)}</td>
+        <td>${p.rando ? `<a href="../#rando=${encodeURIComponent(p.rando.id)}" target="_blank" rel="noopener">${esc(p.rando.name)}</a><br><small>${esc(p.rando.date)}${p.rando.blog ? ` · <a href="${esc(p.rando.blog)}" target="_blank" rel="noopener">article</a>` : ''}</small>` : '–'}</td>
+        <td class="sx-qc__detail">${linkify(p.detail)}</td></tr>`).join('')}
+      </tbody></table>${rows.length > 300 ? `<p class="sx-empty">… et ${rows.length - 300} autres.</p>` : ''}`;
+  }
+  document.addEventListener('change', (e) => { if (e.target.id === 'sx-qc-info') drawControle(); });
+
   // ------------------------------------------------------------ Chargement
   async function load() {
     paintToolbar();
@@ -601,7 +638,7 @@
       $('#sx-app').classList.remove('is-loading');
     }
     drawSummary(); drawKpis(); drawEvo(); drawFunnel(); drawActions(); drawRandos(); drawByRando(); drawLists();
-    drawSources(); drawGeo(); drawTech(); drawHeat(); drawRecent(); drawMisc();
+    drawSources(); drawGeo(); drawTech(); drawHeat(); drawRecent(); drawMisc(); drawControle();
     live();
   }
 
