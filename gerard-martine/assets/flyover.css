@@ -184,3 +184,5 @@
   .fo-duel__cams [data-cam="both"] { font-size: 0.625rem; }
   .fo--duel .fo__speed:not(.fo-duel__cams) { display: none; }
 }
+/* Randonneur dessiné en 3D dans la carte : le point ne sert plus que de secours */
+.fo-walker.is-3d { visibility: hidden; }

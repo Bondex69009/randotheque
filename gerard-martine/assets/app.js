@@ -1552,8 +1552,8 @@
   };
   const loadFlyover = () => Promise.all([
     loadAsset(`https://unpkg.com/maplibre-gl@${ML_VER}/dist/maplibre-gl.css`, true),
-    loadAsset('assets/flyover.css?v=8', true),
-    loadAsset(`https://unpkg.com/maplibre-gl@${ML_VER}/dist/maplibre-gl.js`).then(() => loadAsset('assets/flyover.js?v=8')),
+    loadAsset('assets/flyover.css?v=9', true),
+    loadAsset(`https://unpkg.com/maplibre-gl@${ML_VER}/dist/maplibre-gl.js`).then(() => loadAsset('assets/flyover.js?v=9')),
   ]);
   // Duel en survol 3D : les deux randos du comparateur en même temps, chacune dans sa couleur
   async function openFlyoverDuel(ids, colors, btn) {

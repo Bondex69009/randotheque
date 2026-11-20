@@ -100,6 +100,250 @@
   };
   const angDiff = (a, b) => ((b - a + 540) % 360) - 180;
 
+  // ---------------------------------------------------------------- Randonneur en 3D (couche WebGL dans la scène MapLibre)
+  // Petit bonhomme articulé (sac, chapeau, bâtons) posé sur le relief, tourné dans le sens de la marche,
+  // qui se penche dans les montées et dont les jambes et les bras bougent pendant la lecture.
+  const M4 = {
+    id: () => new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]),
+    mul: (...ms) => ms.reduce((a, b) => {
+      const o = new Float32Array(16);
+      for (let c = 0; c < 4; c++) for (let r = 0; r < 4; r++) {
+        o[c * 4 + r] = a[r] * b[c * 4] + a[4 + r] * b[c * 4 + 1] + a[8 + r] * b[c * 4 + 2] + a[12 + r] * b[c * 4 + 3];
+      }
+      return o;
+    }),
+    t: (x, y, z) => { const m = M4.id(); m[12] = x; m[13] = y; m[14] = z; return m; },
+    s: (x, y, z) => { const m = M4.id(); m[0] = x; m[5] = y; m[10] = z; return m; },
+    rx: (a) => { const c = Math.cos(a), s = Math.sin(a), m = M4.id(); m[5] = c; m[6] = s; m[9] = -s; m[10] = c; return m; },
+    ry: (a) => { const c = Math.cos(a), s = Math.sin(a), m = M4.id(); m[0] = c; m[2] = -s; m[8] = s; m[10] = c; return m; },
+    rz: (a) => { const c = Math.cos(a), s = Math.sin(a), m = M4.id(); m[0] = c; m[1] = s; m[4] = -s; m[5] = c; return m; },
+  };
+  // Géométries simples en mètres (x = droite, y = avant, z = haut), positions + normales entrelacées
+  const GEO = {
+    tube(rxB, ryB, rxT, ryT, zB, zT, n = 12, cy = 0) {
+      const v = [];
+      const ring = (k, rx, ry, z) => { const a = (k / n) * Math.PI * 2; return [Math.cos(a) * rx, cy + Math.sin(a) * ry, z]; };
+      const nor = (k, rx, ry) => { const a = (k / n) * Math.PI * 2, x = Math.cos(a) / rx, y = Math.sin(a) / ry, l = Math.hypot(x, y); return [x / l, y / l, 0]; };
+      for (let k = 0; k < n; k++) {
+        const a0 = ring(k, rxB, ryB, zB), a1 = ring(k + 1, rxB, ryB, zB), b0 = ring(k, rxT, ryT, zT), b1 = ring(k + 1, rxT, ryT, zT);
+        const n0 = nor(k, (rxB + rxT) / 2, (ryB + ryT) / 2), n1 = nor(k + 1, (rxB + rxT) / 2, (ryB + ryT) / 2);
+        v.push(...a0, ...n0, ...a1, ...n1, ...b1, ...n1, ...a0, ...n0, ...b1, ...n1, ...b0, ...n0);
+        v.push(0, cy, zT, 0, 0, 1, ...b0, 0, 0, 1, ...b1, 0, 0, 1);
+        v.push(0, cy, zB, 0, 0, -1, ...a1, 0, 0, -1, ...a0, 0, 0, -1);
+      }
+      return v;
+    },
+    ball(rx, ry, rz, cz, cy = 0, seg = 10) {
+      const v = [];
+      const p = (i, j) => {
+        const th = (i / seg) * Math.PI, ph = (j / (seg * 2)) * Math.PI * 2;
+        const nx = Math.sin(th) * Math.cos(ph), ny = Math.sin(th) * Math.sin(ph), nz = Math.cos(th);
+        const l = Math.hypot(nx / rx, ny / ry, nz / rz) || 1;
+        return [nx * rx, cy + ny * ry, cz + nz * rz, nx / rx / l, ny / ry / l, nz / rz / l];
+      };
+      for (let i = 0; i < seg; i++) for (let j = 0; j < seg * 2; j++) {
+        const a = p(i, j), b = p(i + 1, j), c = p(i + 1, j + 1), d = p(i, j + 1);
+        v.push(...a, ...b, ...c, ...a, ...c, ...d);
+      }
+      return v;
+    },
+    box(w, d, h, cy, z0, cx = 0) {
+      const x0 = cx - w / 2, x1 = cx + w / 2, y0 = cy - d / 2, y1 = cy + d / 2, z1 = z0 + h, v = [];
+      const q = (a, b, c, e, n) => v.push(...a, ...n, ...b, ...n, ...c, ...n, ...a, ...n, ...c, ...n, ...e, ...n);
+      q([x0, y0, z0], [x1, y0, z0], [x1, y0, z1], [x0, y0, z1], [0, -1, 0]);
+      q([x1, y1, z0], [x0, y1, z0], [x0, y1, z1], [x1, y1, z1], [0, 1, 0]);
+      q([x0, y1, z0], [x0, y0, z0], [x0, y0, z1], [x0, y1, z1], [-1, 0, 0]);
+      q([x1, y0, z0], [x1, y1, z0], [x1, y1, z1], [x1, y0, z1], [1, 0, 0]);
+      q([x0, y0, z1], [x1, y0, z1], [x1, y1, z1], [x0, y1, z1], [0, 0, 1]);
+      q([x0, y1, z0], [x1, y1, z0], [x1, y0, z0], [x0, y0, z0], [0, 0, -1]);
+      return v;
+    },
+  };
+  const HIKER_PARTS = {
+    thigh: { c: 'pants', g: () => GEO.tube(0.062, 0.066, 0.08, 0.085, -0.47, 0) },
+    shin: { c: 'pants', g: () => GEO.tube(0.05, 0.055, 0.064, 0.068, -0.45, 0) },
+    boot: { c: 'boot', g: () => [...GEO.box(0.12, 0.25, 0.1, 0.045, -0.07), ...GEO.tube(0.06, 0.06, 0.06, 0.06, -0.02, 0.06)] },
+    hips: { c: 'pants', g: () => GEO.tube(0.17, 0.11, 0.18, 0.115, -0.1, 0.1) },
+    torso: { c: 'shirt', g: () => [...GEO.tube(0.175, 0.11, 0.205, 0.12, 0.06, 0.52), ...GEO.ball(0.205, 0.12, 0.07, 0.52)] },
+    skin: { c: 'skin', g: () => [...GEO.tube(0.05, 0.05, 0.05, 0.05, 0.55, 0.66), ...GEO.ball(0.095, 0.105, 0.12, 0.76, 0.01)] },
+    hat: { c: 'hat', g: () => [...GEO.tube(0.19, 0.19, 0.18, 0.18, 0.835, 0.85), ...GEO.tube(0.11, 0.115, 0.095, 0.1, 0.845, 0.95)] },
+    pack: { c: 'pack', g: () => [...GEO.box(0.32, 0.2, 0.48, -0.2, 0.06), ...GEO.box(0.26, 0.06, 0.24, -0.32, 0.12)] },
+    roll: { c: 'roll', g: () => GEO.tube(0.065, 0.065, 0.065, 0.065, -0.2, 0.2) },
+    arm: { c: 'shirt', g: () => GEO.tube(0.044, 0.046, 0.056, 0.058, -0.29, 0.02) },
+    fore: { c: 'skin', g: () => [...GEO.tube(0.034, 0.034, 0.042, 0.042, -0.27, 0), ...GEO.ball(0.042, 0.048, 0.05, -0.3)] },
+    pole: { c: 'pole', g: () => [...GEO.tube(0.011, 0.011, 0.013, 0.013, -1.02, 0.08, 6), ...GEO.tube(0.02, 0.02, 0.02, 0.02, -0.06, 0.08, 6)] },
+    shadow: { c: 'shadow', flat: true, g: () => {
+      const v = [], n = 24;
+      for (let k = 0; k < n; k++) {
+        const a0 = (k / n) * Math.PI * 2, a1 = ((k + 1) / n) * Math.PI * 2;
+        v.push(0, 0, 0.01, 0, 0, 1, Math.cos(a0) * 0.42, Math.sin(a0) * 0.5, 0.01, 0, 0, 1, Math.cos(a1) * 0.42, Math.sin(a1) * 0.5, 0.01, 0, 0, 1);
+      }
+      return v;
+    } },
+  };
+  // le duvet roulé sur le sac est couché à l'horizontale
+  const ROLL_AT = M4.mul(M4.t(0, -0.21, 0.6), M4.ry(Math.PI / 2));
+
+  const hexRgb = (h) => {
+    const m = /^#?([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(String(h).trim());
+    if (!m) return [0.53, 0.97, 0];
+    const s = m[1].length === 3 ? m[1].replace(/./g, '$&$&') : m[1];
+    return [0, 2, 4].map((i) => parseInt(s.slice(i, i + 2), 16) / 255);
+  };
+
+  // Cap de marche au km d : direction de la trace autour du point
+  const headingAt = (S, total, d) => {
+    const w = clamp(total * 0.004, 0.015, 0.06);
+    const a = Math.max(0, Math.min(d, total - w) - w), b = Math.min(total, Math.max(d, w) + w);
+    return bearingOf(S.pos(a), S.pos(b));
+  };
+
+  // Couche : hikers = [{ color, pos(), heading(), grade(), moving() }]
+  function hikerLayer(map, hikers, onReady) {
+    let prog, parts, loc, last = 0, vaoExt;
+    const st = hikers.map(() => ({ ph: 0, amp: 0, head: null, lean: 0 }));
+    const VS = 'attribute vec3 aP;attribute vec3 aN;uniform mat4 uM;uniform mat4 uL;varying vec3 vN;void main(){vN=(uL*vec4(aN,0.)).xyz;gl_Position=uM*vec4(aP,1.);}';
+    const FS = 'precision mediump float;varying vec3 vN;uniform vec4 uC;uniform vec3 uS;uniform float uF;void main(){vec3 n=normalize(vN);float d=max(dot(n,uS),0.);float r=pow(max(dot(n,normalize(uS+vec3(0.,0.,1.))),0.),12.);vec3 c=uC.rgb*(.42+.7*d)+vec3(r*.12);gl_FragColor=vec4(mix(c,uC.rgb,uF),uC.a);}';
+    const palette = (shirt) => ({
+      shirt: [...hexRgb(shirt), 1], pants: [0.24, 0.28, 0.33, 1], boot: [0.3, 0.2, 0.13, 1], skin: [0.88, 0.67, 0.52, 1],
+      hat: [0.78, 0.69, 0.5, 1], pack: [0.85, 0.36, 0.16, 1], roll: [0.17, 0.32, 0.44, 1], pole: [0.72, 0.74, 0.76, 1], shadow: [0, 0, 0, 0.32],
+    });
+    const cols = hikers.map((h) => palette(h.color));
+
+    function draw(gl, P, part, col, L) {
+      const p = parts[part];
+      gl.bindBuffer(gl.ARRAY_BUFFER, p.buf);
+      gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 24, 0);
+      gl.vertexAttribPointer(1, 3, gl.FLOAT, false, 24, 12);
+      gl.uniformMatrix4fv(loc.uM, false, M4.mul(P, L));
+      gl.uniformMatrix4fv(loc.uL, false, L);
+      gl.uniform4fv(loc.uC, col[HIKER_PARTS[part].c]);
+      gl.uniform1f(loc.uF, HIKER_PARTS[part].flat ? 1 : 0);
+      gl.drawArrays(gl.TRIANGLES, 0, p.count);
+    }
+
+    return {
+      id: 'hikers-3d', type: 'custom', renderingMode: '3d',
+      onAdd(m, gl) {
+        const sh = (type, src) => { const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s); return s; };
+        prog = gl.createProgram();
+        gl.attachShader(prog, sh(gl.VERTEX_SHADER, VS));
+        gl.attachShader(prog, sh(gl.FRAGMENT_SHADER, FS));
+        gl.bindAttribLocation(prog, 0, 'aP');
+        gl.bindAttribLocation(prog, 1, 'aN');
+        gl.linkProgram(prog);
+        if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) throw new Error('randonneur 3D : shader');
+        loc = Object.fromEntries(['uM', 'uL', 'uC', 'uS', 'uF'].map((u) => [u, gl.getUniformLocation(prog, u)]));
+        parts = {};
+        for (const [k, def] of Object.entries(HIKER_PARTS)) {
+          const data = new Float32Array(def.g());
+          const buf = gl.createBuffer();
+          gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+          gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW);
+          parts[k] = { buf, count: data.length / 6 };
+        }
+        if (!gl.bindVertexArray) vaoExt = gl.getExtension('OES_vertex_array_object');
+        onReady && onReady();
+      },
+      render(gl, args) {
+        const P = args?.defaultProjectionData?.mainMatrix || args?.modelViewProjectionMatrix || args;
+        const now = performance.now();
+        const dt = Math.min(0.1, (now - (last || now)) / 1000);
+        last = now;
+        const still = reduceMotion();
+        const tr = map.transform;
+        const zoom = map.getZoom();
+        // Taille constante à l'écran (~ 60 à 80 px de haut), quel que soit le zoom
+        const px = matchMedia('(max-width: 640px)').matches ? 60 : 78;
+        let animating = false;
+
+        if (gl.bindVertexArray) gl.bindVertexArray(null); else if (vaoExt) vaoExt.bindVertexArrayOES(null);
+        gl.useProgram(prog);
+        gl.enableVertexAttribArray(0);
+        gl.enableVertexAttribArray(1);
+        gl.disable(gl.CULL_FACE);
+        gl.enable(gl.BLEND);
+        gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+        // Lumière venant de derrière la caméra, en hauteur : la face qu'on voit est toujours éclairée
+        const cb = (map.getBearing() * Math.PI) / 180;
+        const sun = [Math.cos(cb) * 0.35 - Math.sin(cb) * 0.55, -Math.sin(cb) * 0.35 - Math.cos(cb) * 0.55, 0.76];
+        gl.uniform3fv(loc.uS, sun.map((x) => x / Math.hypot(...sun)));
+        // Le randonneur passe devant le relief (pas coupé par une crête ou la pente sous ses pieds)
+        gl.clear(gl.DEPTH_BUFFER_BIT);
+
+        hikers.forEach((h, i) => {
+          const at = h.pos();
+          const alt = map.queryTerrainElevation ? map.queryTerrainElevation(at) : 0;
+          if (alt == null && map.getTerrain && map.getTerrain()) return;
+          const s = st[i];
+          const target = h.heading();
+          if (s.head == null) s.head = target;
+          s.head += angDiff(s.head, target) * (1 - Math.exp(-dt * 8));
+          const moving = h.moving() && !still;
+          s.amp += ((moving ? 1 : 0) - s.amp) * (1 - Math.exp(-dt * 6));
+          if (moving) s.ph += dt * Math.PI * 2 * 1.05;
+          // Penché en avant dans les montées, un peu en arrière dans les descentes raides
+          const g = clamp(h.grade(), -30, 30);
+          s.lean += ((g > 0 ? g * 0.012 : g * 0.006) + 0.04 * s.amp - s.lean) * (1 - Math.exp(-dt * 3));
+          if (s.amp > 0.002 && s.amp < 0.998) animating = true;
+          if (moving) animating = true;
+
+          const mc = ML.MercatorCoordinate.fromLngLat(at, alt || 0);
+          const mpp = (40075016.686 * Math.cos((at[1] * Math.PI) / 180)) / (512 * 2 ** zoom);
+          const k = (px * mpp) / 1.9;
+          const u = mc.meterInMercatorCoordinateUnits() * k;
+          const W = M4.mul(P, M4.t(mc.x, mc.y, mc.z), M4.s(u, -u, u));
+          const R = M4.rz((-s.head * Math.PI) / 180);
+          const col = cols[i];
+          const sw = Math.sin(s.ph), cw = Math.cos(s.ph), a = s.amp;
+
+          // Ombre portée sous les pieds
+          gl.depthMask(false); gl.disable(gl.DEPTH_TEST);
+          draw(gl, W, 'shadow', col, R);
+          gl.depthMask(true); gl.enable(gl.DEPTH_TEST); gl.depthFunc(gl.LEQUAL);
+
+          const bob = 0.035 * a * Math.abs(cw);
+          const pelvis = M4.mul(R, M4.t(0, 0, 0.98 + bob));
+          [[-1, 1], [1, -1]].forEach(([side, sg]) => {
+            const th = 0.42 * a * sw * sg;
+            const kn = -(0.08 + 0.75 * a * Math.max(0, cw * sg));
+            const hip = M4.mul(pelvis, M4.t(side * 0.095, 0, 0), M4.rx(th));
+            const knee = M4.mul(hip, M4.t(0, 0, -0.47), M4.rx(kn));
+            const ankle = M4.mul(knee, M4.t(0, 0, -0.45), M4.rx(-th - kn));
+            draw(gl, W, 'thigh', col, hip);
+            draw(gl, W, 'shin', col, knee);
+            draw(gl, W, 'boot', col, ankle);
+          });
+          draw(gl, W, 'hips', col, pelvis);
+          const torso = M4.mul(pelvis, M4.rx(-s.lean), M4.rz(0.06 * a * sw));
+          draw(gl, W, 'torso', col, torso);
+          draw(gl, W, 'skin', col, torso);
+          draw(gl, W, 'hat', col, M4.mul(torso, M4.t(0, 0.01, 0), M4.rx(-0.06)));
+          draw(gl, W, 'pack', col, torso);
+          draw(gl, W, 'roll', col, M4.mul(torso, ROLL_AT));
+          [[-1, -1], [1, 1]].forEach(([side, sg]) => {
+            const ar = 0.38 * a * sw * sg + 0.12;
+            const sh = M4.mul(torso, M4.t(side * 0.235, 0, 0.47), M4.ry(side * 0.08), M4.rx(ar));
+            const el = M4.mul(sh, M4.t(0, 0, -0.29), M4.rx(0.55 + 0.15 * a * Math.max(0, sw * sg)));
+            draw(gl, W, 'arm', col, sh);
+            draw(gl, W, 'fore', col, el);
+            // Bâton tenu dans la main, presque vertical, pointe un peu en arrière
+            draw(gl, W, 'pole', col, M4.mul(el, M4.t(0, 0.01, -0.3), M4.rx(-(ar + 0.55) - 0.12 - 0.15 * a * sw * sg + s.lean)));
+          });
+        });
+
+        gl.disableVertexAttribArray(0);
+        gl.disableVertexAttribArray(1);
+        if (animating) map.triggerRepaint();
+      },
+      onRemove(m, gl) {
+        if (!parts) return;
+        Object.values(parts).forEach((p) => gl.deleteBuffer(p.buf));
+        gl.deleteProgram(prog);
+      },
+    };
+  }
+
   // ---------------------------------------------------------------- Interface
   const ICON = {
     play: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.5-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5Z" fill="currentColor"/></svg>',
@@ -289,7 +533,7 @@
         bounds, fitBoundsOptions: { padding: 60 },
         pitch: 40, maxPitch: 80,
         keyboard: false, attributionControl: { compact: true },
-        fadeDuration: 150,
+        fadeDuration: 150, antialias: true,
       });
     } catch (e) {
       $('#fo-loading').innerHTML = 'Le survol 3D nécessite WebGL, indisponible sur cet appareil.';
@@ -314,6 +558,10 @@
     if (!o.loop) mk('<span>A</span>', 'fo-flag fo-flag--end', S.pos(total)).getElement().title = 'Arrivée';
     const walker = mk('<span class="fo-walker__pulse"></span><span class="fo-walker__dot"></span>', 'fo-walker', S.pos(0), 'center');
     walker.getElement().style.setProperty('--fo-c', color);
+    const hiker3d = hikerLayer(map, [{
+      color, pos: () => S.pos(d), heading: () => headingAt(S, total, d), grade: () => S.grade(d),
+      moving: () => phase === 'run' && playing && d < total,
+    }], () => walker.getElement().classList.add('is-3d'));
 
     // État de lecture
     let d = 0, speed = 1, playing = false, phase = 'intro', follow = true, raf = 0, last = 0, hudAt = 0;
@@ -462,6 +710,7 @@
 
     map.on('load', () => {
       $('#fo-loading').hidden = true;
+      try { map.addLayer(hiker3d); } catch (e) { /* le point reste affiché */ }
       map.setPadding({ top: 40, bottom: padBottom(), left: 0, right: 0 });
       draw(true);
       playing = !reduceMotion();
@@ -695,7 +944,7 @@
         bounds, fitBoundsOptions: { padding: 60 },
         pitch: 40, maxPitch: 80,
         keyboard: false, attributionControl: { compact: true },
-        fadeDuration: 150,
+        fadeDuration: 150, antialias: true,
       });
     } catch (e) {
       $('#fo-loading').innerHTML = 'Le survol 3D nécessite WebGL, indisponible sur cet appareil.';
@@ -714,6 +963,13 @@
       if (!r.loop) mk('<span>A</span>', 'fo-flag fo-duel__flag fo-duel__flag--end', r.S.pos(r.T.total), 'bottom', r.color).getElement().title = `Arrivée : ${r.title}`;
       r.walker = mk('<span class="fo-walker__pulse"></span><span class="fo-walker__dot"></span>', 'fo-walker', r.S.pos(0), 'center', r.color);
     });
+    const hiker3d = hikerLayer(map, R.map((r) => {
+      const at = () => r.tl.kmAt(t);
+      return {
+        color: r.color, pos: () => r.S.pos(at()), heading: () => headingAt(r.S, r.T.total, at()), grade: () => r.S.grade(at()),
+        moving: () => phase === 'run' && playing && t < r.tl.end,
+      };
+    }), () => R.forEach((r) => r.walker.getElement().classList.add('is-3d')));
 
     // État : horloge commune (minutes de marche), caméra « les deux » ou qui suit l'un des deux
     let t = 0, speed = 1, playing = false, phase = 'intro', camMode = 'both', follow = true, raf = 0, last = 0, hudAt = 0;
@@ -885,6 +1141,7 @@
 
     map.on('load', () => {
       $('#fo-loading').hidden = true;
+      try { map.addLayer(hiker3d); } catch (e) { /* le point reste affiché */ }
       map.setPadding({ top: 40, bottom: padBottom(), left: 0, right: 0 });
       draw(true);
       playing = !reduceMotion();
