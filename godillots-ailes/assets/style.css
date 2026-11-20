@@ -189,14 +189,18 @@ h1, h2, h3 { line-height: var(--lh-tight); margin: 0; }
 @media (max-width: 1023px) {
   .site-header__inner > .search-wrap { order: 3; flex: 1 1 calc(100% - 2.75rem - var(--space-4)); max-width: none; padding-block: 0; margin-bottom: var(--space-3); }
   .header-filters { display: inline-grid; order: 4; margin-bottom: var(--space-3); align-self: flex-start; }
-  /* « Chercher aussi sur » : une seule ligne qui défile, pour garder l'en-tête figé compact */
-  .site-header .elsewhere__bar { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
-  .site-header .elsewhere__bar::-webkit-scrollbar { display: none; }
-  .site-header .elsewhere__label, .site-header .elsewhere__tabs { flex: none; flex-wrap: nowrap; white-space: nowrap; }
 }
+/* « Chercher aussi sur » : une seule ligne qui défile à toutes les largeurs (4 sites ici contre 3 chez
+   Gérard & Martine), pour que l'en-tête garde la même hauteur que le leur */
+.site-header .elsewhere__bar { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
+.site-header .elsewhere__bar::-webkit-scrollbar { display: none; }
+.site-header .elsewhere__label, .site-header .elsewhere__tabs { flex: none; flex-wrap: nowrap; white-space: nowrap; }
 @media (min-width: 1024px) {
   .site-header__inner { flex-wrap: nowrap; gap: var(--space-6); }
-  .site-header__inner > .search-wrap { flex: 1 1 auto; }
+  .site-header__inner > .search-wrap { flex: 1 1 auto; min-width: 0; }
+  .site-header__inner > .brand { flex: none; }
+  .brand__title { white-space: nowrap; }
+  .site-header .elsewhere__bar { padding-bottom: 0; }
 }
 .brand { display: flex; align-items: center; gap: var(--space-3); color: var(--c-text); text-decoration: none; }
 .brand:hover { color: var(--c-text); }
