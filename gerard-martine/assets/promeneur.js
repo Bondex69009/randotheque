@@ -4,9 +4,14 @@
    S'il doit changer de coin (élément sorti de l'écran), il disparaît en fondu et réapparaît ailleurs : jamais
    de grand saut à travers la page.
    Purement décoratif : ne capte aucun clic, se cache si l'élément est recouvert (fenêtre, menu) et ne bouge pas
-   du tout quand le visiteur a demandé moins d'animations. */
+   du tout quand le visiteur a demandé moins d'animations.
+   Autonome (dessin et styles inclus) : le même fichier sert sur le blog des Godillots, chargé par le code
+   d'intégration du compteur avec l'attribut data-blog ; il part alors du compteur et se promène sur les widgets,
+   les articles et les photos du blog. */
 (() => {
-  if (!window.rtHiker || !window.requestAnimationFrame) return;
+  if (!window.requestAnimationFrame || document.querySelector('.rt-promeneur')) return;
+  const script = document.currentScript;
+  const BLOG = !!(script && script.hasAttribute('data-blog'));
   const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)');
   if (reduce && reduce.matches) return;
 
@@ -16,11 +21,56 @@
   const HOP_DX = 110;         // écart horizontal maximal entre deux blocs pour sauter (px)
   const HOP_DY = 150;         // écart vertical maximal (px)
   const STAY = [9000, 16000]; // temps maximal sur un même bloc avant d'aller voir ailleurs (ms)
-  // Éléments candidats ; seuls ceux dont le bord haut est réellement dessiné (fond, bordure) servent de sol
-  const SELECTORS = [
+  // Éléments candidats ; seuls ceux dont le bord haut est réellement dessiné (fond, bordure, photo) servent de sol
+  const SELECTORS = (BLOG ? [
+    '#ga-compteur', '.date-outer', '.widget', '.widget-content li', '.blog-pager', '.post-body img', '.widget img',
+    'iframe.embedly-embed', '.gsc-input',
+  ] : [
     '.card', '.card__visual', '.hero-total', '.hero-stats > div', '.btn', '.chip', '.segmented', '.search', '.toolbar',
     '.filters', '.overview-map', '.evo', '.elsewhere', '.site-footer', '.site-header',
-  ].join(',');
+  ]).join(',');
+
+  // Dessin du randonneur (le même que celui des chargements du site)
+  const HIKER = '<svg class="hiker" viewBox="0 0 32 32" aria-hidden="true" focusable="false"><path class="hiker__ground" d="M-6 30.8H38"/><g class="hiker__body"><g class="hiker__arm hiker__arm--b"><path d="M15.7 10.8C15.8 12.6 16.1 14.2 16.3 15.3L17.6 15.1C17.7 13.6 17.6 12.2 17.5 10.8Z"/><path d="M16.3 14.6C17.1 15.4 18 16 19.1 16.7L19.8 15.8C18.8 15.2 18.1 14.6 17.5 14.1Z"/><circle cx="19.6" cy="16.3" r=".85"/></g><g class="hiker__leg hiker__leg--b"><path d="M13.5 17.4C13.6 19.8 13.9 21.9 14.1 23.7H15.9C16.3 21.9 16.9 19.7 17 17.4Z"/><g class="hiker__shin"><path d="M14.1 23.2C13.6 24.6 13.9 26.9 14.3 28.6H15.7C15.9 26.9 16.2 24.9 15.9 23.2Z"/><path d="M14.2 28.1H15.8C16.7 28.4 17.9 28.7 18.2 29.4 18.3 29.9 18 30.1 17.5 30.1H14.3C13.9 30.1 13.9 29.3 14.2 28.1Z"/></g></g><path class="hiker__pack" d="M11.2 11.6C11.1 9.9 13.9 9.3 15.1 10.4L15.6 16.3C15.7 17.6 11.9 17.9 11.5 16.7Z"/><path d="M11.6 9.8C12.3 9 13.9 8.9 14.6 9.6L14.4 10.4C13.6 10 12.6 10.1 11.9 10.6Z"/><path d="M14.8 10C16.2 9.3 18.1 9.6 18.5 11.2 18.6 12.9 18 15.4 17.6 17.4 17.3 18.8 13.4 18.9 13.5 17.4 13.6 15 14 12.2 14.8 10Z"/><path d="M16.6 8.2L17.8 8.3 17.7 9.9 16.4 9.8Z"/><circle cx="17.9" cy="6.6" r="2"/><path d="M14.9 5.6C16.4 5.1 19.5 5 21.1 5.5 21.4 5.7 21.2 6 20.9 6 19.2 5.9 16.6 6 15 6.3 14.6 6.3 14.5 5.8 14.9 5.6ZM16.2 5.3C16.2 3.7 19.6 3.6 19.7 5.2Z"/><g class="hiker__leg hiker__leg--a"><path d="M13.5 17.4C13.6 19.8 13.9 21.9 14.1 23.7H15.9C16.3 21.9 16.9 19.7 17 17.4Z"/><g class="hiker__shin"><path d="M14.1 23.2C13.6 24.6 13.9 26.9 14.3 28.6H15.7C15.9 26.9 16.2 24.9 15.9 23.2Z"/><path d="M14.2 28.1H15.8C16.7 28.4 17.9 28.7 18.2 29.4 18.3 29.9 18 30.1 17.5 30.1H14.3C13.9 30.1 13.9 29.3 14.2 28.1Z"/></g></g><g class="hiker__arm hiker__arm--a"><path d="M15.7 10.8C15.8 12.6 16.1 14.2 16.3 15.3L17.6 15.1C17.7 13.6 17.6 12.2 17.5 10.8Z"/><path d="M16.3 14.6C17.1 15.4 18 16 19.1 16.7L19.8 15.8C18.8 15.2 18.1 14.6 17.5 14.1Z"/><circle cx="19.6" cy="16.3" r=".85"/><path class="hiker__stick" d="M19.9 13.4L21.2 29.8"/></g></g></svg>';
+  // Styles, tous limités à .rt-promeneur (rien ne déborde sur la page qui l'accueille)
+  const CSS = `
+.rt-promeneur { position: fixed; left: 0; top: 0; z-index: ${BLOG ? 9999 : 50}; width: 46px; height: 46px; pointer-events: none;
+  color: var(--c-accent, #87f700); opacity: 0; transition: opacity .35s; will-change: transform; filter: drop-shadow(0 1px 1px rgb(0 0 0 / .6)); }
+.rt-promeneur.is-visible { opacity: 1; }
+.rt-promeneur__flip { position: relative; width: 100%; height: 100%; }
+.rt-promeneur .hiker { display: block; width: 100%; height: 100%; overflow: hidden; fill: currentColor; stroke: none; }
+.rt-promeneur .hiker g, .rt-promeneur .hiker path, .rt-pose g, .rt-pose path { transform-box: view-box; }
+.rt-promeneur .hiker__pack, .rt-pose .pack { opacity: .85; }
+.rt-promeneur .hiker__ground { display: none; }
+.rt-promeneur .hiker__stick { fill: none; stroke: currentColor; stroke-linecap: round; stroke-width: 1.1; }
+.rt-promeneur .hiker__arm--b, .rt-promeneur .hiker__leg--b { opacity: .55; }
+.rt-promeneur .hiker__body { animation: rtp-bob .6s ease-in-out infinite alternate; }
+.rt-promeneur .hiker__leg { transform-origin: 15px 18px; animation: rtp-thigh 1.2s ease-in-out infinite; }
+.rt-promeneur .hiker__shin { transform-origin: 15px 23.4px; animation: rtp-knee 1.2s ease-in-out infinite; }
+.rt-promeneur .hiker__arm { transform-origin: 16.6px 11.2px; animation: rtp-arm 1.2s ease-in-out infinite; }
+.rt-promeneur .hiker__leg--b, .rt-promeneur .hiker__leg--b .hiker__shin, .rt-promeneur .hiker__arm--a { animation-delay: -.6s; }
+.rt-promeneur.is-resting .hiker, .rt-promeneur.is-resting .hiker * { animation: none; }
+.rt-pose { position: absolute; inset: 0; display: none; width: 100%; height: 100%; overflow: visible; fill: currentColor; }
+.rt-promeneur[data-pose] .rt-pose { display: block; }
+.rt-promeneur[data-pose] .hiker__arm--a { display: none; }
+.rt-promeneur[data-pose="lacets"] .hiker { visibility: hidden; }
+.rt-pose .arm, .rt-pose .limb, .rt-pose .torso, .rt-pose .fold, .rt-pose .trk { fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; }
+.rt-pose .arm { stroke-width: 1.5; }
+.rt-pose .limb { stroke-width: 2.6; }
+.rt-pose .torso { stroke-width: 3.6; }
+.rt-pose .fold { stroke-width: .5; }
+.rt-pose .paper { fill: currentColor; fill-opacity: .35; stroke: currentColor; stroke-width: .5; }
+.rt-pose .trk { stroke: #0b0f0a; stroke-width: .6; }
+.rt-pose .screen { fill: #0b0f0a; }
+.rt-pose .fidget { transform-origin: 16.6px 11.2px; animation: rtp-fidget 1.6s ease-in-out infinite alternate; }
+.rt-pose .lace { animation: rtp-lace .45s ease-in-out infinite alternate; }
+@keyframes rtp-thigh { 0%, 100% { transform: rotate(-26deg); } 50% { transform: rotate(22deg); } }
+@keyframes rtp-knee { 0%, 100% { transform: rotate(4deg); } 40% { transform: rotate(8deg); } 62% { transform: rotate(58deg); } 85% { transform: rotate(18deg); } }
+@keyframes rtp-arm { 0%, 100% { transform: rotate(22deg); } 50% { transform: rotate(-20deg); } }
+@keyframes rtp-bob { from { transform: translateY(.5px); } to { transform: translateY(-.5px); } }
+@keyframes rtp-fidget { from { transform: rotate(-3deg); } to { transform: rotate(3deg); } }
+@keyframes rtp-lace { from { transform: translate(0, 0); } to { transform: translate(.4px, -.7px); } }
+@media print { .rt-promeneur { display: none; } }`;
 
   // Pauses : accessoires dessinés dans le même repère 32 × 32 que le randonneur (tourné vers la droite)
   const POSES = {
@@ -36,10 +86,14 @@
   };
   const POSE_NAMES = Object.keys(POSES);
 
+  const style = document.createElement('style');
+  style.textContent = CSS;
+  document.head.appendChild(style);
+
   const el = document.createElement('div');
   el.className = 'rt-promeneur';
   el.setAttribute('aria-hidden', 'true');
-  el.innerHTML = `<div class="rt-promeneur__flip">${window.rtHiker()}<svg class="rt-pose" viewBox="0 0 32 32" aria-hidden="true" focusable="false"></svg></div>`;
+  el.innerHTML = `<div class="rt-promeneur__flip">${HIKER}<svg class="rt-pose" viewBox="0 0 32 32" aria-hidden="true" focusable="false"></svg></div>`;
   document.body.appendChild(el);
   const flip = el.firstElementChild;
   const poseSvg = flip.querySelector('.rt-pose');
@@ -57,21 +111,33 @@
     const parts = m[1].split(/[\s,/]+/).filter(Boolean);
     return parts.length > 3 ? parseFloat(parts[3]) * (parts[3].endsWith('%') ? 0.01 : 1) : 1;
   };
+  // Couleur de fond visible derrière l'élément (un fond noir sur une page noire ne fait pas un sol)
+  const behind = (t) => {
+    for (let e = t.parentElement; e; e = e.parentElement) {
+      const c = getComputedStyle(e).backgroundColor;
+      if (alpha(c) > 0) return c;
+    }
+    return 'rgb(255, 255, 255)';
+  };
   const groundCache = new WeakMap();
   const ground = (t) => {
     const hit = groundCache.get(t);
     const now = performance.now();
     if (hit && now - hit.at < 3000) return hit.g;
     const cs = getComputedStyle(t);
-    let ok = false;
+    let ok = BLOG && /^(IMG|IFRAME)$/.test(t.tagName);
     if (!ok && parseFloat(cs.borderTopWidth) >= 1 && cs.borderTopStyle !== 'none' && alpha(cs.borderTopColor) >= 0.2) ok = true;
-    if (!ok && alpha(cs.backgroundColor) >= 0.15) ok = true;
+    if (!ok && alpha(cs.backgroundColor) >= 0.15 && cs.backgroundColor !== behind(t)) ok = true;
     if (!ok && cs.backgroundImage !== 'none') ok = true;
     if (cs.visibility === 'hidden' || parseFloat(cs.opacity) < 0.5) ok = false;
-    const g = ok ? { l: Math.max(10, parseFloat(cs.borderTopLeftRadius) || 0), r: Math.max(10, parseFloat(cs.borderTopRightRadius) || 0) } : null;
+    // Compteur intégré : la carte arrondie est dans l'iframe, avec ses propres coins
+    const round = t.id === 'ga-compteur' ? 20 : 0;
+    const g = ok ? { l: Math.max(10, round, parseFloat(cs.borderTopLeftRadius) || 0), r: Math.max(10, round, parseFloat(cs.borderTopRightRadius) || 0) } : null;
     groundCache.set(t, { g, at: now });
     return g;
   };
+  // Hauteur du sol : le bord haut, sauf pour le compteur intégré dont la carte est décalée de la marge de l'iframe
+  const topOf = (t, r) => (t.id === 'ga-compteur' ? r.top + (r.width <= 348 ? 2 : 4) : r.top);
   // Portion praticable du bord haut (px depuis le bord gauche de l'élément), coins arrondis exclus
   const span = (t, r) => { const g = ground(t) || { l: 10, r: 10 }; return [g.l, r.width - g.r]; };
 
@@ -97,7 +163,7 @@
     const near = candidates(target).map((t) => {
       const r = t.getBoundingClientRect();
       const dx = Math.max(r.left - x, 0, x - r.right);
-      const dy = Math.abs(r.top - y);
+      const dy = Math.abs(topOf(t, r) - y);
       if (dx > HOP_DX || dy > HOP_DY || (dx < 4 && dy < 6)) return null;
       const [lo, hi] = span(t, r);
       const land = Math.min(Math.max(x, r.left + lo + 4), r.left + hi - 4);
@@ -141,10 +207,13 @@
 
   const goAway = (now, delay) => { mode = 'away'; rest(false); show(false); until = now + delay; };
 
-  // Réapparition (fondu) sur un élément visible au hasard
+  // Réapparition (fondu) sur un élément visible au hasard ; sur le blog, la première fois sur le compteur
+  let appeared = false;
   const appear = (now) => {
-    const list = candidates(null).filter((t) => reachable(t));
+    const start = BLOG && !appeared && document.getElementById('ga-compteur');
+    const list = start && reachable(start) ? [start] : candidates(null).filter((t) => reachable(t));
     if (!list.length) { until = now + 1500; return; }
+    appeared = true;
     target = list[Math.floor(Math.random() * list.length)];
     leaveAt = now + rand(STAY[0], STAY[1]);
     const r = target.getBoundingClientRect();
@@ -152,7 +221,7 @@
     offset = rand(lo, hi);
     face(Math.random() < 0.5 ? 1 : -1);
     mode = 'rest'; rest(true); until = now + rand(300, 700);
-    place(r.left + offset, r.top);
+    place(r.left + offset, topOf(target, r));
     show(true);
   };
 
@@ -187,7 +256,7 @@
       if (now >= until) appear(now);
     } else if (mode === 'hop') {
       const r = hop.to.getBoundingClientRect();
-      const tx = r.left + hop.toOffset, ty = r.top;
+      const tx = r.left + hop.toOffset, ty = topOf(hop.to, r);
       const k = Math.min(1, (now - hop.start) / HOP_MS);
       const e = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
       const arc = Math.min(45, 18 + Math.hypot(tx - hop.from.x, ty - hop.from.y) * 0.25) + Math.max(0, hop.from.y - ty) * 0.5;
@@ -220,7 +289,7 @@
         if (!(Math.random() < 0.35 && hopToNeighbour(now))) { mode = 'walk'; newGoal(r); }
       }
       if (mode === 'walk' || mode === 'rest') {
-        place(r.left + offset, r.top);
+        place(r.left + offset, topOf(target, r));
         // Élément sorti de l'écran (défilement) ou recouvert : il s'efface et réapparaît ailleurs
         if (now >= nextCheck) {
           nextCheck = now + 250;

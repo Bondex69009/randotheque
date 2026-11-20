@@ -1069,36 +1069,5 @@ h1, h2, h3 { line-height: var(--lh-tight); margin: 0; }
 @keyframes hiker-bob { from { transform: translateY(0.5px); } to { transform: translateY(-0.5px); } }
 @keyframes hiker-ground { to { stroke-dashoffset: 10; } }
 @media (prefers-reduced-motion: reduce) { .hiker *, .hiker { animation: none !important; } }
-/* Randonneur qui se promène sur les éléments de la page (assets/promeneur.js) */
-.rt-promeneur {
-  position: fixed; left: 0; top: 0; z-index: 50; width: 46px; height: 46px; pointer-events: none;
-  color: var(--c-accent); opacity: 0; transition: opacity 0.35s; will-change: transform;
-  filter: drop-shadow(0 1px 1px rgb(0 0 0 / 0.6));
-}
-.rt-promeneur.is-visible { opacity: 1; }
-.rt-promeneur__flip { position: relative; width: 100%; height: 100%; }
-.rt-promeneur .hiker { display: block; width: 100%; height: 100%; }
-.rt-promeneur .hiker__ground { display: none; }
-.rt-promeneur.is-resting .hiker, .rt-promeneur.is-resting .hiker * { animation: none; }
-/* Pauses : boire, carte, GPS, jumelles (accessoires dessinés par-dessus), lacets (silhouette accroupie) */
-.rt-pose { position: absolute; inset: 0; display: none; width: 100%; height: 100%; overflow: visible; fill: currentColor; }
-.rt-promeneur[data-pose] .rt-pose { display: block; }
-.rt-promeneur[data-pose] .hiker__arm--a { display: none; }
-.rt-promeneur[data-pose="lacets"] .hiker { visibility: hidden; }
-.rt-pose g, .rt-pose path { transform-box: view-box; }
-.rt-pose .arm, .rt-pose .limb, .rt-pose .torso, .rt-pose .fold, .rt-pose .trk { fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; }
-.rt-pose .arm { stroke-width: 1.5; }
-.rt-pose .limb { stroke-width: 2.6; }
-.rt-pose .torso { stroke-width: 3.6; }
-.rt-pose .fold { stroke-width: 0.5; }
-.rt-pose .paper { fill: currentColor; fill-opacity: 0.35; stroke: currentColor; stroke-width: 0.5; }
-.rt-pose .trk { stroke: #0b0f0a; stroke-width: 0.6; }
-.rt-pose .screen { fill: #0b0f0a; }
-.rt-pose .pack { opacity: 0.85; }
-.rt-pose .fidget { transform-origin: 16.6px 11.2px; animation: rt-fidget 1.6s ease-in-out infinite alternate; }
-.rt-pose .lace { animation: rt-lace 0.45s ease-in-out infinite alternate; }
-@keyframes rt-fidget { from { transform: rotate(-3deg); } to { transform: rotate(3deg); } }
-@keyframes rt-lace { from { transform: translate(0, 0); } to { transform: translate(0.4px, -0.7px); } }
-@media print { .rt-promeneur { display: none; } }
 .loader { display: grid; justify-items: center; gap: var(--space-2); color: var(--c-text-muted); font-size: var(--fs-sm); }
 .loader .hiker { width: 3rem; height: 3rem; color: var(--c-accent); }

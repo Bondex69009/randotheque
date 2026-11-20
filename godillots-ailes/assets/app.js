@@ -796,14 +796,16 @@
   const embedDialog = $('#embed');
   const embedBase = () => (/^(localhost|127\.|\[::1\])/.test(location.hostname) || location.protocol === 'file:'
     ? PUBLIC_URL : new URL('./', location.href).href);
-  // iframe + petit script qui ajuste sa hauteur au contenu (colonne étroite : texte sur plusieurs lignes).
-  // Sans le script (s'il était retiré), la hauteur par défaut suffit à tout afficher.
+  // iframe + petit script qui ajuste sa hauteur au contenu (colonne étroite : texte sur plusieurs lignes),
+  // + le randonneur qui part du compteur et se promène sur la page du blog (assets/promeneur.js, mode data-blog).
+  // Sans les scripts (s'ils étaient retirés), la hauteur par défaut suffit à tout afficher.
   function embedCode(theme) {
     const base = embedBase();
     const src = `${base}compteur.html${theme === 'clair' ? '?theme=clair' : ''}`;
     const origin = new URL(base).origin;
     return `<iframe id="ga-compteur" src="${src}" title="Compteur global des Godillots Ailés depuis 1977" width="100%" height="130" scrolling="no" loading="lazy" style="border:0;display:block;width:100%;max-width:420px;margin:0 auto;"></iframe>
-<script>window.addEventListener("message",function(e){if(e.origin==="${origin}"&&e.data&&e.data.gaCompteurHeight){document.getElementById("ga-compteur").style.height=e.data.gaCompteurHeight+"px";}});</script>`;
+<script>window.addEventListener("message",function(e){if(e.origin==="${origin}"&&e.data&&e.data.gaCompteurHeight){document.getElementById("ga-compteur").style.height=e.data.gaCompteurHeight+"px";}});</script>
+<script src="${base}assets/promeneur.js" data-blog defer></script>`;
   }
   function paintEmbed() {
     const theme = ($('input[name="embed-theme"]:checked', embedDialog) || {}).value || 'sombre';
