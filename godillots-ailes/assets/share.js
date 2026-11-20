@@ -71,11 +71,11 @@
   const STATS = {
     distance: 'Distance', dplus: 'Dénivelé +', dminus: 'Dénivelé −', duree: 'Durée', ibp: 'IBP index', altmax: 'Altitude max',
   };
-  const SHOW = { title: 'Nom', date: 'Date', place: 'Lieu', profile: 'Profil', brand: 'Signature', markers: 'Départ / arrivée' };
+  const SHOW = { title: 'Nom', date: 'Date', place: 'Lieu', meteo: 'Météo du jour', profile: 'Profil', brand: 'Signature', markers: 'Départ / arrivée' };
   const DEFAULTS = {
     mode: 'image', format: 'story', bg: 'plan', gradient: 'crepuscule', solid: '#0d1322', dim: 25,
     trackColor: 'pace', width: 10, glow: true,
-    stats: ['distance', 'dplus', 'duree', 'ibp'], show: ['title', 'date', 'place', 'profile', 'brand', 'markers'],
+    stats: ['distance', 'dplus', 'duree', 'ibp'], show: ['title', 'date', 'place', 'meteo', 'profile', 'brand', 'markers'],
     seconds: 10, textTheme: 'auto', anim3d: true,
   };
   const FPS = 30;
@@ -120,6 +120,7 @@
   let anim = null; // aperçu animé en cours
   let lastBlob = null, lastKind = null; // dernier fichier créé (image ou vidéo)
   let renderToken = 0;
+  let wx = null; // météo du jour de la rando (assets/meteo.js, Open-Meteo) : { kind, label, tmax, tmin, img }
 
   // ------------------------------------------------------------ Préparation de la trace
   function prepareTrack(track) {
@@ -557,10 +558,25 @@
       y += L.titleSize * (lines.length * 1.12 + 0.25);
     }
     const sub = [show.has('date') ? fmtDate(R.date) : '', show.has('place') ? [R.commune, R.deptName].filter(Boolean).join(', ') : ''].filter(Boolean).join('  ·  ');
+    const subSize = Math.round(L.titleSize * 0.42);
+    let subEnd = L.head.x;
     if (sub) {
-      const s = fitFont(g, sub, 600, Math.round(L.titleSize * 0.42), SITE.fontSans, L.head.w);
+      const s = fitFont(g, sub, 600, subSize, SITE.fontSans, L.head.w);
       g.fillStyle = inkSoft;
       g.fillText(sub, L.head.x, y + s * 1.25);
+      subEnd = L.head.x + g.measureText(sub).width + s * 0.9;
+    }
+    // Météo du jour : picto + températures + temps, à la suite de la date (ou dessous si la place manque)
+    if (show.has('meteo') && wx) {
+      const s = subSize, ic = Math.round(s * 1.9);
+      const txt = `${wx.tmax}° / ${wx.tmin}°  ·  ${wx.label}`;
+      g.font = `700 ${s}px ${SITE.fontSans}`;
+      const need = ic + s * 0.35 + g.measureText(txt).width;
+      let wxX = sub ? subEnd : L.head.x, base = y + s * 1.25;
+      if (wxX + need > L.head.x + L.head.w) { wxX = L.head.x; base += s * 1.75; }
+      if (wx.img) g.drawImage(wx.img, wxX, base - s * 0.35 - ic / 2, ic, ic);
+      g.fillStyle = ink;
+      g.fillText(txt, wxX + ic + s * 0.35, base);
     }
     g.globalAlpha = 1;
 
@@ -627,7 +643,8 @@
       g.globalAlpha = 1;
     }
 
-    // Signature du site
+    // Signature du site (et sources : fond de carte, météo)
+    const attr = [bgAttr, show.has('meteo') && wx ? 'Météo Open-Meteo' : ''].filter(Boolean).join(' · ');
     if (L.brand.h) {
       const { x, y: by, h, w } = L.brand;
       const s = Math.round(h * 0.42);
@@ -637,16 +654,16 @@
       g.fillText(SITE.name, tx, by + h * 0.5);
       g.fillStyle = inkSoft; g.font = `500 ${Math.round(s * 0.78)}px ${SITE.fontSans}`;
       g.fillText(SITE.tagline, tx, by + h * 0.5 + s * 1.15);
-      if (bgAttr) {
+      if (attr) {
         const as = Math.round(s * 0.62);
         g.font = `500 ${as}px ${SITE.fontSans}`; g.textAlign = 'right'; g.fillStyle = inkSoft;
-        g.fillText(bgAttr, x + w, by + h * 0.5 + s * 1.15);
+        g.fillText(attr, x + w, by + h * 0.5 + s * 1.15);
         g.textAlign = 'left';
       }
-    } else if (bgAttr) {
+    } else if (attr) {
       const as = Math.round(L.titleSize * 0.22);
       g.font = `500 ${as}px ${SITE.fontSans}`; g.textAlign = 'right'; g.fillStyle = inkSoft;
-      g.fillText(bgAttr, W - L.pad * 0.5, H - L.pad * 0.4); g.textAlign = 'left';
+      g.fillText(attr, W - L.pad * 0.5, H - L.pad * 0.4); g.textAlign = 'left';
     }
     g.restore();
   }
@@ -1356,6 +1373,8 @@
   async function open({ rando, track, site }) {
     if (!dlg) build();
     R = rando; TRACK = track; SITE = { ...site };
+    wx = null;
+    loadWeather(rando);
     if (site.logoUrl) { SITE.logo = new Image(); SITE.logo.src = site.logoUrl; }
     geo = prepareTrack(track);
     const saved = store.get();
@@ -1363,6 +1382,8 @@
     // Anciens réglages : couleur libre ou cases « rythme / pente » → nouveau choix unique, rythme par défaut
     if (!saved.tc2) { opts.trackColor = 'pace'; opts.tc2 = 1; }
     delete opts.customColor; delete opts.pace; delete opts.slope;
+    // Réglages enregistrés avant l'option « Météo du jour » : on l'ajoute une fois (décochable ensuite)
+    if (!saved.wx1) { if (!opts.show.includes('meteo')) opts.show = [...opts.show, 'meteo']; opts.wx1 = 1; }
     if (opts.bg === 'blog' && !(R.blog && R.blog.image)) opts.bg = 'plan';
     if (opts.bg === 'perso' && !userPhoto) opts.bg = 'plan';
     bgKey = ''; bgCanvas = null; blogPhoto = null; lastBlob = null; lastKey = ''; ready = null;
@@ -1374,6 +1395,19 @@
     try { await document.fonts.load(`700 40px ${SITE.fontDisplay}`); await document.fonts.load(`800 40px ${SITE.fontSans}`); } catch { /* polices système */ }
     await render();
     if (opts.mode === 'video') togglePreview();
+  }
+
+  // Météo du jour (en arrière-plan) : l'aperçu se redessine dès qu'elle arrive
+  async function loadWeather(r) {
+    const M = window.RTMeteo;
+    if (!M || !M.summary) return;
+    const s = await M.summary(r);
+    if (!s || R !== r) return;
+    const img = await M.pictoImage(s.kind);
+    if (R !== r) return;
+    wx = { ...s, img };
+    lastBlob = null;
+    if (dlg && dlg.open && opts.show.includes('meteo')) schedule();
   }
 
   window.RTShare = { open, close, makeImage, makeVideo, shareTo }; // makeImage / makeVideo : contrôle et tests

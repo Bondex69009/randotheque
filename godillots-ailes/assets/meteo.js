@@ -358,5 +358,33 @@
     });
   }
 
-  window.RTMeteo = { html, mount, sunTimes, parisMidnight, picto, pausesFor, picnicFor };
+  // Résumé de la météo du jour de la rando, pour l'image et la vidéo de partage (assets/share.js) :
+  // { kind, label, tmax, tmin, status } ou null (trop loin dans le futur, pas de données, hors connexion)
+  async function summary(r) {
+    if (!r || !r.start || !r.date) return null;
+    try {
+      const w = await fetchWeather(r.start[0], r.start[1], r.date);
+      if (!w || (w.status !== 'forecast' && w.status !== 'observed')) return null;
+      const [kind, label] = wmo(w.code);
+      return { kind, label, tmax: Math.round(w.tmax), tmin: Math.round(w.tmin), status: w.status };
+    } catch { return null; }
+  }
+  // Picto sans animation, couleurs comprises : en image SVG autonome (à dessiner sur un canvas)
+  const STATIC_CSS = '.wx-sun circle{fill:#ffc83d}.wx-rays line{stroke:#ffc83d;stroke-width:3.2;stroke-linecap:round}'
+    + '.wx-moon{fill:#f3e7b5}.wx-cloud{fill:#eef3f8;stroke:#9fb0c2;stroke-width:1.4}.wx-cloud--back{fill:#cfd9e4}'
+    + '.wx-cloud--grey{fill:#c9d3de;stroke:#8797a9}.wx-cloud--dark{fill:#8392a5;stroke:#5f6d80}'
+    + '.wx-drop{stroke:#4fb3ff;stroke-width:3;stroke-linecap:round}.wx-drop--small{stroke-width:2}'
+    + '.wx-flake{fill:#fff;stroke:#8fb6d8;stroke-width:1}.wx-bolt{fill:#ffd43b;stroke:#e0a800;stroke-width:1;stroke-linejoin:round}'
+    + '.wx-fog{stroke:#b6c3d1;stroke-width:3;stroke-linecap:round}';
+  function pictoImage(kind, size = 128) {
+    const svgTxt = picto(kind, { size }).replace('<svg ', `<svg xmlns="http://www.w3.org/2000/svg" `).replace('>', `><style>${STATIC_CSS}</style>`);
+    return new Promise((resolve) => {
+      const im = new Image();
+      im.onload = () => resolve(im);
+      im.onerror = () => resolve(null);
+      im.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svgTxt)}`;
+    });
+  }
+
+  window.RTMeteo = { html, mount, sunTimes, parisMidnight, picto, pausesFor, picnicFor, summary, pictoImage };
 })();

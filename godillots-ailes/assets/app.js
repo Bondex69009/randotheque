@@ -1649,7 +1649,7 @@
     const label = btn && $('.btn__label', btn);
     if (btn) { btn.disabled = true; if (label) label.textContent = 'Chargement…'; }
     try {
-      await Promise.all([loadAsset('assets/share.css?v=10', true), loadAsset('assets/share.js?v=23')]);
+      await Promise.all([loadAsset('assets/share.css?v=10', true), loadAsset('assets/share.js?v=24')]);
       const track = await loadTrack(id);
       stopAudio();
       window.RTShare.open({
