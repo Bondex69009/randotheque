@@ -1,7 +1,61 @@
 {
-  "generatedAt": "2026-11-20T11:59:11.441Z",
+  "generatedAt": "2026-11-20T13:05:24.082Z",
   "source": "https://godillotsailes.blogspot.com",
   "items": [
+    {
+      "key": "drive:1iLYEa8RAHJVer4p15r3RHaSg-h6D65Jy",
+      "downloadUrl": "https://drive.google.com/uc?export=download&id=1iLYEa8RAHJVer4p15r3RHaSg-h6D65Jy",
+      "sourceUrl": "https://drive.google.com/file/d/1iLYEa8RAHJVer4p15r3RHaSg-h6D65Jy/view?usp=sharing",
+      "name": "DOMESSARGUES (30)",
+      "date": "2026-11-22",
+      "ibp": 53,
+      "ibpColor": null,
+      "declared": null,
+      "animateurs": "Alain - Marc",
+      "departements": [
+        "30-GARD"
+      ],
+      "cancelled": false,
+      "image": "https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEhJBRIf7pbs3Rdf9Oepzb00zLuy-u_syKYQ2TV5DRTPlvla8zf1l7vCdXKrG4crl5PGyCDfdc4ug7JRfLE6IpIMGWAHdtSQpuGd2DBY-mh9aFLp3c1t95ys6-cVWlhfJDL5PPRMLUXJ2sA8TLb1NQ7hSZg2Xf6l_oGm42t9pSNyrc0yNClOiQSmaKLQKhE/w640-h360-c/Boucouran.jpg",
+      "audio": [
+        {
+          "key": "drive:116xgPd0i3IyszXXaF5p8f3lJIrfcqP_y",
+          "downloadUrl": "https://drive.google.com/uc?export=download&id=116xgPd0i3IyszXXaF5p8f3lJIrfcqP_y",
+          "sourceUrl": "https://drive.google.com/file/d/116xgPd0i3IyszXXaF5p8f3lJIrfcqP_y/view?usp=sharing",
+          "label": "PRESENTATION - Audio 2'03\"",
+          "seconds": 123,
+          "file": "2026-11-22_domessargues-2.mp3"
+        }
+      ],
+      "albums": null,
+      "maps": [
+        {
+          "url": "https://maps.app.goo.gl/TUuEeLBJjnwHpTiD7",
+          "label": "Vue Parking",
+          "kind": "parking",
+          "lat": 43.975661,
+          "lon": 4.1702
+        },
+        {
+          "url": "https://maps.app.goo.gl/SS1NNf1NEp36v3sc8",
+          "label": "43°58'32.38\"N 4°10'12.72\"E",
+          "kind": "autre",
+          "lat": 43.975661,
+          "lon": 4.1702
+        }
+      ],
+      "post": {
+        "id": "4397070081192667742",
+        "title": "Dimanche 22 novembre 2026 - Prochaine sortie ...",
+        "url": "https://godillotsailes.blogspot.com/2026/11/dimanche-22-novembre-2026-prochaine.html",
+        "published": "2026-11-20T14:00:00.000+01:00"
+      },
+      "outings": [
+        "2026-11-22"
+      ],
+      "originalName": "Piste_2019-11-13-Domessargues-15h30.gpx",
+      "file": "2026-11-22_domessargues-30-2.gpx"
+    },
     {
       "key": "drive:1FHIeYn2Z_OLD2RenwQTTGDzXZqxaD2eb",
       "downloadUrl": "https://drive.google.com/uc?export=download&id=1FHIeYn2Z_OLD2RenwQTTGDzXZqxaD2eb",
@@ -566,8 +620,8 @@
       "outings": [
         "2026-09-25"
       ],
-      "originalName": "Piste_2026-09-25-Candillargues-Etang de l_OR-12h05.gpx",
-      "file": "2026-09-25_candillargues-34-l-etang-de-l-or.gpx"
+      "file": "2026-09-25_candillargues-34-l-etang-de-l-or.gpx",
+      "originalName": "Piste_2026-09-25-Candillargues-Etang de l_OR-12h05.gpx"
     },
     {
       "key": "drive:1HfLMUhh_kxU2eyC1utB_hvqBFrA4NJV1",
