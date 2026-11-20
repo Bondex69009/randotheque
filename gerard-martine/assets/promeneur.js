@@ -11,10 +11,11 @@
   if (reduce && reduce.matches) return;
 
   const SIZE = 46;            // taille du randonneur (px)
-  const SPEED = 42;           // vitesse de marche (px/s)
+  const SPEED = 48;           // vitesse de marche (px/s)
   const HOP_MS = 650;         // durée d'un saut vers un bloc voisin
-  const HOP_DX = 70;          // écart horizontal maximal entre deux blocs pour sauter (px)
-  const HOP_DY = 110;         // écart vertical maximal (px)
+  const HOP_DX = 110;         // écart horizontal maximal entre deux blocs pour sauter (px)
+  const HOP_DY = 150;         // écart vertical maximal (px)
+  const STAY = [9000, 16000]; // temps maximal sur un même bloc avant d'aller voir ailleurs (ms)
   const SELECTORS = [
     '.card', '.hero-total', '.hero-stats > div', '.btn', '.chip', '.segmented', '.search', '.toolbar',
     '.overview-map', '.evo', '.elsewhere', '.detail h2', 'main h1', 'main h2', 'main h3', '.site-footer', '.brand',
@@ -87,6 +88,7 @@
   let x = -100, y = -100;
   let last = 0;
   let nextCheck = 0;
+  let leaveAt = 0;         // moment où il cherche à quitter le bloc
 
   const face = (d) => { dir = d; flip.style.transform = d < 0 ? 'scaleX(-1)' : ''; };
   const show = (on) => el.classList.toggle('is-visible', on);
@@ -97,7 +99,10 @@
 
   const newGoal = (r) => {
     const margin = Math.min(14, r.width / 4);
-    goal = rand(margin, r.width - margin);
+    // Plutôt loin de là où il est : il traverse le bloc au lieu de piétiner
+    const lo = margin, hi = r.width - margin;
+    const far = offset - lo > hi - offset ? [lo, lo + (hi - lo) * 0.35] : [hi - (hi - lo) * 0.35, hi];
+    goal = Math.random() < 0.75 ? rand(far[0], far[1]) : rand(lo, hi);
     face(goal >= offset ? 1 : -1);
   };
 
@@ -108,10 +113,11 @@
     const list = candidates(null).filter((t) => reachable(t));
     if (!list.length) { until = now + 1500; return; }
     target = list[Math.floor(Math.random() * list.length)];
+    leaveAt = now + rand(STAY[0], STAY[1]);
     const r = target.getBoundingClientRect();
     offset = rand(Math.min(14, r.width / 4), r.width - Math.min(14, r.width / 4));
     face(Math.random() < 0.5 ? 1 : -1);
-    mode = 'rest'; rest(true); until = now + rand(500, 1100);
+    mode = 'rest'; rest(true); until = now + rand(300, 700);
     place(r.left + offset, r.top);
     show(true);
   };
@@ -129,7 +135,7 @@
   const startPause = (now) => {
     const name = Math.random() < 0.8 ? POSE_NAMES[Math.floor(Math.random() * POSE_NAMES.length)] : null;
     mode = 'rest'; rest(true, name);
-    until = now + (name ? rand(2600, 5200) : rand(900, 2000));
+    until = now + (name ? rand(2000, 3800) : rand(600, 1300));
   };
 
   function place(px, py) {
@@ -153,7 +159,7 @@
       const arc = Math.min(45, 18 + Math.hypot(tx - hop.from.x, ty - hop.from.y) * 0.25) + Math.max(0, hop.from.y - ty) * 0.5;
       place(hop.from.x + (tx - hop.from.x) * e, hop.from.y + (ty - hop.from.y) * e - Math.sin(Math.PI * k) * arc);
       if (k >= 1) {
-        target = hop.to; offset = hop.toOffset; hop = null;
+        target = hop.to; offset = hop.toOffset; hop = null; leaveAt = now + rand(STAY[0], STAY[1]);
         if (!reachable(target, tx)) goAway(now, 600);
         else { mode = 'walk'; newGoal(r); }
       }
@@ -166,12 +172,15 @@
         if ((dir > 0 && offset >= goal) || (dir < 0 && offset <= goal)) {
           offset = goal;
           const roll = Math.random();
-          if (roll < 0.3) startPause(now);
-          else if (!(roll < 0.45 && hopToNeighbour(now))) newGoal(r);
+          if (now >= leaveAt) {
+            // Assez vu ce bloc : il passe sur un voisin, ou à défaut s'éclipse pour réapparaître ailleurs
+            if (!hopToNeighbour(now)) goAway(now, rand(400, 900));
+          } else if (roll < 0.22) startPause(now);
+          else if (!(roll < 0.5 && hopToNeighbour(now))) newGoal(r);
         }
       } else if (mode === 'rest' && now >= until) {
         rest(false);
-        if (!(Math.random() < 0.12 && hopToNeighbour(now))) { mode = 'walk'; newGoal(r); }
+        if (!(Math.random() < 0.35 && hopToNeighbour(now))) { mode = 'walk'; newGoal(r); }
       }
       if (mode === 'walk' || mode === 'rest') {
         place(r.left + offset, r.top);
