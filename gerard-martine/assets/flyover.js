@@ -177,6 +177,17 @@
       }
       return v;
     },
+    // Applique une matrice à un lot de sommets (positions + normales), pour poser une pièce de biais
+    xf(v, m) {
+      const o = [];
+      for (let i = 0; i < v.length; i += 6) {
+        const [x, y, z, nx, ny, nz] = v.slice(i, i + 6);
+        o.push(m[0] * x + m[4] * y + m[8] * z + m[12], m[1] * x + m[5] * y + m[9] * z + m[13], m[2] * x + m[6] * y + m[10] * z + m[14]);
+        const a = m[0] * nx + m[4] * ny + m[8] * nz, b = m[1] * nx + m[5] * ny + m[9] * nz, c = m[2] * nx + m[6] * ny + m[10] * nz, l = Math.hypot(a, b, c) || 1;
+        o.push(a / l, b / l, c / l);
+      }
+      return o;
+    },
     box(w, d, h, cy, z0, cx = 0) {
       const x0 = cx - w / 2, x1 = cx + w / 2, y0 = cy - d / 2, y1 = cy + d / 2, z1 = z0 + h, v = [];
       const q = (a, b, c, e, n) => v.push(...a, ...n, ...b, ...n, ...c, ...n, ...a, ...n, ...c, ...n, ...e, ...n);
@@ -214,6 +225,39 @@
   // le duvet roulé sur le sac est couché à l'horizontale
   const ROLL_AT = M4.mul(M4.t(0, -0.21, 0.6), M4.ry(Math.PI / 2));
 
+  // Godillot ailé (l'emblème des Godillots Ailés) : chaussure de rando qui vole au-dessus de la trace
+  // en battant des ailes. Mêmes unités que le randonneur (environ 1,9 de haut, y = avant).
+  const feather = (len, wid, ang, off) => GEO.xf(
+    [...GEO.box(len, wid, 0.03, 0, -0.015, len / 2), ...GEO.xf(GEO.ball(wid / 2, wid / 2, 0.015, 0), M4.t(len, 0, 0))],
+    M4.mul(M4.t(0, off, 0), M4.rz(ang)),
+  );
+  const BOOT_PARTS = {
+    sole: { c: 'sole', g: () => [...GEO.box(0.5, 1.2, 0.12, 0.04, 0), ...GEO.xf(GEO.ball(0.25, 0.2, 0.06, 0.06), M4.t(0, 0.62, 0))] },
+    foot: { c: 'leather', g: () => [...GEO.box(0.46, 1.0, 0.34, 0.02, 0.12), ...GEO.ball(0.23, 0.3, 0.2, 0.3, 0.5)] },
+    toe: { c: 'cap', g: () => GEO.ball(0.245, 0.24, 0.13, 0.2, 0.6) },
+    shaft: { c: 'leather', g: () => GEO.tube(0.25, 0.3, 0.27, 0.3, 0.3, 1.02, 16, -0.26) },
+    collar: { c: 'cap', g: () => GEO.tube(0.29, 0.33, 0.29, 0.33, 0.98, 1.12, 16, -0.26) },
+    tongue: { c: 'cap', g: () => GEO.box(0.22, 0.06, 0.62, 0.05, 0.5) },
+    laces: { c: 'lace', g: () => [0.58, 0.7, 0.82, 0.94].flatMap((z) => GEO.box(0.3, 0.05, 0.035, 0.08, z)) },
+    // Aile droite, charnière à l'origine, plumes en éventail vers l'extérieur (+x) et l'arrière
+    wing: { c: 'wing', g: () => [
+      ...GEO.xf(GEO.ball(0.32, 0.2, 0.06, 0), M4.t(0.26, 0, 0)),
+      ...[[0.95, 0.15, 0.32], [0.9, 0.03, 0.18], [0.82, -0.09, 0.04], [0.7, -0.21, -0.1], [0.56, -0.32, -0.22]]
+        .flatMap(([len, ang, off]) => feather(len, 0.15, ang, off)),
+    ] },
+    shadow: HIKER_PARTS.shadow,
+  };
+
+  // Visuel qui suit la trace, au choix (gardé sur l'appareil)
+  const AVATARS = [
+    { id: 'hiker', label: 'Randonneur 3D' },
+    { id: 'boot', label: 'Godillot ailé' },
+    { id: 'dot', label: 'Point simple' },
+  ];
+  const AV_KEY = 'rt-fly-avatar';
+  const loadAvatar = () => { try { const v = localStorage.getItem(AV_KEY); if (AVATARS.some((a) => a.id === v)) return v; } catch (e) { /* stockage bloqué */ } return 'hiker'; };
+  const saveAvatar = (v) => { try { localStorage.setItem(AV_KEY, v); } catch (e) { /* stockage bloqué */ } };
+
   const hexRgb = (h) => {
     const m = /^#?([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(String(h).trim());
     if (!m) return [0.53, 0.97, 0];
@@ -231,29 +275,32 @@
   // Couche : hikers = [{ color, pos(), heading(), grade(), moving() }]
   function hikerLayer(map, hikers, onReady) {
     let prog, parts, loc, last = 0, vaoExt;
-    const st = hikers.map(() => ({ ph: 0, amp: 0, head: null, lean: 0 }));
+    const st = hikers.map(() => ({ ph: 0, amp: 0, head: null, lean: 0, flap: 0 }));
     const VS = 'attribute vec3 aP;attribute vec3 aN;uniform mat4 uM;uniform mat4 uL;varying vec3 vN;void main(){vN=(uL*vec4(aN,0.)).xyz;gl_Position=uM*vec4(aP,1.);}';
     const FS = 'precision mediump float;varying vec3 vN;uniform vec4 uC;uniform vec3 uS;uniform float uF;void main(){vec3 n=normalize(vN);float d=max(dot(n,uS),0.);float r=pow(max(dot(n,normalize(uS+vec3(0.,0.,1.))),0.),12.);vec3 c=uC.rgb*(.42+.7*d)+vec3(r*.12);gl_FragColor=vec4(mix(c,uC.rgb,uF),uC.a);}';
     const palette = (shirt) => ({
       shirt: [...hexRgb(shirt), 1], pants: [0.24, 0.28, 0.33, 1], boot: [0.3, 0.2, 0.13, 1], skin: [0.88, 0.67, 0.52, 1],
       hat: [0.78, 0.69, 0.5, 1], pack: [0.85, 0.36, 0.16, 1], roll: [0.17, 0.32, 0.44, 1], pole: [0.72, 0.74, 0.76, 1], shadow: [0, 0, 0, 0.32],
+      leather: [0.62, 0.4, 0.22, 1], cap: [0.38, 0.23, 0.12, 1], sole: [0.13, 0.11, 0.1, 1], lace: [...hexRgb(shirt), 1], wing: [0.97, 0.96, 0.93, 1],
     });
     const cols = hikers.map((h) => palette(h.color));
 
     function draw(gl, P, part, col, L) {
       const p = parts[part];
+      const def = HIKER_PARTS[part] || BOOT_PARTS[part];
       gl.bindBuffer(gl.ARRAY_BUFFER, p.buf);
       gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 24, 0);
       gl.vertexAttribPointer(1, 3, gl.FLOAT, false, 24, 12);
       gl.uniformMatrix4fv(loc.uM, false, M4.mul(P, L));
       gl.uniformMatrix4fv(loc.uL, false, L);
-      gl.uniform4fv(loc.uC, col[HIKER_PARTS[part].c]);
-      gl.uniform1f(loc.uF, HIKER_PARTS[part].flat ? 1 : 0);
+      gl.uniform4fv(loc.uC, col[def.c]);
+      gl.uniform1f(loc.uF, def.flat ? 1 : 0);
       gl.drawArrays(gl.TRIANGLES, 0, p.count);
     }
 
-    return {
+    const layer = {
       id: 'hikers-3d', type: 'custom', renderingMode: '3d',
+      mode: loadAvatar(),
       onAdd(m, gl) {
         const sh = (type, src) => { const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s); return s; };
         prog = gl.createProgram();
@@ -265,7 +312,7 @@
         if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) throw new Error('randonneur 3D : shader');
         loc = Object.fromEntries(['uM', 'uL', 'uC', 'uS', 'uF'].map((u) => [u, gl.getUniformLocation(prog, u)]));
         parts = {};
-        for (const [k, def] of Object.entries(HIKER_PARTS)) {
+        for (const [k, def] of Object.entries({ ...HIKER_PARTS, ...BOOT_PARTS })) {
           const data = new Float32Array(def.g());
           const buf = gl.createBuffer();
           gl.bindBuffer(gl.ARRAY_BUFFER, buf);
@@ -276,6 +323,8 @@
         onReady && onReady();
       },
       render(gl, args) {
+        if (layer.mode === 'dot') return;
+        const boot = layer.mode === 'boot';
         const P = args?.defaultProjectionData?.mainMatrix || args?.modelViewProjectionMatrix || args;
         const now = performance.now();
         const dt = Math.min(0.1, (now - (last || now)) / 1000);
@@ -332,6 +381,24 @@
           draw(gl, W, 'shadow', col, R);
           gl.depthMask(true); gl.enable(gl.DEPTH_TEST); gl.depthFunc(gl.LEQUAL);
 
+          if (boot) {
+            // Vol stationnaire qui ondule ; battements plus rapides et plus amples en marche
+            s.flap += dt * Math.PI * 2 * (still ? 0 : 0.7 + 1.6 * a);
+            if (!still) animating = true;
+            const fl = still ? 0.35 : 0.3 + (0.25 + 0.35 * a) * Math.sin(s.flap);
+            const hover = 0.3 + (still ? 0 : 0.07 * Math.sin(s.flap + 1.2));
+            const pitchUp = clamp(g, -25, 25) * 0.012;
+            // Tourné de trois quarts (pointe vers la droite de l'écran) : la caméra suit de dos, on voit ainsi
+            // la chaussure de profil plutôt qu'un simple talon
+            const body = M4.mul(R, M4.t(0, 0, hover), M4.rz(-1.15), M4.s(1.3, 1.3, 1.3), M4.rx(pitchUp), M4.ry(0.05 * a * Math.sin(s.flap * 0.5)));
+            ['sole', 'foot', 'toe', 'shaft', 'collar', 'tongue', 'laces'].forEach((pt) => draw(gl, W, pt, col, body));
+            // Ailes accrochées de part et d'autre de la tige, l'une en miroir de l'autre
+            [1, -1].forEach((side) => {
+              const hinge = M4.mul(body, M4.t(side * 0.27, -0.36, 0.86), M4.s(side, 1, 1), M4.rz(-0.75), M4.ry(-fl));
+              draw(gl, W, 'wing', col, hinge);
+            });
+            return;
+          }
           const bob = 0.035 * a * Math.abs(cw);
           const pelvis = M4.mul(R, M4.t(0, 0, 0.98 + bob));
           [[-1, 1], [1, -1]].forEach(([side, sg]) => {
@@ -372,6 +439,44 @@
         gl.deleteProgram(prog);
       },
     };
+    return layer;
+  }
+
+  // Bouton « Visuel » de la barre + petit menu (randonneur 3D, godillot ailé ou point simple)
+  function avatarButton() {
+    const cur = loadAvatar();
+    return `<div class="fo__av">
+            <button type="button" class="fo__btn fo__btn--pill" data-fo="avatar" aria-haspopup="true" aria-expanded="false" aria-controls="fo-av-menu" title="Choisir ce qui suit la trace">${ICON.avatar}<span>Visuel</span></button>
+            <div class="fo__av-menu fo__card" id="fo-av-menu" role="menu" aria-label="Ce qui suit la trace" hidden>
+              ${AVATARS.map((v) => `<button type="button" role="menuitemradio" class="fo__av-item" data-avatar="${v.id}" aria-checked="${v.id === cur}">${ICON['av_' + v.id]}<span>${v.label}</span></button>`).join('')}
+            </div>
+          </div>`;
+  }
+  // walkers : éléments du point (repli si le 3D ne s'affiche pas) ; ready() : le calque 3D est prêt
+  function wireAvatar(dlg, map, layer, walkers, ready) {
+    const btn = dlg.querySelector('[data-fo="avatar"]'), menu = dlg.querySelector('#fo-av-menu');
+    const show = (open) => { menu.hidden = !open; btn.setAttribute('aria-expanded', String(open)); };
+    const apply = () => walkers().forEach((el) => el.classList.toggle('is-3d', ready() && layer.mode !== 'dot'));
+    dlg.addEventListener('click', (e) => {
+      if (e.target.closest('[data-fo="avatar"]')) { show(menu.hidden); if (!menu.hidden) menu.querySelector('[aria-checked="true"]')?.focus(); return; }
+      const it = e.target.closest('[data-avatar]');
+      if (it) {
+        layer.mode = it.dataset.avatar; saveAvatar(layer.mode);
+        menu.querySelectorAll('[data-avatar]').forEach((x) => x.setAttribute('aria-checked', String(x === it)));
+        show(false); btn.focus(); apply(); map.triggerRepaint();
+        return;
+      }
+      if (!menu.hidden && !e.target.closest('#fo-av-menu')) show(false);
+    });
+    menu.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); show(false); btn.focus(); }
+      else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        const items = [...menu.querySelectorAll('[data-avatar]')], i = items.indexOf(document.activeElement);
+        items[(i + (e.key === 'ArrowDown' ? 1 : items.length - 1)) % items.length].focus();
+      }
+    });
+    return apply;
   }
 
   // ---------------------------------------------------------------- Interface
@@ -384,6 +489,10 @@
     layers: '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="m12 3 9 5-9 5-9-5 9-5Z"/><path d="m3 13 9 5 9-5"/></svg>',
     code: '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m8 7-5 5 5 5M16 7l5 5-5 5M14 4l-4 16"/></svg>',
     ext: '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>',
+    avatar: '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="2"/><path d="m10 21 2-7 3 3v4M9 11l3-3 3 2 2 1M12 8l-1 6"/></svg>',
+    av_hiker: '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="2"/><path d="m10 21 2-7 3 3v4M9 11l3-3 3 2 2 1M12 8l-1 6M18 12v9"/></svg>',
+    av_boot: '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6v9H5a2 2 0 0 0-2 2v2h15a2 2 0 0 0 2-2c0-2-2-3-4-3h-2V6Z"/><path d="M13 8c3-3 6-4 8-4-1 2-3 4-6 6M13 11c3-1 5-1 7 0"/></svg>',
+    av_dot: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="5" fill="currentColor"/><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.5" opacity=".5"/></svg>',
     full: '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>',
   };
 
@@ -447,6 +556,7 @@
           </div>
           <span class="fo__spacer"></span>
           <button type="button" class="fo__btn fo__btn--pill" data-fo="follow" hidden>${ICON.cam}<span>Suivre la trace</span></button>
+          ${avatarButton()}
           <button type="button" class="fo__btn fo__btn--pill" data-fo="base" aria-label="Changer de fond de carte">${ICON.layers}<span id="fo-base-label">Carte</span></button>
         </div>
         <div class="fo__profile" id="fo-profile" role="slider" tabindex="0" aria-label="Position sur le profil de l'étape"
@@ -626,10 +736,12 @@
     if (!o.loop) mk('<span>A</span>', 'fo-flag fo-flag--end', S.pos(total)).getElement().title = 'Arrivée';
     const walker = mk('<span class="fo-walker__pulse"></span><span class="fo-walker__dot"></span>', 'fo-walker', S.pos(0), 'center');
     walker.getElement().style.setProperty('--fo-c', color);
+    let ready3d = false;
     const hiker3d = hikerLayer(map, [{
       color, pos: () => S.pos(d), heading: () => headingAt(S, total, d), grade: () => S.grade(d),
       moving: () => phase === 'run' && playing && d < total,
-    }], () => walker.getElement().classList.add('is-3d'));
+    }], () => { ready3d = true; applyAvatar(); });
+    const applyAvatar = wireAvatar(dlg, map, hiker3d, () => [walker.getElement()], () => ready3d);
 
     // État de lecture
     let d = 0, speed = 1, playing = false, phase = 'intro', follow = true, raf = 0, last = 0, hudAt = 0;
@@ -881,6 +993,7 @@
             <button type="button" class="fo__chip" data-cam="both" aria-pressed="true" title="Cadrer les deux randonneurs">Les deux</button>
             ${R.map((r, i) => `<button type="button" class="fo__chip fo-duel__cam" data-cam="${i}" aria-pressed="false" style="--fo-c:${r.color}" title="Suivre ${esc(r.title)}"><i aria-hidden="true"></i><span>Suivre</span></button>`).join('')}
           </div>
+          ${avatarButton()}
           <button type="button" class="fo__btn fo__btn--pill" data-fo="base" aria-label="Changer de fond de carte">${ICON.layers}<span id="fo-base-label">Carte</span></button>
         </div>
         <div class="fo__profile" id="fo-profile" role="slider" tabindex="0" aria-label="Temps de marche écoulé"
@@ -1051,7 +1164,9 @@
         color: r.color, pos: () => r.S.pos(at()), heading: () => headingAt(r.S, r.T.total, at()), grade: () => r.S.grade(at()),
         moving: () => phase === 'run' && playing && t < r.tl.end,
       };
-    }), () => R.forEach((r) => r.walker.getElement().classList.add('is-3d')));
+    }), () => { ready3d = true; applyAvatar(); });
+    let ready3d = false;
+    const applyAvatar = wireAvatar(dlg, map, hiker3d, () => R.map((r) => r.walker.getElement()), () => ready3d);
 
     // État : horloge commune (minutes de marche), caméra « les deux » ou qui suit l'un des deux
     let t = 0, speed = 1, playing = false, phase = 'intro', camMode = 'both', follow = true, raf = 0, last = 0, hudAt = 0;

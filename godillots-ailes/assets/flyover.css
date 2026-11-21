@@ -225,3 +225,35 @@
   .fo--embed .fo__hud dt { font-size: 0.5625rem; }
   .fo--embed .fo__profile { height: 6.5rem; }
 }
+
+/* ---------------------------------------------- Choix du visuel qui suit la trace */
+.fo__av { position: relative; }
+.fo__av-menu {
+  position: absolute; right: 0; bottom: calc(100% + var(--space-2)); z-index: 5; min-width: 13rem;
+  display: grid; gap: 2px; padding: var(--space-1);
+  background: color-mix(in srgb, var(--c-bg) 92%, transparent);
+}
+.fo__av-menu[hidden] { display: none; }
+.fo__av-item {
+  display: flex; align-items: center; gap: var(--space-2); width: 100%; min-height: var(--tap); padding: 0 var(--space-3);
+  border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--c-text);
+  font: var(--fw-semibold) var(--fs-sm) var(--font-sans); text-align: left; cursor: pointer;
+}
+.fo__av-item svg { width: 1.25rem; height: 1.25rem; flex: none; color: var(--c-text-muted); }
+.fo__av-item:hover, .fo__av-item:focus-visible { background: var(--c-surface-3); outline: none; }
+.fo__av-item[aria-checked="true"] { color: var(--c-accent); }
+.fo__av-item[aria-checked="true"] svg { color: var(--c-accent); }
+.fo__av-item[aria-checked="true"]::after { content: "✓"; margin-left: auto; font-weight: var(--fw-bold); }
+@media (max-width: 640px) {
+  .fo__av-menu .fo__av-item span { display: inline; }
+}
+/* Petits téléphones : la barre garde tous ses boutons sur une ligne */
+@media (max-width: 400px) {
+  .fo__bar { gap: 0.25rem; }
+  .fo__chip { min-width: 1.875rem; }
+}
+/* Duel : barre plus chargée (caméras), les boutons Visuel et Carte gardent seulement leur icône sous 960 px */
+@media (max-width: 960px) {
+  .fo--duel .fo__bar > .fo__btn--pill span, .fo--duel .fo__av > .fo__btn--pill span { display: none; }
+  .fo--duel .fo__bar > .fo__btn--pill, .fo--duel .fo__av > .fo__btn--pill { padding-inline: 0; width: var(--tap); }
+}

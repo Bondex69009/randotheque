@@ -82,8 +82,8 @@
         if (!id) throw new Error('rando');
         await Promise.all([
           load(`https://unpkg.com/maplibre-gl@${ML_VER}/dist/maplibre-gl.css`, true),
-          load('assets/flyover.css?v=12', true),
-          load(`https://unpkg.com/maplibre-gl@${ML_VER}/dist/maplibre-gl.js`).then(() => load('assets/flyover.js?v=12')),
+          load('assets/flyover.css?v=13', true),
+          load(`https://unpkg.com/maplibre-gl@${ML_VER}/dist/maplibre-gl.js`).then(() => load('assets/flyover.js?v=13')),
           window.RANDOTHEQUE ? null : load(DATA),
         ]);
         const r = (window.RANDOTHEQUE && window.RANDOTHEQUE.randos || []).find((x) => x.id === id);
