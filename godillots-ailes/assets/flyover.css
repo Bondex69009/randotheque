@@ -282,3 +282,9 @@
   .fo__wx-ico { width: 1.75rem; height: 1.75rem; }
   .fo__wx b { font-size: var(--fs-md); }
 }
+/* Iframe peu haute : le bandeau de chiffres occupe le bas à gauche, la météo et la commune passent en haut à gauche */
+@media (max-height: 640px) {
+  .fo--embed .fo__info { bottom: auto; top: 5rem; padding: 0.375rem var(--space-3); max-width: calc(100% - 4.5rem); }
+  .fo--embed .fo__wx-ico { width: 1.75rem; height: 1.75rem; }
+  .fo--embed .fo__wx b { font-size: var(--fs-md); }
+}
