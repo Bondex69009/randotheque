@@ -1,8 +1,9 @@
 #!/usr/bin/env node
-// Récupère automatiquement les fichiers GPX publiés sur les deux blogs de Gérard & Martine,
+// Récupère automatiquement les fichiers GPX publiés sur les trois blogs de Gérard & Martine,
 // avec les infos de chaque sortie (nom, date, IBP, département, itinéraire GR, photos, parking...).
 //   - https://photosge30132.blogspot.com : Randonnées & Photos de Gé (plusieurs randos par article)
 //   - https://gr-ge-30132.blogspot.com   : Nos chemins en itinérance (étapes des GR)
+//   - https://ge-30132.blogspot.com      : Gé & Martine (randos depuis octobre 2021, une par article)
 //
 //   node scripts/scrape-blog.mjs            → met à jour (ne retélécharge que le nouveau)
 //   node scripts/scrape-blog.mjs --refresh  → relit tous les articles
@@ -22,6 +23,7 @@ import {
 export const BLOGS = [
   { id: 'photos', url: 'https://photosge30132.blogspot.com', name: 'Randonnées & Photos de Gé' },
   { id: 'gr', url: 'https://gr-ge-30132.blogspot.com', name: 'Nos chemins en itinérance' },
+  { id: 'ge', url: 'https://ge-30132.blogspot.com', name: 'Gé & Martine' },
 ];
 const REFRESH = process.argv.includes('--refresh');
 // --recent=10 : relit de force les articles des 10 dernières randos et retélécharge leurs GPX / audios

@@ -35,7 +35,13 @@ const TOTAL_REF = { km: 0, date: '0000-00-00' };
 const DEFAULT_BLOGS = [
   { id: 'photos', url: 'https://photosge30132.blogspot.com', name: 'Randonnées & Photos de Gé' },
   { id: 'gr', url: 'https://gr-ge-30132.blogspot.com', name: 'Nos chemins en itinérance' },
+  { id: 'ge', url: 'https://ge-30132.blogspot.com', name: 'Gé & Martine' },
 ];
+// Blog d'origine d'une rando ; publiée sur plusieurs blogs : GR d'abord, puis Randos & Photos, puis Gé & Martine
+const blogSource = (blog) => {
+  const sites = blog.sites || [blog.site];
+  return sites.includes('gr') ? 'gr' : sites.includes('photos') ? 'photos' : sites.includes('ge') ? 'ge' : 'photos';
+};
 
 // ---------------------------------------------------------------- Niveaux IBP (randonnée pédestre)
 export const LEVELS = [
@@ -270,7 +276,7 @@ async function main() {
         // nom proposé au téléchargement : celui du fichier d'origine sur le Drive du blog
         downloadName: (blog && blog.originalName) || path.basename(file),
         // origine : blog des randos & photos, blog des itinérances GR, ou GPX ajouté à la main
-        source: blog ? ((blog.sites || [blog.site]).includes('gr') ? 'gr' : 'photos') : 'perso',
+        source: blog ? blogSource(blog) : 'perso',
         name,
         description,
         date,
@@ -307,7 +313,7 @@ async function main() {
           return Array.isArray(a) ? a.join(' - ') : a;
         })(),
         blog: blog ? {
-          site: (blog.sites || [blog.site]).includes('gr') ? 'gr' : 'photos',
+          site: blogSource(blog),
           url: blog.post.url,
           title: blog.post.title,
           outings: blog.outings,

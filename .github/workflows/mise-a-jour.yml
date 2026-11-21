@@ -1,6 +1,6 @@
 # Mise à jour automatique des deux Randothèques, toutes les heures :
 #   - Les Godillots Ailés (dossier godillots-ailes/), depuis le blog du club ;
-#   - Gérard & Martine (dossier gerard-martine/), depuis les deux blogs de Gé.
+#   - Gérard & Martine (dossier gerard-martine/), depuis les trois blogs de Gé.
 # Tout est envoyé par FTP chez o2switch, sur https://randotheque.anthony-bondon.fr/ :
 #   /godillots-ailes/ et /gerard-martine/ (chacun avec son espace stats dans stats/),
 #   /stats/ (moteur commun des statistiques), / (page d'accueil, robots.txt, .htaccess)
@@ -70,7 +70,7 @@ jobs:
 
       # ---------------------------------------------------------------- Gérard & Martine
       # Un souci sur les blogs de Gé ne doit pas bloquer la mise à jour des Godillots.
-      - name: "Gérard & Martine : nouveautés des deux blogs"
+      - name: "Gérard & Martine : nouveautés des trois blogs"
         working-directory: gerard-martine
         run: node scripts/scrape-blog.mjs
         continue-on-error: true

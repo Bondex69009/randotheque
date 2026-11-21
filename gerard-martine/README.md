@@ -1,8 +1,10 @@
 # La Randothèque de Gérard & Martine
 
 Catalogue des randonnées de Gérard & Martine, construit automatiquement à partir des fichiers GPX publiés sur leurs
-deux blogs : [Randonnées & Photos de Gé](https://photosge30132.blogspot.com) (plusieurs randos par article) et
-[Nos chemins en itinérance](https://gr-ge-30132.blogspot.com) (étapes des GR 34, 65, 70, 700).
+trois blogs : [Randonnées & Photos de Gé](https://photosge30132.blogspot.com) (plusieurs randos par article),
+[Nos chemins en itinérance](https://gr-ge-30132.blogspot.com) (étapes des GR 34, 65, 70, 700) et
+[Gé & Martine](https://ge-30132.blogspot.com) (randos depuis octobre 2021). Un même GPX publié sur plusieurs
+blogs ne compte qu'une fois.
 Chaque rando a son nom, sa distance, ses dénivelés, un temps estimé, l'IBP index, une carte, un profil et les métadonnées du fichier.
 
 ## Utilisation rapide
@@ -10,7 +12,7 @@ Chaque rando a son nom, sa distance, ses dénivelés, un temps estimé, l'IBP in
 Il faut [Node.js](https://nodejs.org) 18 ou plus récent, et rien d'autre.
 
 ```bash
-npm run update   # récupère les nouveaux GPX des deux blogs puis régénère les données
+npm run update   # récupère les nouveaux GPX des trois blogs puis régénère les données
 npm run serve    # ouvre la Randothèque sur http://localhost:8080
 ```
 
@@ -85,7 +87,7 @@ Chacun apparaît ensuite dans le filtre « Itinéraire de grande randonnée ».
 
 | Commande | Rôle |
 |---|---|
-| `npm run blog` | Lit tous les articles de https://photosge30132.blogspot.com et https://gr-ge-30132.blogspot.com et repère les liens « GPX » (Google Drive, Dropbox). Un article peut contenir plusieurs randos : chacune prend le nom écrit juste avant son lien GPX, son IBP, sa photo, son album et son parking. Télécharge les fichiers dans `gpx/blog/` et les résumés audio (liens « Audio ») dans `audio/blog/`, puis note les infos de la sortie (titre, date, IBP, itinéraire GR, département, photo) dans `data/blog-catalog.json`. Seuls les articles nouveaux ou modifiés sont relus, plus ceux de la première page du blog à chaque fois. `--refresh` relit tout ; `--recent=10` relit de force les articles des 10 dernières randos et retélécharge leurs GPX et audios. |
+| `npm run blog` | Lit tous les articles de https://photosge30132.blogspot.com, https://gr-ge-30132.blogspot.com et https://ge-30132.blogspot.com et repère les liens « GPX » (Google Drive, Dropbox). Un article peut contenir plusieurs randos : chacune prend le nom écrit juste avant son lien GPX, son IBP, sa photo, son album et son parking. Télécharge les fichiers dans `gpx/blog/` et les résumés audio (liens « Audio ») dans `audio/blog/`, puis note les infos de la sortie (titre, date, IBP, itinéraire GR, département, photo) dans `data/blog-catalog.json`. Seuls les articles nouveaux ou modifiés sont relus, plus ceux de la première page du blog à chaque fois. `--refresh` relit tout ; `--recent=10` relit de force les articles des 10 dernières randos et retélécharge leurs GPX et audios. |
 | `npm run build` | Analyse chaque GPX de `gpx/` et génère `data/randos.js` + `data/tracks/`. |
 | `npm run serve` | Petit serveur local. |
 

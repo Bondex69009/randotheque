@@ -52,7 +52,9 @@
   window.rtHiker = () => HIKER;
   const loader = (text) => `<div class="loader" role="status">${HIKER}<span>${text}</span></div>`;
   const icon = (id, cls = 'icon') => `<svg class="${cls}" aria-hidden="true"><use href="#i-${id}"/></svg>`;
-  const SOURCE_LABELS = { photos: 'Randos & Photos de Gé', gr: 'Chemins en itinérance', perso: 'Ajoutées au dossier' };
+  const SOURCE_LABELS = { photos: 'Randos & Photos de Gé', gr: 'Chemins en itinérance', ge: 'Gé & Martine', perso: 'Ajoutées au dossier' };
+  const BLOG_HOST = { photos: 'photosge30132.blogspot.com', gr: 'gr-ge-30132.blogspot.com', ge: 'ge-30132.blogspot.com' };
+  const BLOG_NAME = { photos: 'Randonnées & Photos de Gé', gr: 'Nos chemins en itinérance', ge: 'Gé & Martine' };
   const placeOf = (r) => [r.commune, r.deptCode ? `(${r.deptCode})` : r.deptName].filter(Boolean).join(' ');
   const animLinks = (r) => r.animateursList.length
     ? r.animateursList.map((n) => `<button type="button" class="link-btn" data-anim="${esc(n)}" title="Voir toutes les randos sur le ${esc(n)}">${esc(n)}</button>`).join(', ')
@@ -265,6 +267,7 @@
         <div class="chips">
           <label class="chip"><input type="checkbox" name="sources" value="photos"><span>Randos &amp; Photos de Gé <small data-count="sources:photos"></small></span></label>
           <label class="chip"><input type="checkbox" name="sources" value="gr"><span>Chemins en itinérance <small data-count="sources:gr"></small></span></label>
+          <label class="chip"><input type="checkbox" name="sources" value="ge"><span>Gé &amp; Martine <small data-count="sources:ge"></small></span></label>
           <label class="chip"><input type="checkbox" name="sources" value="perso"><span>Ajoutées au dossier <small data-count="sources:perso"></small></span></label>
         </div>
       </fieldset>`;
@@ -623,7 +626,7 @@
       const d = new Date(at);
       const day = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Europe/Paris' }).format(d);
       const hour = new Intl.DateTimeFormat('fr-FR', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Paris' }).format(d);
-      $('#sync-status').textContent = `Synchronisé avec les deux blogs · dernière vérification le ${day} à ${hour.replace(':', 'h')}`;
+      $('#sync-status').textContent = `Synchronisé avec les trois blogs · dernière vérification le ${day} à ${hour.replace(':', 'h')}`;
     }
     const model = DATA.ibpModel ? ` IBP estimé calé sur ${DATA.ibpModel.samples} randos des blogs (écart moyen ±${nf1.format(DATA.ibpModel.mae)}).` : '';
     $('#footer-info').textContent = `Données générées le ${fmtDate(DATA.generatedAt.slice(0, 10))}.${model}`;
@@ -1057,7 +1060,7 @@
     text(ctx, '📅', 66, 49, { font: `11px ${EMOJI}`, color: PNG.text });
     text(ctx, ddmmyyyy(r.date), 83, 49, { font: `400 11px ${MONO}`, color: PNG.muted });
     text(ctx, 'La Randothèque de Gérard & Martine', 866.5, 31, { font: `700 12px ${SANS}`, color: PNG.text, align: 'right' });
-    text(ctx, r.source === 'gr' ? 'gr-ge-30132.blogspot.com' : 'photosge30132.blogspot.com', 866.5, 48, { font: `400 10.5px ${MONO}`, color: PNG.green, align: 'right' });
+    text(ctx, BLOG_HOST[r.source] || BLOG_HOST.photos, 866.5, 48, { font: `400 10.5px ${MONO}`, color: PNG.green, align: 'right' });
     hline(67);
 
     // Indice IBP
@@ -1140,7 +1143,7 @@
     ctx.beginPath(); ctx.arc(31.5, 532, 3.5, 0, Math.PI * 2); ctx.fillStyle = PNG.dot; ctx.fill();
     text(ctx, 'Gérard & Martine', 40, 535.5, { font: `400 10.5px ${MONO}`, color: PNG.muted });
     text(ctx, `Généré le ${ddmmyyyy(new Date().toISOString())}`, CW / 2, 535.5, { font: `400 10.5px ${MONO}`, color: PNG.muted, align: 'center' });
-    text(ctx, r.source === 'gr' ? 'Nos chemins en itinérance' : 'Randonnées & Photos de Gé', 866.5, 535.5, { font: `400 10.5px ${MONO}`, color: PNG.muted, align: 'right' });
+    text(ctx, BLOG_NAME[r.source] || BLOG_NAME.photos, 866.5, 535.5, { font: `400 10.5px ${MONO}`, color: PNG.muted, align: 'right' });
     ctx.restore();
     return canvas;
   }
