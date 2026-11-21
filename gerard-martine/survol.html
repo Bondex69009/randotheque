@@ -7,6 +7,7 @@
   <meta name="robots" content="noindex, nofollow">
   <!-- Survol 3D d'une rando, à intégrer sur un blog avec une balise <iframe> (bouton « Intégrer » du lecteur 3D).
        survol.html?id=<identifiant de la rando>&t=<nom affiché avant le chargement>.
+       Aucun lien vers la Randothèque (page faite pour des sites tiers).
        Rien de lourd n'est chargé avant le clic du lecteur : MapLibre, les données et la trace arrivent à la demande. -->
   <link rel="icon" href="assets/favicon.png" type="image/png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -34,7 +35,6 @@
     .poster__play:disabled { opacity: 0.7; cursor: progress; }
     .poster__play svg { width: 1.25rem; height: 1.25rem; }
     .poster__site { margin: 0; font-size: var(--fs-xs); color: var(--c-text-faint); }
-    .poster__site a { color: inherit; }
     .poster__msg { margin: 0; min-height: 1.25em; font-size: var(--fs-sm); color: var(--c-orange, #f59e0b); }
   </style>
 </head>
@@ -47,7 +47,7 @@
       <span id="poster-label">Lancer le survol</span>
     </button>
     <p class="poster__msg" id="poster-msg" role="status" aria-live="polite"></p>
-    <p class="poster__site">Relief et profil de la rando · <a href="./" target="_blank" rel="noopener">La Randothèque de Gérard &amp; Martine</a></p>
+    <p class="poster__site">Relief et profil de la rando</p>
   </main>
 
   <script data-randos="data/randos.js">
@@ -60,8 +60,6 @@
     const id = (qs.get('id') || '').replace(/[^\w-]/g, '');
     const $ = (s) => document.querySelector(s);
     if (qs.get('t')) { $('#poster-name').textContent = qs.get('t'); document.title = `Survol 3D : ${qs.get('t')} | ${SITE}`; }
-    const ficheUrl = id ? `./#rando=${id}` : './';
-    $('.poster__site a').href = ficheUrl;
 
     const load = (url, css) => new Promise((resolve, reject) => {
       const el = document.createElement(css ? 'link' : 'script');
@@ -93,7 +91,7 @@
         const track = await loadTrack(id);
         $('#poster').hidden = true;
         window.RTFlyover.open({
-          embed: true, link: ficheUrl, linkLabel: 'Voir la fiche',
+          embed: true,
           track, title: r.name, place: [r.commune, r.deptName].filter(Boolean).join(', '),
           color: levelColor(r.level), inFrance: !!r.region,
           loop: r.loop, dplus: r.dplus, durationMin: r.durationMin,
