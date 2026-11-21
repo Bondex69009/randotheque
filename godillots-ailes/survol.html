@@ -17,12 +17,35 @@
   <style>
     html, body { height: 100%; margin: 0; overflow: hidden; background: var(--c-bg); }
     .poster {
-      position: fixed; inset: 0; display: grid; place-content: center; justify-items: center; gap: var(--space-3);
+      position: fixed; inset: 0; display: grid; align-content: end; justify-content: center; justify-items: center; gap: var(--space-2);
+      padding-bottom: clamp(1.25rem, 6vh, 2.5rem) !important;
       padding: var(--space-4); text-align: center; color: var(--c-text);
       background:
         radial-gradient(120% 80% at 50% 110%, color-mix(in srgb, var(--c-accent) 22%, transparent), transparent 60%),
         linear-gradient(160deg, var(--c-surface-2), var(--c-bg) 70%);
     }
+    /* Image d'attente : photo aérienne autour de la trace, inclinée comme au début du survol */
+    .poster__bg {
+      position: absolute; left: -50%; top: -50%; width: 200%; height: 200%; opacity: 0;
+      transform: perspective(1100px) rotateX(36deg); transform-origin: 50% 50%; transition: opacity 600ms ease;
+    }
+    .poster__bg.is-on { opacity: 1; }
+    .poster__scrim {
+      position: absolute; inset: 0; pointer-events: none;
+      background: radial-gradient(40% 35% at 50% 50%, rgb(0 0 0 / 0.25), transparent 80%),
+        linear-gradient(to bottom, color-mix(in srgb, var(--c-bg) 55%, transparent), transparent 30%, transparent 70%, color-mix(in srgb, var(--c-bg) 70%, transparent));
+    }
+    .poster > :not(.poster__bg, .poster__scrim, .poster__credit) { position: relative; z-index: 1; }
+    
+    .poster__credit { position: absolute; right: 8px; bottom: 6px; margin: 0; font-size: 10px; color: rgb(255 255 255 / 0.7); text-shadow: 0 1px 2px #000; }
+    .poster__credit:empty { display: none; }
+    .poster__head {
+      position: absolute !important; top: 12px; left: 12px; right: 12px; max-width: min(34rem, calc(100% - 24px)); justify-self: start;
+      padding: var(--space-2) var(--space-4); text-align: left; border-radius: var(--radius-lg);
+      background: color-mix(in srgb, var(--c-bg) 74%, transparent); border: 1px solid rgb(255 255 255 / 0.08);
+      backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+    }
+    .poster__head .poster__name { font-size: clamp(1rem, 3vw, 1.25rem); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-shadow: none; }
     .poster__eyebrow { margin: 0; font-size: var(--fs-xs); font-weight: var(--fw-bold); letter-spacing: 0.12em; text-transform: uppercase; color: var(--c-accent); }
     .poster__name { margin: 0; max-width: 32rem; font-size: clamp(1.25rem, 4vw, 1.875rem); font-weight: var(--fw-black); line-height: 1.15; }
     .poster__play {
@@ -35,19 +58,29 @@
     .poster__play:disabled { opacity: 0.7; cursor: progress; }
     .poster__play svg { width: 1.25rem; height: 1.25rem; }
     .poster__site { margin: 0; font-size: var(--fs-xs); color: var(--c-text-faint); }
+    .poster__loading { display: grid; justify-items: center; gap: var(--space-2); margin-top: var(--space-2); font-size: var(--fs-sm); color: var(--c-text-muted); }
+    .poster__loading[hidden] { display: none; }
+    .poster__loading .hiker { width: 3.5rem; height: 3.5rem; color: var(--c-accent); }
     .poster__msg { margin: 0; min-height: 1.25em; font-size: var(--fs-sm); color: var(--c-orange, #f59e0b); }
   </style>
 </head>
 <body>
   <main class="poster" id="poster">
+    <canvas class="poster__bg" id="poster-bg" aria-hidden="true"></canvas>
+    <div class="poster__scrim" aria-hidden="true"></div>
+    <p class="poster__credit" id="poster-credit"></p>
+    <header class="poster__head">
     <p class="poster__eyebrow">Survol 3D animé</p>
     <h1 class="poster__name" id="poster-name">Randonnée des Godillots Ailés</h1>
+    <p class="poster__site">Relief et profil de la rando</p>
+    </header>
     <button type="button" class="poster__play" id="poster-play">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.5-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5Z" fill="currentColor"/></svg>
       <span id="poster-label">Lancer le survol</span>
     </button>
+    <!-- Randonneur qui marche pendant le chargement (même dessin et mêmes animations que sur le site, style.css) -->
+    <div class="poster__loading" id="poster-loading" role="status" hidden><span id="poster-hiker"></span><span>Chargement du survol…</span></div>
     <p class="poster__msg" id="poster-msg" role="status" aria-live="polite"></p>
-    <p class="poster__site">Relief et profil de la rando</p>
   </main>
 
   <script data-randos="data/randos.js">
@@ -59,6 +92,11 @@
     const qs = new URLSearchParams(location.search);
     const id = (qs.get('id') || '').replace(/[^\w-]/g, '');
     const $ = (s) => document.querySelector(s);
+    // Repris aussi par le lecteur 3D pendant le chargement du relief (window.rtHiker, lu par flyover.js)
+    const HIKER = '<svg class="hiker" viewBox="0 0 32 32" aria-hidden="true" focusable="false"><path class="hiker__ground" d="M-6 30.8H38"/><g class="hiker__body"><g class="hiker__arm hiker__arm--b"><path d="M15.7 10.8C15.8 12.6 16.1 14.2 16.3 15.3L17.6 15.1C17.7 13.6 17.6 12.2 17.5 10.8Z"/><path d="M16.3 14.6C17.1 15.4 18 16 19.1 16.7L19.8 15.8C18.8 15.2 18.1 14.6 17.5 14.1Z"/><circle cx="19.6" cy="16.3" r=".85"/></g><g class="hiker__leg hiker__leg--b"><path d="M13.5 17.4C13.6 19.8 13.9 21.9 14.1 23.7H15.9C16.3 21.9 16.9 19.7 17 17.4Z"/><g class="hiker__shin"><path d="M14.1 23.2C13.6 24.6 13.9 26.9 14.3 28.6H15.7C15.9 26.9 16.2 24.9 15.9 23.2Z"/><path d="M14.2 28.1H15.8C16.7 28.4 17.9 28.7 18.2 29.4 18.3 29.9 18 30.1 17.5 30.1H14.3C13.9 30.1 13.9 29.3 14.2 28.1Z"/></g></g><path class="hiker__pack" d="M11.2 11.6C11.1 9.9 13.9 9.3 15.1 10.4L15.6 16.3C15.7 17.6 11.9 17.9 11.5 16.7Z"/><path d="M11.6 9.8C12.3 9 13.9 8.9 14.6 9.6L14.4 10.4C13.6 10 12.6 10.1 11.9 10.6Z"/><path d="M14.8 10C16.2 9.3 18.1 9.6 18.5 11.2 18.6 12.9 18 15.4 17.6 17.4 17.3 18.8 13.4 18.9 13.5 17.4 13.6 15 14 12.2 14.8 10Z"/><path d="M16.6 8.2L17.8 8.3 17.7 9.9 16.4 9.8Z"/><circle cx="17.9" cy="6.6" r="2"/><path d="M14.9 5.6C16.4 5.1 19.5 5 21.1 5.5 21.4 5.7 21.2 6 20.9 6 19.2 5.9 16.6 6 15 6.3 14.6 6.3 14.5 5.8 14.9 5.6ZM16.2 5.3C16.2 3.7 19.6 3.6 19.7 5.2Z"/><g class="hiker__leg hiker__leg--a"><path d="M13.5 17.4C13.6 19.8 13.9 21.9 14.1 23.7H15.9C16.3 21.9 16.9 19.7 17 17.4Z"/><g class="hiker__shin"><path d="M14.1 23.2C13.6 24.6 13.9 26.9 14.3 28.6H15.7C15.9 26.9 16.2 24.9 15.9 23.2Z"/><path d="M14.2 28.1H15.8C16.7 28.4 17.9 28.7 18.2 29.4 18.3 29.9 18 30.1 17.5 30.1H14.3C13.9 30.1 13.9 29.3 14.2 28.1Z"/></g></g><g class="hiker__arm hiker__arm--a"><path d="M15.7 10.8C15.8 12.6 16.1 14.2 16.3 15.3L17.6 15.1C17.7 13.6 17.6 12.2 17.5 10.8Z"/><path d="M16.3 14.6C17.1 15.4 18 16 19.1 16.7L19.8 15.8C18.8 15.2 18.1 14.6 17.5 14.1Z"/><circle cx="19.6" cy="16.3" r=".85"/><path class="hiker__stick" d="M19.9 13.4L21.2 29.8"/></g></g></svg>';
+    window.rtHiker = () => HIKER;
+    $('#poster-hiker').outerHTML = HIKER;
+    const busy = (on) => { $('#poster-play').hidden = on; $('#poster-loading').hidden = !on; };
     if (qs.get('t')) { $('#poster-name').textContent = qs.get('t'); document.title = `Survol 3D : ${qs.get('t')} | ${SITE}`; }
 
     const load = (url, css) => new Promise((resolve, reject) => {
@@ -72,12 +110,73 @@
       window.__rtTrack = (got, pts) => { if (got === rid) resolve(pts); };
       load(`data/tracks/${rid}.js`).catch(reject);
     });
+    // Trace chargée une seule fois : pour l'image d'attente, puis pour le survol
+    let trackP = null;
+    const getTrack = () => (trackP = trackP || loadTrack(id).catch((e) => { trackP = null; throw e; }));
+
+    // Image d'attente : tuiles photo (IGN en France, Esri ailleurs) autour de la trace, trace en pointillés
+    // blancs et drapeau de départ, comme la première image du survol. Rien de plus lourd avant le clic.
+    async function paintPoster() {
+      const pts = (await getTrack()).filter((p) => Number.isFinite(p[0]) && Number.isFinite(p[1]));
+      if (pts.length < 2) return;
+      const cv = $('#poster-bg'), view = $('#poster').getBoundingClientRect();
+      const dpr = Math.min(2, window.devicePixelRatio || 1);
+      const W = Math.round(cv.offsetWidth * dpr), H = Math.round(cv.offsetHeight * dpr);
+      if (W < 50 || H < 50) return;
+      cv.width = W; cv.height = H;
+      const lats = pts.map((p) => p[0]), lons = pts.map((p) => p[1]);
+      const S = Math.min(...lats), N = Math.max(...lats), Wl = Math.min(...lons), E = Math.max(...lons);
+      const fr = S > 41 && N < 51.2 && Wl > -5.3 && E < 9.7;
+      const wx = (lon, z) => ((lon + 180) / 360) * 256 * 2 ** z;
+      const wy = (lat, z) => { const r = (lat * Math.PI) / 180; return ((1 - Math.log(Math.tan(r) + 1 / Math.cos(r)) / Math.PI) / 2) * 256 * 2 ** z; };
+      // Zoom : la trace occupe le centre de la partie visible (le canevas déborde de 50 % de chaque côté)
+      const vis = { w: view.width * 0.62, h: view.height * 0.5 };
+      let z = 16;
+      while (z > 8 && (wx(E, z) - wx(Wl, z) > vis.w || wy(S, z) - wy(N, z) > vis.h)) z--;
+      // Échelle fine entre deux niveaux de zoom (tuiles agrandies au plus ×1,9)
+      const f = Math.min(1.9, vis.w / Math.max(1, wx(E, z) - wx(Wl, z)), vis.h / Math.max(1, wy(S, z) - wy(N, z)));
+      const k = dpr * f; // pixels du canevas par pixel de tuile
+      const cx = (wx(Wl, z) + wx(E, z)) / 2, cy = (wy(S, z) + wy(N, z)) / 2;
+      const ox = cx - W / 2 / k, oy = cy - H / 2 / k; // coin haut gauche en pixels monde
+      const ctx = cv.getContext('2d');
+      const url = (x, y) => fr
+        ? `https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=ORTHOIMAGERY.ORTHOPHOTOS&STYLE=normal&TILEMATRIXSET=PM&FORMAT=image/jpeg&TILEMATRIX=${z}&TILEROW=${y}&TILECOL=${x}`
+        : `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${z}/${y}/${x}`;
+      const x0 = Math.floor(ox / 256), x1 = Math.floor((ox + W / k) / 256), y0 = Math.floor(oy / 256), y1 = Math.floor((oy + H / k) / 256);
+      if ((x1 - x0 + 1) * (y1 - y0 + 1) > 220) return;
+      const tiles = [];
+      for (let ty = y0; ty <= y1; ty++) for (let tx = x0; tx <= x1; tx++) {
+        tiles.push(new Promise((res) => {
+          const im = new Image();
+          im.onload = () => { ctx.drawImage(im, (tx * 256 - ox) * k, (ty * 256 - oy) * k, 256 * k + 1, 256 * k + 1); res(true); };
+          im.onerror = () => res(false);
+          im.src = url(tx, ty);
+        }));
+      }
+      const ok = (await Promise.all(tiles)).filter(Boolean).length;
+      if (!ok) return;
+      // Trace
+      const P = pts.map((p) => [(wx(p[1], z) - ox) * k, (wy(p[0], z) - oy) * k]);
+      const path = () => { ctx.beginPath(); P.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y))); };
+      ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+      path(); ctx.strokeStyle = 'rgba(0,0,0,0.45)'; ctx.lineWidth = 7 * dpr; ctx.stroke();
+      path(); ctx.strokeStyle = 'rgba(255,255,255,0.9)'; ctx.lineWidth = 3 * dpr; ctx.setLineDash([5 * dpr, 4 * dpr]); ctx.stroke();
+      ctx.setLineDash([]);
+      // Drapeau de départ
+      const accent = getComputedStyle(document.documentElement).getPropertyValue('--c-accent').trim() || '#87f700';
+      const [sx, sy] = P[0];
+      ctx.beginPath(); ctx.arc(sx, sy, 9 * dpr, 0, Math.PI * 2); ctx.fillStyle = accent; ctx.fill();
+      ctx.lineWidth = 3 * dpr; ctx.strokeStyle = '#0b0f0a'; ctx.stroke();
+      cv.classList.add('is-on');
+      $('#poster-credit').textContent = fr ? 'Photo © IGN' : 'Imagerie © Esri, Maxar, Earthstar Geographics';
+    }
+    if (id) paintPoster().catch(() => { /* le dégradé reste */ });
     const css = getComputedStyle(document.documentElement);
     const levelColor = (lvl) => (lvl === 'noir' ? '#f4f4f0' : css.getPropertyValue(`--c-lvl-${lvl || 'vert'}`).trim() || css.getPropertyValue('--c-accent').trim());
 
     async function start() {
       const btn = $('#poster-play');
-      btn.disabled = true; $('#poster-label').textContent = 'Chargement…'; $('#poster-msg').textContent = '';
+      btn.disabled = true; busy(true); $('#poster-msg').textContent = '';
       try {
         if (!id) throw new Error('rando');
         await Promise.all([
@@ -88,7 +187,7 @@
         ]);
         const r = (window.RANDOTHEQUE && window.RANDOTHEQUE.randos || []).find((x) => x.id === id);
         if (!r) throw new Error('rando');
-        const track = await loadTrack(id);
+        const track = await getTrack();
         $('#poster').hidden = true;
         window.RTFlyover.open({
           embed: true,
@@ -101,7 +200,7 @@
         $('#poster-msg').textContent = e.message === 'rando'
           ? 'Cette rando est introuvable sur le site.'
           : 'Le survol 3D n\'a pas pu se charger. Vérifiez la connexion internet puis réessayez.';
-        btn.disabled = false; $('#poster-label').textContent = 'Réessayer';
+        busy(false); btn.disabled = false; $('#poster-label').textContent = 'Réessayer';
       }
     }
     $('#poster-play').addEventListener('click', start);
