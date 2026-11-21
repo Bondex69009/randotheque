@@ -257,3 +257,28 @@
   .fo--duel .fo__bar > .fo__btn--pill span, .fo--duel .fo__av > .fo__btn--pill span { display: none; }
   .fo--duel .fo__bar > .fo__btn--pill, .fo--duel .fo__av > .fo__btn--pill { padding-inline: 0; width: var(--tap); }
 }
+
+/* Fin du survol : vue d'ensemble sans bornes ni randonneur, pour voir toute la trace */
+.fo-walker { transition: opacity 400ms var(--ease); }
+.fo--end .fo-borne, .fo--end .fo-walker { opacity: 0 !important; pointer-events: none; }
+
+/* Météo du jour et commune, dans le coin de l'écran */
+.fo__info {
+  position: absolute; z-index: 2; left: var(--space-3); bottom: calc(var(--fo-bottom-h, 11rem) + var(--space-2));
+  display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2) var(--space-3); margin: 0;
+  font-size: var(--fs-sm); max-width: calc(100% - 2 * var(--space-3));
+}
+.fo__info[hidden], .fo__wx[hidden] { display: none; }
+.fo__wx, .fo__loc { display: inline-flex; align-items: center; gap: 0.375rem; margin: 0; min-width: 0; }
+.fo__wx-ico { width: 2.125rem; height: 2.125rem; flex: none; }
+.fo__wx b { font: 600 var(--fs-lg)/1 "IBM Plex Mono", ui-monospace, monospace; color: var(--c-text); }
+.fo__wx small { font-size: var(--fs-xs); color: var(--c-text-muted); }
+.fo__wx:not([hidden]) + .fo__loc { padding-left: var(--space-3); border-left: 1px solid rgb(255 255 255 / 0.14); }
+.fo__loc svg { width: 1.125rem; height: 1.125rem; flex: none; color: var(--c-accent); }
+.fo__loc span { font-weight: var(--fw-semibold); color: var(--c-text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 640px) {
+  .fo__info { bottom: auto; top: 5rem; padding: 0.375rem var(--space-3); max-width: calc(100% - 4.5rem); }
+  .fo__wx small { display: none; }
+  .fo__wx-ico { width: 1.75rem; height: 1.75rem; }
+  .fo__wx b { font-size: var(--fs-md); }
+}

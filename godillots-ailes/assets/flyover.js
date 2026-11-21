@@ -351,6 +351,7 @@
         gl.clear(gl.DEPTH_BUFFER_BIT);
 
         hikers.forEach((h, i) => {
+          if (h.hidden && h.hidden()) return;
           const at = h.pos();
           const alt = map.queryTerrainElevation ? map.queryTerrainElevation(at) : 0;
           if (alt == null && map.getTerrain && map.getTerrain()) return;
@@ -493,6 +494,7 @@
     av_hiker: '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="2"/><path d="m10 21 2-7 3 3v4M9 11l3-3 3 2 2 1M12 8l-1 6M18 12v9"/></svg>',
     av_boot: '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6v9H5a2 2 0 0 0-2 2v2h15a2 2 0 0 0 2-2c0-2-2-3-4-3h-2V6Z"/><path d="M13 8c3-3 6-4 8-4-1 2-3 4-6 6M13 11c3-1 5-1 7 0"/></svg>',
     av_dot: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="5" fill="currentColor"/><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.5" opacity=".5"/></svg>',
+    pin: '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21Z"/><circle cx="12" cy="9.5" r="2.5"/></svg>',
     full: '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>',
   };
 
@@ -540,6 +542,10 @@
         ${topActions(o)}
       </header>
       ${embedPanel(o)}
+      ${o.commune || o.weather ? `<div class="fo__card fo__info" id="fo-info"${o.commune ? '' : ' hidden'}>
+        <p class="fo__wx" id="fo-wx" hidden></p>
+        ${o.commune ? `<p class="fo__loc">${ICON.pin}<span>${esc(o.commune)}</span></p>` : ''}
+      </div>` : ''}
       <dl class="fo__hud fo__card" aria-live="off">
         <div><dt>Distance</dt><dd><b id="fo-d">0,0</b> <small><span class="fo__of">/ ${nf1.format(o.total)}</span> km</small></dd></div>
         <div><dt>Altitude</dt><dd><b id="fo-e">–</b> <small>m</small></dd></div>
@@ -668,6 +674,19 @@
     document.body.appendChild(dlg);
     dlg.showModal();
     const $ = (s) => dlg.querySelector(s);
+    // Météo du jour de la rando (assets/meteo.js) : picto et température, dans le coin de l'écran
+    if (o.weather) {
+      Promise.resolve(o.weather).then(async (w) => {
+        const box = $('#fo-wx');
+        if (!w || !box || !dlg.isConnected) return;
+        const img = window.RTMeteo && window.RTMeteo.pictoImage ? await window.RTMeteo.pictoImage(w.kind, 96) : null;
+        if (img) { img.className = 'fo__wx-ico'; img.alt = ''; img.width = 34; img.height = 34; box.append(img); }
+        box.insertAdjacentHTML('beforeend', `<b>${nf0.format(w.tmax)}°</b><small>${esc(w.label)}</small>`);
+        box.title = `${w.status === 'forecast' ? 'Prévision' : 'Météo'} du jour : ${w.label}, ${nf0.format(w.tmin)}° à ${nf0.format(w.tmax)}°`;
+        box.setAttribute('aria-label', box.title);
+        box.hidden = false; $('#fo-info').hidden = false;
+      }, () => {});
+    }
 
     // Rythme : environ 20 s + 2,5 s par km, entre 25 et 75 s en vitesse ×1
     const baseDuration = clamp(20 + total * 2.5, 25, 75);
@@ -740,6 +759,7 @@
     const hiker3d = hikerLayer(map, [{
       color, pos: () => S.pos(d), heading: () => headingAt(S, total, d), grade: () => S.grade(d),
       moving: () => phase === 'run' && playing && d < total,
+      hidden: () => phase === 'outro' || phase === 'done',
     }], () => { ready3d = true; applyAvatar(); });
     const applyAvatar = wireAvatar(dlg, map, hiker3d, () => [walker.getElement()], () => ready3d);
 
@@ -815,28 +835,31 @@
         map.setBearing(map.getBearing() + dt * 6); // lent tour d'horizon final
       }
     }
+    // Vue d'ensemble finale : bornes et randonneur masqués pour laisser voir toute la trace
+    const endView = (on) => { dlg.classList.toggle('fo--end', on); map.triggerRepaint(); };
     function finish() {
       phase = 'outro';
+      endView(true);
       updateHud(true);
       map.fitBounds(bounds, { padding: { top: 90, left: 50, right: 50, bottom: padBottom() + 20 }, pitch: 55, bearing: cam.b, duration: reduceMotion() ? 0 : 3500, essential: true });
       map.once('moveend', () => { if (phase === 'outro') phase = 'done'; });
     }
     function startRun() {
-      phase = 'run'; follow = true; followBtn.hidden = true;
+      phase = 'run'; follow = true; followBtn.hidden = true; endView(false);
       placeCamera(0, true);
     }
     function intro() {
       const t = camTarget(0);
       cam = { c: t.here, b: t.b };
       if (reduceMotion()) { startRun(); playing = false; setPlayUi(); draw(true); return; }
-      phase = 'intro';
+      phase = 'intro'; endView(false);
       map.flyTo({ center: t.here, bearing: t.b, zoom, pitch, duration: 3200, curve: 1.3, essential: true });
       map.once('moveend', () => { if (phase === 'intro') startRun(); });
     }
     function seek(km) {
       map.stop();
       d = clamp(km, 0, total);
-      if (phase !== 'run') { phase = 'run'; }
+      if (phase !== 'run') { phase = 'run'; endView(false); }
       if (d >= total) { draw(true); finish(); return; }
       draw(true);
       if (follow) placeCamera(0, true);

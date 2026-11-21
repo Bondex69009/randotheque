@@ -181,8 +181,9 @@
         if (!id) throw new Error('rando');
         await Promise.all([
           load(`https://unpkg.com/maplibre-gl@${ML_VER}/dist/maplibre-gl.css`, true),
-          load('assets/flyover.css?v=13', true),
-          load(`https://unpkg.com/maplibre-gl@${ML_VER}/dist/maplibre-gl.js`).then(() => load('assets/flyover.js?v=13')),
+          load('assets/flyover.css?v=14', true),
+          load(`https://unpkg.com/maplibre-gl@${ML_VER}/dist/maplibre-gl.js`).then(() => load('assets/flyover.js?v=14')),
+          window.RTMeteo ? null : load('assets/meteo.js?v=3').catch(() => null),
           window.RANDOTHEQUE ? null : load(DATA),
         ]);
         const r = (window.RANDOTHEQUE && window.RANDOTHEQUE.randos || []).find((x) => x.id === id);
@@ -192,6 +193,7 @@
         window.RTFlyover.open({
           embed: true,
           track, title: r.name, place: [r.commune, r.deptName].filter(Boolean).join(', '),
+          commune: r.commune, weather: window.RTMeteo ? window.RTMeteo.summary(r) : null,
           color: levelColor(r.level), inFrance: !!r.region,
           loop: r.loop, dplus: r.dplus, durationMin: r.durationMin,
         });
