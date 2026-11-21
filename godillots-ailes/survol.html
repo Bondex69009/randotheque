@@ -17,8 +17,7 @@
   <style>
     html, body { height: 100%; margin: 0; overflow: hidden; background: var(--c-bg); }
     .poster {
-      position: fixed; inset: 0; display: grid; align-content: end; justify-content: center; justify-items: center; gap: var(--space-2);
-      padding-bottom: clamp(1.25rem, 6vh, 2.5rem) !important;
+      position: fixed; inset: 0; display: grid; align-content: center; justify-content: center; justify-items: center; gap: var(--space-2);
       padding: var(--space-4); text-align: center; color: var(--c-text);
       background:
         radial-gradient(120% 80% at 50% 110%, color-mix(in srgb, var(--c-accent) 22%, transparent), transparent 60%),
@@ -48,15 +47,31 @@
     .poster__head .poster__name { font-size: clamp(1rem, 3vw, 1.25rem); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-shadow: none; }
     .poster__eyebrow { margin: 0; font-size: var(--fs-xs); font-weight: var(--fw-bold); letter-spacing: 0.12em; text-transform: uppercase; color: var(--c-accent); }
     .poster__name { margin: 0; max-width: 32rem; font-size: clamp(1.25rem, 4vw, 1.875rem); font-weight: var(--fw-black); line-height: 1.15; }
+    /* Bouton de lecture façon vidéo : grand rond « play » au centre, libellé dessous */
     .poster__play {
-      display: inline-flex; align-items: center; gap: var(--space-2); margin-top: var(--space-2);
-      height: 3.25rem; padding-inline: var(--space-5, 1.5rem); border: 0; border-radius: var(--radius-pill); cursor: pointer;
-      background: var(--c-accent); color: var(--c-on-accent); font: var(--fw-bold) var(--fs-md) var(--font-sans);
-      box-shadow: 0 10px 30px -10px color-mix(in srgb, var(--c-accent) 70%, transparent);
+      display: grid; justify-items: center; gap: var(--space-3, 0.75rem); padding: var(--space-2); border: 0; border-radius: var(--radius-lg);
+      background: none; color: #fff; cursor: pointer; font: var(--fw-bold) var(--fs-md) var(--font-sans);
+      -webkit-tap-highlight-color: transparent;
     }
-    .poster__play:hover { background: var(--c-accent-hover); }
+    .poster__play[hidden] { display: none; }
+    .poster__disc {
+      display: grid; place-items: center; width: clamp(4.5rem, 16vmin, 6.5rem); aspect-ratio: 1; border-radius: 50%;
+      background: var(--c-accent); color: var(--c-on-accent);
+      box-shadow: 0 0 0 0.5rem rgb(255 255 255 / 0.18), 0 14px 40px -12px rgb(0 0 0 / 0.6);
+      transition: transform 160ms ease, background-color 160ms ease, box-shadow 160ms ease;
+    }
+    .poster__disc svg { width: 46%; height: 46%; margin-left: 8%; }
+    .poster__play:hover .poster__disc { background: var(--c-accent-hover); transform: scale(1.06); box-shadow: 0 0 0 0.65rem rgb(255 255 255 / 0.24), 0 16px 44px -12px rgb(0 0 0 / 0.65); }
+    .poster__play:active .poster__disc { transform: scale(0.97); }
+    .poster__play:focus-visible { outline: none; }
+    .poster__play:focus-visible .poster__disc { outline: 3px solid #fff; outline-offset: 0.75rem; }
     .poster__play:disabled { opacity: 0.7; cursor: progress; }
-    .poster__play svg { width: 1.25rem; height: 1.25rem; }
+    #poster-label {
+      padding: 0.35rem 0.9rem; border-radius: var(--radius-pill);
+      background: rgb(0 0 0 / 0.45); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+      text-shadow: 0 1px 2px rgb(0 0 0 / 0.5);
+    }
+    @media (prefers-reduced-motion: reduce) { .poster__disc { transition: none; } .poster__play:hover .poster__disc { transform: none; } }
     .poster__site { margin: 0; font-size: var(--fs-xs); color: var(--c-text-faint); }
     .poster__loading { display: grid; justify-items: center; gap: var(--space-2); margin-top: var(--space-2); font-size: var(--fs-sm); color: var(--c-text-muted); }
     .poster__loading[hidden] { display: none; }
@@ -75,7 +90,7 @@
     <p class="poster__site">Relief et profil de la rando</p>
     </header>
     <button type="button" class="poster__play" id="poster-play">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.5-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5Z" fill="currentColor"/></svg>
+      <span class="poster__disc" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 4.6v14.8a1.1 1.1 0 0 0 1.7.94l11.6-7.4a1.1 1.1 0 0 0 0-1.88L8.7 3.66A1.1 1.1 0 0 0 7 4.6Z" fill="currentColor"/></svg></span>
       <span id="poster-label">Lancer le survol</span>
     </button>
     <!-- Randonneur qui marche pendant le chargement (même dessin et mêmes animations que sur le site, style.css) -->
