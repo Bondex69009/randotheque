@@ -70,6 +70,7 @@
   const TRACK_COLORS = ['level', 'accent', '#fc5200', '#ffffff', '#ffd400', '#00e5ff', '#ff3b6b', '#111111'];
   const STATS = {
     distance: 'Distance', dplus: 'Dénivelé +', dminus: 'Dénivelé −', duree: 'Durée', ibp: 'IBP index', altmax: 'Altitude max',
+    meteo: 'Météo',
   };
   const SHOW = { title: 'Nom', date: 'Date', place: 'Lieu', meteo: 'Météo du jour', profile: 'Profil', brand: 'Signature', markers: 'Départ / arrivée' };
   const DEFAULTS = {
@@ -407,6 +408,16 @@
     }
     return lines;
   }
+  // Nom de la rando en entier : la police rétrécit (2 lignes, puis 3 en plus petit) avant de couper avec « … »
+  function fitTitle(g, str, weight, size, family, maxW) {
+    const min = Math.round(size * 0.5);
+    for (let s = size; s >= min; s -= 2) {
+      const lines = wrapTitle(g, str, weight, s, family, maxW, 99);
+      // 3 lignes seulement si elles tiennent dans la hauteur prévue pour 2 lignes en grand
+      if (lines.length <= 2 || (lines.length === 3 && s <= size * 0.69)) return { lines, size: s };
+    }
+    return { lines: wrapTitle(g, str, weight, min, family, maxW, 3), size: min };
+  }
   function rrect(g, x, y, w, h, r) {
     g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r);
     g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath();
@@ -430,11 +441,13 @@
       case 'duree': return [fmtDur((r.recorded && r.recorded.movingMin ? r.recorded.movingMin : r.durationMin) * k), ''];
       case 'ibp': return [r.ibp == null ? '–' : `${r.ibpEstimated ? '≈' : ''}${Math.round(r.ibp * k)}`, ''];
       case 'altmax': return [r.altMax == null ? '–' : nf0.format(r.altMax), 'm'];
+      case 'meteo': return wx ? [`${wx.tmax}°`, `/ ${wx.tmin}°`] : ['–', ''];
       default: return ['', ''];
     }
   }
   function statLabel(key) {
     if (key === 'ibp' && R.level) return `IBP · ${SITE.levelLabel(R.level)}`;
+    if (key === 'meteo' && wx) return `Météo · ${wx.label}`;
     if (key === 'duree') return R.recorded && R.recorded.movingMin ? 'Temps en mouvement' : 'Durée estimée';
     return STATS[key];
   }
@@ -551,11 +564,11 @@
     g.textBaseline = 'alphabetic';
     let y = L.head.y;
     if (show.has('title')) {
-      const lines = wrapTitle(g, R.name, 700, L.titleSize, SITE.fontDisplay, L.head.w);
+      const { lines, size: ts } = fitTitle(g, R.name, 700, L.titleSize, SITE.fontDisplay, L.head.w);
       g.fillStyle = ink;
-      g.font = `700 ${L.titleSize}px ${SITE.fontDisplay}`;
-      lines.forEach((ln, i) => g.fillText(ln, L.head.x, y + L.titleSize * (1 + i * 1.12)));
-      y += L.titleSize * (lines.length * 1.12 + 0.25);
+      g.font = `700 ${ts}px ${SITE.fontDisplay}`;
+      lines.forEach((ln, i) => g.fillText(ln, L.head.x, y + ts * (1 + i * 1.12)));
+      y += ts * (lines.length * 1.12 + 0.25);
     }
     const sub = [show.has('date') ? fmtDate(R.date) : '', show.has('place') ? [R.commune, R.deptName].filter(Boolean).join(', ') : ''].filter(Boolean).join('  ·  ');
     const subSize = Math.round(L.titleSize * 0.42);
@@ -636,15 +649,22 @@
         const vs = Math.round(L.statH * 0.42);
         g.font = `800 ${vs}px ${SITE.fontSans}`;
         g.fillStyle = key === 'ibp' && R.level ? (SITE.levelColor(R.level) === '#111' || R.level === 'noir' ? ink : SITE.levelColor(R.level)) : ink;
+        // Météo : picto du jour devant la température
+        let vx = sx;
+        if (key === 'meteo' && wx && wx.img) {
+          const ic = Math.round(vs * 1.15);
+          g.drawImage(wx.img, sx, sy + ls * 1.4 + vs * 0.62 - ic / 2, ic, ic);
+          vx += ic + vs * 0.12;
+        }
         const vw = g.measureText(v).width;
-        g.fillText(v, sx, sy + ls * 1.4 + vs);
-        if (unit) { g.font = `600 ${Math.round(vs * 0.45)}px ${SITE.fontSans}`; g.fillStyle = inkSoft; g.fillText(unit, sx + vw + vs * 0.15, sy + ls * 1.4 + vs); }
+        g.fillText(v, vx, sy + ls * 1.4 + vs);
+        if (unit) { g.font = `600 ${Math.round(vs * 0.45)}px ${SITE.fontSans}`; g.fillStyle = inkSoft; g.fillText(unit, vx + vw + vs * 0.15, sy + ls * 1.4 + vs); }
       });
       g.globalAlpha = 1;
     }
 
     // Signature du site (et sources : fond de carte, météo)
-    const attr = [bgAttr, show.has('meteo') && wx ? 'Météo Open-Meteo' : ''].filter(Boolean).join(' · ');
+    const attr = [bgAttr, (show.has('meteo') || opts.stats.includes('meteo')) && wx ? 'Météo Open-Meteo' : ''].filter(Boolean).join(' · ');
     if (L.brand.h) {
       const { x, y: by, h, w } = L.brand;
       const s = Math.round(h * 0.42);
@@ -1407,7 +1427,7 @@
     if (R !== r) return;
     wx = { ...s, img };
     lastBlob = null;
-    if (dlg && dlg.open && opts.show.includes('meteo')) schedule();
+    if (dlg && dlg.open && (opts.show.includes('meteo') || opts.stats.includes('meteo'))) schedule();
   }
 
   window.RTShare = { open, close, makeImage, makeVideo, shareTo }; // makeImage / makeVideo : contrôle et tests
