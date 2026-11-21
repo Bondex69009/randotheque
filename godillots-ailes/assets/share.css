@@ -36,6 +36,24 @@
 .sh-walker .hiker { width: 3.25rem; height: 3.25rem; }
 .sh-stage.is-loading .sh-walker { opacity: 1; }
 @keyframes sh-spin { to { transform: rotate(360deg); } }
+/* Création de la vidéo : randonneur qui marche + gros pourcentage par-dessus l'aperçu */
+.sh-make {
+  position: absolute; inset: 0; z-index: 2; display: none; flex-direction: column; align-items: center; justify-content: center; gap: 0.6rem;
+  padding: 1.5rem; text-align: center; background: rgb(0 0 0 / 0.62); color: var(--c-text, #fff); pointer-events: none;
+}
+.sh.is-making .sh-make { display: flex; }
+.sh.is-making .sh-status:not(.is-warn) { display: none; } /* le pourcentage est déjà en grand sur l'aperçu */
+.sh.is-making .sh-walker, .sh.is-making .sh-stage > .sh-spinner { display: none; }
+.sh-make__walker { color: var(--c-accent, #87f700); }
+.sh-make__walker .hiker { width: clamp(5rem, 16vmin, 8rem); height: clamp(5rem, 16vmin, 8rem); }
+.sh-make__spin { position: static; opacity: 1; width: 4rem; height: 4rem; animation: sh-spin 0.8s linear infinite; }
+.sh-make__pct { font-size: clamp(3rem, 12vmin, 5.5rem); font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
+.sh-make__pct:empty { display: none; }
+.sh-make__bar { display: none; width: min(18rem, 70%); height: 0.45rem; border-radius: 99px; background: rgb(255 255 255 / 0.18); overflow: hidden; }
+.sh-make.has-pct .sh-make__bar { display: block; }
+.sh-make__bar span { display: block; height: 100%; width: 100%; border-radius: inherit; background: var(--c-accent, #87f700); transform: scaleX(var(--p, 0)); transform-origin: left; transition: transform 0.25s linear; }
+.sh-make__label { font-size: 1.05rem; font-weight: 700; }
+.sh-make__hint { max-width: 22rem; font-size: 0.85rem; color: var(--c-text-muted, #bbb); }
 
 /* Réglages */
 .sh-side { display: flex; flex-direction: column; min-height: 0; border-left: 1px solid var(--c-border, #333); background: var(--c-bg, #0d0d0d); }
@@ -171,7 +189,7 @@
   .sh-status:empty { display: none; }
 }
 @media (max-width: 860px) and (max-height: 640px) { .sh-side { max-height: 60dvh; } }
-@media (prefers-reduced-motion: reduce) { .sh-stage.is-loading .sh-spinner { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .sh-stage.is-loading .sh-spinner, .sh-make__spin { animation: none; } .sh-make__bar span { transition: none; } }
 
 /* Destinations de partage (WhatsApp, Messenger, e-mail, téléchargement, Instagram, Facebook) */
 .sh-targets__label { margin: 0.6rem 0 0.45rem; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--c-text-muted, #aaa); }

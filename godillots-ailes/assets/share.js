@@ -649,13 +649,25 @@
         const vs = Math.round(L.statH * 0.42);
         g.font = `800 ${vs}px ${SITE.fontSans}`;
         g.fillStyle = key === 'ibp' && R.level ? (SITE.levelColor(R.level) === '#111' || R.level === 'noir' ? ink : SITE.levelColor(R.level)) : ink;
-        // Météo : picto du jour devant la température
-        let vx = sx;
-        if (key === 'meteo' && wx && wx.img) {
-          const ic = Math.round(vs * 1.15);
-          g.drawImage(wx.img, sx, sy + ls * 1.4 + vs * 0.62 - ic / 2, ic, ic);
-          vx += ic + vs * 0.12;
+        // Météo : grand picto du jour puis « max / min » à la taille des autres chiffres (réduit si la colonne est étroite)
+        if (key === 'meteo' && wx) {
+          const base = sy + ls * 1.4 + vs, sep = ' / ';
+          let fs = vs, ic, w1, w2, w3;
+          for (let k = 0; k < 8; k++) {
+            ic = wx.img ? Math.round(fs * 1.45) : 0;
+            g.font = `800 ${fs}px ${SITE.fontSans}`; w1 = g.measureText(`${wx.tmax}°`).width; w3 = g.measureText(`${wx.tmin}°`).width;
+            g.font = `600 ${fs}px ${SITE.fontSans}`; w2 = g.measureText(sep).width;
+            if ((ic ? ic + fs * 0.12 : 0) + w1 + w2 + w3 <= cw - 16) break;
+            fs = Math.round(fs * 0.92);
+          }
+          let x = sx;
+          if (ic) { g.drawImage(wx.img, x - ic * 0.06, base - fs * 0.36 - ic / 2, ic, ic); x += ic + fs * 0.12; }
+          g.font = `800 ${fs}px ${SITE.fontSans}`; g.fillStyle = ink; g.fillText(`${wx.tmax}°`, x, base); x += w1;
+          g.font = `600 ${fs}px ${SITE.fontSans}`; g.fillStyle = inkSoft; g.fillText(sep, x, base); x += w2;
+          g.font = `800 ${fs}px ${SITE.fontSans}`; g.fillText(`${wx.tmin}°`, x, base);
+          return;
         }
+        const vx = sx;
         const vw = g.measureText(v).width;
         g.fillText(v, vx, sy + ls * 1.4 + vs);
         if (unit) { g.font = `600 ${Math.round(vs * 0.45)}px ${SITE.fontSans}`; g.fillStyle = inkSoft; g.fillText(unit, vx + vw + vs * 0.15, sy + ls * 1.4 + vs); }
@@ -1052,6 +1064,7 @@
   async function makeVideo() {
     stopAnimation();
     const P = planFor();
+    setMaking(true);
     try {
       if (canEncode()) {
         try { await prepare(P); } catch (e) { console.warn('Survol 3D indisponible', e); opts.anim3d = false; paintPanel(); P.TL = timeline(); setStatus('Survol 3D indisponible : animation à plat.', true); }
@@ -1064,6 +1077,7 @@
       setStatus('Ce navigateur ne sait pas créer de vidéo. Essayez Chrome, Edge ou Safari récents.', true);
       return null;
     } finally {
+      setMaking(false);
       busy(false);
       if ($('#sh-status', dlg).textContent.startsWith('Création') || $('#sh-status', dlg).textContent.startsWith('Enregistrement')) setStatus('');
       drawAt(P, P.TL.frames - 1, false);
@@ -1171,6 +1185,24 @@
     if (!el) return;
     el.textContent = msg; el.classList.toggle('is-warn', !!warn);
     if (msg) ready = null;
+    if (making && msg && !warn) showMaking(msg);
+  }
+  // Création de la vidéo : grand randonneur qui marche + pourcentage sur l'aperçu, pour montrer que ça avance
+  let making = false;
+  function showMaking(msg) {
+    const box = $('.sh-make', dlg);
+    if (!box) return;
+    const m = /(\d+)\s*%/.exec(msg);
+    const pct = m ? Math.min(100, +m[1]) : null;
+    $('.sh-make__pct', box).textContent = pct == null ? '' : `${pct} %`;
+    box.style.setProperty('--p', pct == null ? 0 : pct / 100);
+    box.classList.toggle('has-pct', pct != null);
+    $('.sh-make__label', box).textContent = msg.replace(/\s*\d+\s*%\s*$/, '').trim();
+  }
+  function setMaking(on) {
+    making = on;
+    dlg.classList.toggle('is-making', on);
+    if (on) showMaking('Préparation de la vidéo… 0 %');
   }
   function busy(on, msg = '') {
     dlg.classList.toggle('is-busy', on);
@@ -1371,7 +1403,14 @@
           <button type="button" class="sh-x" data-sh-close aria-label="Fermer">${svg('close')}</button>
         </header>
         <div class="sh-body">
-          <div class="sh-stage"><canvas class="sh-canvas" aria-label="Aperçu de l'image à partager"></canvas>${window.rtHiker ? `<span class="sh-walker">${window.rtHiker()}</span>` : '<span class="sh-spinner" aria-hidden="true"></span>'}</div>
+          <div class="sh-stage"><canvas class="sh-canvas" aria-label="Aperçu de l'image à partager"></canvas>${window.rtHiker ? `<span class="sh-walker">${window.rtHiker()}</span>` : '<span class="sh-spinner" aria-hidden="true"></span>'}
+            <div class="sh-make" aria-hidden="true">
+              ${window.rtHiker ? `<span class="sh-make__walker">${window.rtHiker()}</span>` : '<span class="sh-spinner sh-make__spin"></span>'}
+              <span class="sh-make__pct"></span>
+              <span class="sh-make__bar"><span></span></span>
+              <span class="sh-make__label"></span>
+              <span class="sh-make__hint">La vidéo se fabrique image par image, gardez cette fenêtre ouverte.</span>
+            </div></div>
           <div class="sh-side">
             <form class="sh-panel" onsubmit="return false"></form>
             <div class="sh-foot"></div>
