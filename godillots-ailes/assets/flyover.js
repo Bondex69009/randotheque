@@ -776,6 +776,8 @@
     const padBottom = () => {
       const h = Math.round($('.fo__bottom').getBoundingClientRect().height);
       dlg.style.setProperty('--fo-bottom-h', `${h}px`);
+      const top = $('.fo__title');
+      if (top) dlg.style.setProperty('--fo-top-h', `${Math.round(top.getBoundingClientRect().bottom - dlg.getBoundingClientRect().top)}px`);
       const hud = matchMedia('(max-width: 640px)').matches ? $('.fo__hud').getBoundingClientRect().height + 8 : 0;
       return Math.round(h * 0.85 + hud);
     };
@@ -1270,6 +1272,8 @@
     const padBottom = () => {
       const h = Math.round($('.fo__bottom').getBoundingClientRect().height);
       dlg.style.setProperty('--fo-bottom-h', `${h}px`);
+      const top = $('.fo__title');
+      if (top) dlg.style.setProperty('--fo-top-h', `${Math.round(top.getBoundingClientRect().bottom - dlg.getBoundingClientRect().top)}px`);
       const hud = matchMedia('(max-width: 640px)').matches ? $('.fo-duel__huds').getBoundingClientRect().height + 8 : 0;
       return Math.round(h * 0.85 + hud);
     };
