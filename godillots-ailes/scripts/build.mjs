@@ -31,6 +31,8 @@ const EDITABLE = ['name', 'date', 'description', 'animateurs', 'ibp', 'commune']
 // Compteur total du club (randos d'avant 2010 comprises) : valeur de référence donnée par le club au
 // 3 novembre 2026, rando de ce jour incluse. Chaque rando suivante déjà faite et non annulée s'y ajoute.
 const TOTAL_REF = { km: 20229, date: '2026-11-03' };
+// Objectif du club : kilomètres restants et barre de progression sous le compteur (site et compteur intégré)
+const TOTAL_GOAL = 21000;
 
 // ---------------------------------------------------------------- Niveaux IBP (randonnée pédestre)
 export const LEVELS = [
@@ -385,6 +387,7 @@ async function main() {
       .filter((r) => r.date > TOTAL_REF.date && r.date <= today && !(r.blog && r.blog.cancelled))
       .reduce((s, r) => s + r.distanceKm, 0)),
     ref: TOTAL_REF,
+    goal: TOTAL_GOAL,
     asOf: today, // kilométrage arrêté à cette date (heure de Paris)
   };
   const payload = {
@@ -407,7 +410,7 @@ async function main() {
     Object.fromEntries(visible.filter((r) => heat.has(r.id)).map((r) => [r.id, heat.get(r.id)])))});`);
   // Données minuscules pour le compteur à intégrer sur un blog (compteur.html)
   fs.writeFileSync(path.join(DATA_DIR, 'compteur.js'),
-    `window.COMPTEUR=${JSON.stringify({ km: total.km, asOf: today, randos: visible.length, generatedAt: payload.generatedAt })};`);
+    `window.COMPTEUR=${JSON.stringify({ km: total.km, goal: TOTAL_GOAL, asOf: today, randos: visible.length, generatedAt: payload.generatedAt })};`);
   writeJSON(path.join(DATA_DIR, 'randos.json'), payload, false);
   writeJSON(GEO_CACHE_FILE, geoCache);
   writeJSON(ELE_CACHE_FILE, eleCache, false);

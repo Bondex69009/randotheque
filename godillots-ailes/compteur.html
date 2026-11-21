@@ -55,9 +55,17 @@
     .value { font-size: 34px; font-weight: 800; color: var(--accent); margin: 3px 0; font-variant-numeric: tabular-nums; white-space: nowrap; }
     .value small { font-size: 15px; font-weight: 600; color: var(--muted); }
     .hint { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    /* Objectif du club : barre de progression et kilomètres restants */
+    .goal { display: flex; flex-direction: column; gap: 3px; margin-top: 6px; width: 100%; }
+    .goal[hidden] { display: none; }
+    .bar { display: block; height: 6px; border-radius: 999px; background: rgb(135 247 0 / 0.18); overflow: hidden; }
+    :root[data-theme="clair"] .bar { background: rgb(63 122 0 / 0.14); }
+    .bar > span { display: block; height: 100%; width: 0; border-radius: inherit; background: var(--accent); }
+    .left { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .left strong { color: var(--text); font-weight: 800; }
     /* Colonne latérale d'un blog (environ 200 à 340 px) : contenu empilé et centré, textes sur plusieurs lignes */
     /* Colonne latérale d'un blog (environ 200 à 340 px) : version compacte et centrée, avec un petit randonneur,
-       qui tient dans 128 px de haut (même si la hauteur de l'iframe n'est pas ajustée par le blog) */
+       qui tient dans 160 px de haut avec la barre d'objectif (hauteur par défaut de l'iframe) */
     @media (max-width: 340px) {
       body { padding: 2px; }
       .counter { flex-direction: column; text-align: center; gap: 0; padding: 10px 10px 11px; border-radius: 14px; }
@@ -66,6 +74,8 @@
       .body { align-items: center; }
       .label { letter-spacing: 0.04em; }
       .value { font-size: 32px; margin: 2px 0 1px; }
+      .goal { margin-top: 4px; }
+      .left { white-space: normal; }
     }
     @media (max-width: 220px) {
       .value { font-size: 26px; }
@@ -80,6 +90,10 @@
       <span class="label">Compteur global depuis 1977</span>
       <span class="value"><span id="km" aria-hidden="true">…</span> <small>km</small><span id="km-sr" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)"></span></span>
       <span class="hint" id="as-of"></span>
+      <span class="goal" id="goal" hidden>
+        <span class="bar" id="bar" role="progressbar" aria-valuemin="0"><span id="bar-fill"></span></span>
+        <span class="left" id="left"></span>
+      </span>
     </span>
   </div>
   <script src="data/compteur.js"></script>
@@ -97,10 +111,25 @@
       if (asOf) {
         document.getElementById('as-of').textContent = `au ${new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date(`${asOf}T12:00:00`))}`;
       }
+      // Objectif du club : kilomètres restants et barre de progression (21 000 km par défaut)
+      const goal = data.goal || 21000;
+      const left = Math.max(0, goal - data.km);
+      const pct = Math.min(100, (data.km / goal) * 100);
+      const bar = document.getElementById('bar');
+      bar.setAttribute('aria-valuemax', goal);
+      bar.setAttribute('aria-valuenow', data.km);
+      bar.setAttribute('aria-label', `Progression vers l'objectif de ${fmt(goal)} km`);
+      document.getElementById('left').innerHTML = left
+        ? `Plus que <strong>${fmt(left)} km</strong> avant les ${fmt(goal)} km`
+        : `Objectif ${fmt(goal)} km atteint !`;
+      document.getElementById('goal').hidden = false;
+      const fill = document.getElementById('bar-fill');
       const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
       // Défilement du compteur quand il devient visible sur la page du blog
       const run = () => {
-        if (reduced) { el.textContent = fmt(data.km); return; }
+        if (reduced) { el.textContent = fmt(data.km); fill.style.width = `${pct}%`; return; }
+        fill.style.transition = 'width 1.8s cubic-bezier(0.25, 1, 0.5, 1)';
+        requestAnimationFrame(() => { fill.style.width = `${pct}%`; });
         const t0 = performance.now(), ms = 1800;
         const step = (t) => {
           const k = Math.min(1, (t - t0) / ms);

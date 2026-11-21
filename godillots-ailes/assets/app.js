@@ -587,6 +587,17 @@
   }
   const num = (key, initial = '0') => `<span class="num" data-stat="${key}" aria-hidden="true">${initial}</span><span class="visually-hidden" data-sr="${key}"></span>`;
 
+  // Objectif du club (TOTAL_GOAL dans scripts/build.mjs) : barre de progression et kilomètres restants
+  function goalHTML(km, goal) {
+    const f = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 }).format;
+    const left = Math.max(0, goal - km);
+    const pct = Math.min(100, (km / goal) * 100);
+    return `<span class="hero-total__goal">
+          <span class="hero-total__bar" role="progressbar" aria-label="Progression vers l'objectif de ${f(goal)} km" aria-valuemin="0" aria-valuemax="${goal}" aria-valuenow="${km}"><span style="width:${pct.toFixed(1)}%"></span></span>
+          <span class="hero-total__left">${left ? `Plus que <strong>${f(left)} km</strong> avant les ${f(goal)} km` : `Objectif ${f(goal)} km atteint !`}</span>
+        </span>`;
+  }
+
   function renderHeroStats() {
     // Date d'arrêt du kilométrage (randos dont la date est passée), en toutes lettres
     const asOf = (DATA.total && DATA.total.asOf) || new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Paris' }).format(new Date());
@@ -606,6 +617,7 @@
         <span class="hero-total__label">Compteur global depuis 1977</span>
         <span class="hero-total__value">${num('total')} <small>km</small></span>
         <span class="hero-total__hint" title="Randos d'avant 2010 comprises">Le club, au ${asOfLabel}</span>
+        ${goalHTML(Math.round(totalKm), (DATA.total && DATA.total.goal) || 21000)}
       </span>
       <button type="button" class="hero-total__embed" id="open-embed" title="Code HTML pour afficher ce compteur sur un blog">
         ${icon('code')}<span>Intégrer</span>
@@ -803,7 +815,7 @@
     const base = embedBase();
     const src = `${base}compteur.html${theme === 'clair' ? '?theme=clair' : ''}`;
     const origin = new URL(base).origin;
-    return `<iframe id="ga-compteur" src="${src}" title="Compteur global des Godillots Ailés depuis 1977" width="100%" height="130" scrolling="no" loading="lazy" style="border:0;display:block;width:100%;max-width:420px;margin:0 auto;"></iframe>
+    return `<iframe id="ga-compteur" src="${src}" title="Compteur global des Godillots Ailés depuis 1977" width="100%" height="160" scrolling="no" loading="lazy" style="border:0;display:block;width:100%;max-width:420px;margin:0 auto;"></iframe>
 <script>window.addEventListener("message",function(e){if(e.origin==="${origin}"&&e.data&&e.data.gaCompteurHeight){document.getElementById("ga-compteur").style.height=e.data.gaCompteurHeight+"px";}});</script>
 <script src="${base}assets/promeneur.js" data-blog defer></script>`;
   }
@@ -813,7 +825,7 @@
     $('#embed-code').value = code;
     // Aperçu : même iframe servie localement, à la largeur d'une colonne de blog et à pleine largeur
     const local = `compteur.html${theme === 'clair' ? '?theme=clair' : ''}`;
-    const frame = (id) => `<iframe id="${id}" src="${local}" title="Aperçu du compteur" height="130" scrolling="no" style="border:0;display:block;width:100%;"></iframe>`;
+    const frame = (id) => `<iframe id="${id}" src="${local}" title="Aperçu du compteur" height="160" scrolling="no" style="border:0;display:block;width:100%;"></iframe>`;
     $('#embed-preview').innerHTML = `
       <figure class="embed__pv embed__pv--narrow"><figcaption>Colonne du blog (250 px)</figcaption>${frame('pv-narrow')}</figure>
       <figure class="embed__pv"><figcaption>Pleine largeur</figcaption>${frame('pv-wide')}</figure>`;

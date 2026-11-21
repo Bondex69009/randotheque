@@ -31,6 +31,8 @@ L'interface d'administration n'est pas publiée en ligne ; elle reste utilisable
 Le haut du site affiche le compteur global depuis 1977, qui inclut les randos d'avant 2010. Il part de la valeur
 donnée par le club, 20 229 km au 3 novembre 2026 (rando de ce jour incluse). Chaque rando suivante s'y ajoute une
 fois sa date passée, sauf si elle est annulée. La référence se règle avec `TOTAL_REF` dans `scripts/build.mjs`.
+Sous le compteur, une barre de progression montre les kilomètres restants avant l'objectif du club
+(21 000 km), réglé avec `TOTAL_GOAL` dans le même fichier ; elle apparaît aussi sur le compteur intégré au blog.
 
 Le bouton « Intégrer », à côté du compteur, donne un code HTML (balise `<iframe>`, fond sombre ou clair) à coller sur
 Blogger, dans Mise en page > Ajouter un gadget > HTML/JavaScript. Le compteur affiché sur le blog (`compteur.html`,

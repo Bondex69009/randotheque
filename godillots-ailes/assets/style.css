@@ -420,6 +420,18 @@ h1, h2, h3 { line-height: var(--lh-tight); margin: 0; }
 .hero-total__value .num.is-counting { color: var(--c-accent-hover); }
 .hero-total__value small { font-size: var(--fs-sm); color: var(--c-text-muted); font-weight: var(--fw-semibold); }
 .hero-total__hint { font-size: var(--fs-xs); color: var(--c-text-muted); }
+/* Objectif du club : barre de progression et kilomètres restants */
+.hero-total__goal { display: flex; flex-direction: column; gap: 4px; margin-top: var(--space-2); }
+.hero-total__bar { display: block; height: 6px; border-radius: 999px; background: rgb(135 247 0 / 0.16); overflow: hidden; }
+.hero-total__bar > span {
+  display: block; height: 100%; border-radius: inherit; background: var(--c-accent);
+  transform-origin: left; animation: goal-grow 1.8s cubic-bezier(0.25, 1, 0.5, 1) both;
+}
+@keyframes goal-grow { from { transform: scaleX(0); } }
+@media (prefers-reduced-motion: reduce) { .hero-total__bar > span { animation: none; } }
+.hero-total__left { font-size: var(--fs-xs); color: var(--c-text-muted); }
+.hero-total__left strong { color: var(--c-text); font-weight: var(--fw-bold, 700); }
+[data-theme="light"] .hero-total__bar { background: rgb(58 133 0 / 0.14); }
 @media (max-width: 479px) {
   .hero-total { width: 100%; }
   .hero__stats { gap: var(--space-3) var(--space-6); }
