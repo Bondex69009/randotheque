@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="fr" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Survol 3D | La Randothèque de Gérard &amp; Martine</title>
+  <meta name="robots" content="noindex, nofollow">
+  <!-- Survol 3D d'une rando, à intégrer sur un blog avec une balise <iframe> (bouton « Intégrer » du lecteur 3D).
+       survol.html?id=<identifiant de la rando>&t=<nom affiché avant le chargement>.
+       Rien de lourd n'est chargé avant le clic du lecteur : MapLibre, les données et la trace arrivent à la demande. -->
+  <link rel="icon" href="assets/favicon.png" type="image/png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,600;0,9..144,700;1,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=IBM+Plex+Sans:wght@400;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+  <link rel="stylesheet" href="assets/style.css?v=44">
+  <style>
+    html, body { height: 100%; margin: 0; overflow: hidden; background: var(--c-bg); }
+    .poster {
+      position: fixed; inset: 0; display: grid; place-content: center; justify-items: center; gap: var(--space-3);
+      padding: var(--space-4); text-align: center; color: var(--c-text);
+      background:
+        radial-gradient(120% 80% at 50% 110%, color-mix(in srgb, var(--c-accent) 22%, transparent), transparent 60%),
+        linear-gradient(160deg, var(--c-surface-2), var(--c-bg) 70%);
+    }
+    .poster__eyebrow { margin: 0; font-size: var(--fs-xs); font-weight: var(--fw-bold); letter-spacing: 0.12em; text-transform: uppercase; color: var(--c-accent); }
+    .poster__name { margin: 0; max-width: 32rem; font-size: clamp(1.25rem, 4vw, 1.875rem); font-weight: var(--fw-black); line-height: 1.15; }
+    .poster__play {
+      display: inline-flex; align-items: center; gap: var(--space-2); margin-top: var(--space-2);
+      height: 3.25rem; padding-inline: var(--space-5, 1.5rem); border: 0; border-radius: var(--radius-pill); cursor: pointer;
+      background: var(--c-accent); color: var(--c-on-accent); font: var(--fw-bold) var(--fs-md) var(--font-sans);
+      box-shadow: 0 10px 30px -10px color-mix(in srgb, var(--c-accent) 70%, transparent);
+    }
+    .poster__play:hover { background: var(--c-accent-hover); }
+    .poster__play:disabled { opacity: 0.7; cursor: progress; }
+    .poster__play svg { width: 1.25rem; height: 1.25rem; }
+    .poster__site { margin: 0; font-size: var(--fs-xs); color: var(--c-text-faint); }
+    .poster__site a { color: inherit; }
+    .poster__msg { margin: 0; min-height: 1.25em; font-size: var(--fs-sm); color: var(--c-orange, #f59e0b); }
+  </style>
+</head>
+<body>
+  <main class="poster" id="poster">
+    <p class="poster__eyebrow">Survol 3D animé</p>
+    <h1 class="poster__name" id="poster-name">Randonnée de Gérard &amp; Martine</h1>
+    <button type="button" class="poster__play" id="poster-play">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.5-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5Z" fill="currentColor"/></svg>
+      <span id="poster-label">Lancer le survol</span>
+    </button>
+    <p class="poster__msg" id="poster-msg" role="status" aria-live="polite"></p>
+    <p class="poster__site">Relief et profil de la rando · <a href="./" target="_blank" rel="noopener">La Randothèque de Gérard &amp; Martine</a></p>
+  </main>
+
+  <script data-randos="data/randos.js">
+  (() => {
+    'use strict';
+    const DATA = document.currentScript.dataset.randos;
+    const SITE = 'La Randothèque de Gérard & Martine';
+    const ML_VER = '4.7.1';
+    const qs = new URLSearchParams(location.search);
+    const id = (qs.get('id') || '').replace(/[^\w-]/g, '');
+    const $ = (s) => document.querySelector(s);
+    if (qs.get('t')) { $('#poster-name').textContent = qs.get('t'); document.title = `Survol 3D : ${qs.get('t')} | ${SITE}`; }
+    const ficheUrl = id ? `./#rando=${id}` : './';
+    $('.poster__site a').href = ficheUrl;
+
+    const load = (url, css) => new Promise((resolve, reject) => {
+      const el = document.createElement(css ? 'link' : 'script');
+      if (css) { el.rel = 'stylesheet'; el.href = url; } else { el.src = url; }
+      el.onload = resolve;
+      el.onerror = () => reject(new Error(`chargement impossible : ${url}`));
+      document.head.appendChild(el);
+    });
+    const loadTrack = (rid) => new Promise((resolve, reject) => {
+      window.__rtTrack = (got, pts) => { if (got === rid) resolve(pts); };
+      load(`data/tracks/${rid}.js`).catch(reject);
+    });
+    const css = getComputedStyle(document.documentElement);
+    const levelColor = (lvl) => (lvl === 'noir' ? '#f4f4f0' : css.getPropertyValue(`--c-lvl-${lvl || 'vert'}`).trim() || css.getPropertyValue('--c-accent').trim());
+
+    async function start() {
+      const btn = $('#poster-play');
+      btn.disabled = true; $('#poster-label').textContent = 'Chargement…'; $('#poster-msg').textContent = '';
+      try {
+        if (!id) throw new Error('rando');
+        await Promise.all([
+          load(`https://unpkg.com/maplibre-gl@${ML_VER}/dist/maplibre-gl.css`, true),
+          load('assets/flyover.css?v=12', true),
+          load(`https://unpkg.com/maplibre-gl@${ML_VER}/dist/maplibre-gl.js`).then(() => load('assets/flyover.js?v=12')),
+          window.RANDOTHEQUE ? null : load(DATA),
+        ]);
+        const r = (window.RANDOTHEQUE && window.RANDOTHEQUE.randos || []).find((x) => x.id === id);
+        if (!r) throw new Error('rando');
+        const track = await loadTrack(id);
+        $('#poster').hidden = true;
+        window.RTFlyover.open({
+          embed: true, link: ficheUrl, linkLabel: 'Voir la fiche',
+          track, title: r.name, place: [r.commune, r.deptName].filter(Boolean).join(', '),
+          color: levelColor(r.level), inFrance: !!r.region,
+          loop: r.loop, dplus: r.dplus, durationMin: r.durationMin,
+        });
+      } catch (e) {
+        $('#poster').hidden = false;
+        $('#poster-msg').textContent = e.message === 'rando'
+          ? 'Cette rando est introuvable sur le site.'
+          : 'Le survol 3D n\'a pas pu se charger. Vérifiez la connexion internet puis réessayez.';
+        btn.disabled = false; $('#poster-label').textContent = 'Réessayer';
+      }
+    }
+    $('#poster-play').addEventListener('click', start);
+  })();
+  </script>
+</body>
+</html>

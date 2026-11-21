@@ -382,7 +382,41 @@
     close: '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>',
     cam: '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>',
     layers: '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="m12 3 9 5-9 5-9-5 9-5Z"/><path d="m3 13 9 5 9-5"/></svg>',
+    code: '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m8 7-5 5 5 5M16 7l5 5-5 5M14 4l-4 16"/></svg>',
+    ext: '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>',
+    full: '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>',
   };
+
+  // Boutons en haut à droite : fermer (sur le site) ou lien vers la fiche (survol intégré à un blog)
+  function topActions(o) {
+    if (o.embed) {
+      return `<div class="fo__actions">
+          ${document.fullscreenEnabled ? `<button type="button" class="fo__btn fo__btn--round" data-fo="full" aria-label="Plein écran" title="Plein écran">${ICON.full}</button>` : ''}
+          ${o.link ? `<a class="fo__btn fo__btn--pill fo__btn--link" href="${esc(o.link)}" target="_blank" rel="noopener">${ICON.ext}<span>${esc(o.linkLabel || 'Voir la fiche')}</span></a>` : ''}
+        </div>`;
+    }
+    return `<div class="fo__actions">
+          ${o.embedCode ? `<button type="button" class="fo__btn fo__btn--pill" data-fo="embed" aria-expanded="false" aria-controls="fo-embed" title="Code HTML pour mettre ce survol 3D sur un blog">${ICON.code}<span>Intégrer</span></button>` : ''}
+          <button type="button" class="fo__btn fo__btn--round" data-fo="close" aria-label="Fermer le survol 3D">${ICON.close}</button>
+        </div>`;
+  }
+  // Panneau « Intégrer à un blog » : code iframe à copier (Blogger : vue HTML du message)
+  function embedPanel(o) {
+    if (o.embed || !o.embedCode) return '';
+    return `<section class="fo__embed fo__card" id="fo-embed" aria-labelledby="fo-embed-title" hidden>
+        <h3 class="fo__embed-title" id="fo-embed-title">Mettre ce survol 3D sur un blog</h3>
+        <ol class="fo__embed-steps">
+          <li>Dans Blogger, ouvrez le message et passez en <strong>Vue HTML</strong> (icône <code>&lt;&gt;</code> en haut à gauche de l'éditeur).</li>
+          <li>Collez le code à l'endroit voulu, puis publiez. Le survol démarre quand le lecteur clique dessus.</li>
+        </ol>
+        <label class="fo__embed-label" for="fo-embed-code">Code HTML à copier</label>
+        <textarea class="fo__embed-code" id="fo-embed-code" rows="5" readonly spellcheck="false">${esc(o.embedCode)}</textarea>
+        <div class="fo__embed-foot">
+          <p class="fo__embed-status" id="fo-embed-status" role="status" aria-live="polite"></p>
+          <button type="button" class="fo__btn fo__btn--pill fo__btn--accent" data-fo="copy">${ICON.code}<span>Copier le code</span></button>
+        </div>
+      </section>`;
+  }
 
   function shellHtml(o) {
     return `
@@ -394,8 +428,9 @@
           <h2 class="fo__name" id="fo-title">${esc(o.title)}</h2>
           ${o.place ? `<p class="fo__place">${esc(o.place)}</p>` : ''}
         </div>
-        <button type="button" class="fo__btn fo__btn--round" data-fo="close" aria-label="Fermer le survol 3D">${ICON.close}</button>
+        ${topActions(o)}
       </header>
+      ${embedPanel(o)}
       <dl class="fo__hud fo__card" aria-live="off">
         <div><dt>Distance</dt><dd><b id="fo-d">0,0</b> <small><span class="fo__of">/ ${nf1.format(o.total)}</span> km</small></dd></div>
         <div><dt>Altitude</dt><dd><b id="fo-e">–</b> <small>m</small></dd></div>
@@ -515,9 +550,11 @@
     const bgColor = cssVar('--c-bg', '#0b0f0a');
 
     const dlg = document.createElement('dialog');
-    dlg.className = 'fo';
+    dlg.className = o.embed ? 'fo fo--embed' : 'fo';
     dlg.setAttribute('aria-labelledby', 'fo-title');
     dlg.innerHTML = shellHtml({ ...o, total });
+    // Intégré à un blog : le lecteur ne se ferme pas (Échap laisserait une page vide)
+    if (o.embed) dlg.addEventListener('cancel', (e) => e.preventDefault());
     document.body.appendChild(dlg);
     dlg.showModal();
     const $ = (s) => dlg.querySelector(s);
@@ -721,6 +758,19 @@
       }
       const a = b.dataset.fo;
       if (a === 'close') dlg.close();
+      else if (a === 'embed') {
+        const panel = $('#fo-embed');
+        panel.hidden = !panel.hidden;
+        b.setAttribute('aria-expanded', String(!panel.hidden));
+        if (!panel.hidden) { $('#fo-embed-status').textContent = ''; $('#fo-embed-code').select(); o.onEmbed && o.onEmbed(); }
+      } else if (a === 'copy') {
+        const area = $('#fo-embed-code');
+        (navigator.clipboard ? navigator.clipboard.writeText(area.value) : Promise.reject())
+          .catch(() => { area.select(); document.execCommand('copy'); })
+          .then(() => { $('#fo-embed-status').textContent = 'Code copié ! Collez-le dans la vue HTML du message.'; });
+      } else if (a === 'full') {
+        if (document.fullscreenElement) document.exitFullscreen(); else document.documentElement.requestFullscreen().catch(() => {});
+      }
       else if (a === 'play') toggle();
       else if (a === 'replay') replay();
       else if (a === 'follow') { follow = true; followBtn.hidden = true; map.stop(); const t = camTarget(d); map.easeTo({ center: t.here, bearing: t.b, zoom, pitch, duration: 900 }); cam = { c: t.here, b: t.b }; }
@@ -733,6 +783,7 @@
       }
     });
     dlg.addEventListener('keydown', (e) => {
+      if (e.target.closest('textarea, a')) return;
       if (e.key === ' ' && !e.target.closest('button')) { e.preventDefault(); toggle(); }
       else if ((e.key === 'ArrowRight' || e.key === 'ArrowLeft') && !e.target.closest('.maplibregl-canvas')) {
         e.preventDefault(); seek(d + (e.key === 'ArrowRight' ? 1 : -1) * Math.max(0.1, total * 0.02));

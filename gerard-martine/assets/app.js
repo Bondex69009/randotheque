@@ -1590,8 +1590,8 @@
   };
   const loadFlyover = () => Promise.all([
     loadAsset(`https://unpkg.com/maplibre-gl@${ML_VER}/dist/maplibre-gl.css`, true),
-    loadAsset('assets/flyover.css?v=11', true),
-    loadAsset(`https://unpkg.com/maplibre-gl@${ML_VER}/dist/maplibre-gl.js`).then(() => loadAsset('assets/flyover.js?v=11')),
+    loadAsset('assets/flyover.css?v=12', true),
+    loadAsset(`https://unpkg.com/maplibre-gl@${ML_VER}/dist/maplibre-gl.js`).then(() => loadAsset('assets/flyover.js?v=12')),
   ]);
   // Duel en survol 3D : les deux randos du comparateur en même temps, chacune dans sa couleur
   async function openFlyoverDuel(ids, colors, btn) {
@@ -1616,6 +1616,11 @@
       if (btn) { btn.disabled = false; if (label) label.textContent = txt; }
     }
   }
+  // Code à coller dans un message de blog : la page survol.html du site, en iframe (le survol démarre au clic)
+  function flyEmbedCode(r) {
+    const src = `${embedBase()}survol.html?id=${encodeURIComponent(r.id)}&amp;t=${encodeURIComponent(r.name)}`;
+    return `<iframe src="${src}" title="Survol 3D : ${esc(r.name)}" width="100%" height="540" loading="lazy" allow="fullscreen" allowfullscreen style="border:0;display:block;width:100%;max-width:960px;height:540px;margin:1em auto;border-radius:12px;"></iframe>`;
+  }
   async function openFlyover(id, btn) {
     const r = getR(id);
     if (!r) return;
@@ -1627,6 +1632,7 @@
       const track = await loadTrack(id);
       stopAudio();
       window.RTFlyover.open({
+        embedCode: byId.has(id) ? flyEmbedCode(r) : null, onEmbed: () => stat('embed', `Survol 3D : ${r.name}`, r.id),
         track, title: r.name, place: [r.commune, r.deptName].filter(Boolean).join(', '),
         color: r.level === 'noir' ? '#f4f4f0' : levelColor(r.level), inFrance: !!r.region,
         loop: r.loop, dplus: r.dplus, durationMin: r.durationMin,

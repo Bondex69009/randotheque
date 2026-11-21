@@ -186,3 +186,42 @@
 }
 /* Randonneur dessiné en 3D dans la carte : le point ne sert plus que de secours */
 .fo-walker.is-3d { visibility: hidden; }
+
+/* ---------------------------------------------- Intégrer à un blog (bouton du lecteur + survol.html en iframe) */
+.fo__actions { display: flex; gap: var(--space-2); flex: none; }
+.fo__btn--link { text-decoration: none; }
+.fo__btn--accent { background: var(--c-accent); color: var(--c-on-accent); border-color: transparent; }
+.fo__btn--accent:hover { background: var(--c-accent-hover); }
+.fo__embed {
+  position: absolute; z-index: 4; top: 5.25rem; right: var(--space-3); width: min(30rem, calc(100% - 2 * var(--space-3)));
+  padding: var(--space-4); display: grid; gap: var(--space-3);
+  background: color-mix(in srgb, var(--c-bg) 92%, transparent);
+}
+.fo__embed[hidden] { display: none; }
+.fo__embed-title { margin: 0; font-size: var(--fs-md); font-weight: var(--fw-bold); }
+.fo__embed-steps { margin: 0; padding-left: 1.25rem; display: grid; gap: var(--space-1); font-size: var(--fs-sm); color: var(--c-text-muted); }
+.fo__embed-steps strong { color: var(--c-text); }
+.fo__embed-label { font-size: var(--fs-xs); font-weight: var(--fw-semibold); text-transform: uppercase; letter-spacing: 0.08em; color: var(--c-text-faint); }
+.fo__embed-code {
+  width: 100%; resize: vertical; padding: var(--space-2) var(--space-3); border-radius: var(--radius-sm);
+  border: 1px solid var(--c-border-strong); background: var(--c-surface-2, rgb(0 0 0 / 0.3)); color: var(--c-text);
+  font: 0.75rem/1.45 "IBM Plex Mono", ui-monospace, monospace; word-break: break-all;
+}
+.fo__embed-foot { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); flex-wrap: wrap; }
+.fo__embed-status { margin: 0; font-size: var(--fs-sm); color: var(--c-accent); }
+@media (max-width: 640px) {
+  .fo__embed { top: 4.75rem; max-height: calc(100% - 6rem); overflow: auto; }
+  .fo__embed .fo__btn--pill span { display: inline; }
+  .fo__embed .fo__btn--pill { width: auto; padding-inline: var(--space-4); }
+}
+/* Dans l'iframe d'un blog : la page entière est le lecteur */
+.fo--embed::backdrop { background: var(--c-bg); }
+/* Iframe peu haute (540 px par défaut) : chiffres en bandeau au-dessus du profil, comme sur téléphone */
+@media (max-height: 640px) {
+  .fo--embed .fo__hud { top: auto; bottom: calc(var(--fo-bottom-h, 11rem) + var(--space-2)); left: var(--space-3); right: auto;
+    grid-template-columns: repeat(4, auto); column-gap: var(--space-5, 1.5rem); padding: var(--space-2) var(--space-3); }
+  .fo--embed .fo__hud-time { display: none !important; }
+  .fo--embed .fo__hud b { font-size: var(--fs-md); }
+  .fo--embed .fo__hud dt { font-size: 0.5625rem; }
+  .fo--embed .fo__profile { height: 6.5rem; }
+}

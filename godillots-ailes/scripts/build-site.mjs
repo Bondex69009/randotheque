@@ -18,17 +18,21 @@ if (!fs.existsSync(path.join(ROOT, 'data', 'randos.js'))) {
 }
 copy('index.html', 'index.html');
 copy('compteur.html', 'compteur.html');
+// Survol 3D d'une rando à intégrer sur un blog (iframe), données chargées au clic
+copy('survol.html', 'survol.html');
 // Espace stats du site (dossier stats/, à protéger par mot de passe dans cPanel) : tableau de bord commun
 // aux deux Randothèques, dans stats-serveur/admin/ à la racine du dépôt ; il n'affiche que le site où il est copié.
 fs.cpSync(path.join(ROOT, '..', 'stats-serveur', 'admin'), path.join(OUT, 'stats'), { recursive: true, filter: noHidden });
 // Les données changent à chaque mise à jour : on ajoute un numéro de version à leur adresse
 // pour que les navigateurs (et le gadget du blog) ne réutilisent pas une ancienne copie en cache.
 const version = Date.now().toString(36);
-for (const [page, data] of [['index.html', 'data/randos.js'], ['compteur.html', 'data/compteur.js']]) {
+for (const [page, data] of [['index.html', 'data/randos.js'], ['compteur.html', 'data/compteur.js'], ['survol.html', 'data/randos.js']]) {
   const file = path.join(OUT, page);
   const html = fs.readFileSync(file, 'utf8');
-  if (!html.includes(`src="${data}"`)) throw new Error(`${page} : balise ${data} introuvable`);
-  fs.writeFileSync(file, html.replace(`src="${data}"`, `src="${data}?v=${version}"`));
+  // src="…" pour une balise <script>, data-randos="…" pour survol.html qui charge les données au clic
+  const attr = page === 'survol.html' ? 'data-randos' : 'src';
+  if (!html.includes(`${attr}="${data}"`)) throw new Error(`${page} : balise ${data} introuvable`);
+  fs.writeFileSync(file, html.replace(`${attr}="${data}"`, `${attr}="${data}?v=${version}"`));
 }
 copy('data/compteur.js', 'data/compteur.js');
 copy('robots.txt', 'robots.txt');
