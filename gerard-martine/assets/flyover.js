@@ -831,9 +831,8 @@
         draw();
         placeCamera(dt);
         if (d >= total) finish();
-      } else if (phase === 'done' && playing && !map.isMoving()) {
-        map.setBearing(map.getBearing() + dt * 6); // lent tour d'horizon final
       }
+      // (pas de rotation finale : la trace reste cadrée plein écran)
     }
     // Vue d'ensemble finale : bornes et randonneur masqués pour laisser voir toute la trace
     const endView = (on) => { dlg.classList.toggle('fo--end', on); map.triggerRepaint(); };
@@ -841,8 +840,76 @@
       phase = 'outro';
       endView(true);
       updateHud(true);
-      map.fitBounds(bounds, { padding: { top: 90, left: 50, right: 50, bottom: padBottom() + 20 }, pitch: 55, bearing: cam.b, duration: reduceMotion() ? 0 : 3500, essential: true });
-      map.once('moveend', () => { if (phase === 'outro') phase = 'done'; });
+      const end = endCamera();
+      if (end) map.easeTo({ ...end, duration: reduceMotion() ? 0 : 3500, essential: true });
+      else map.fitBounds(bounds, { padding: 40, pitch: 55, bearing: cam.b, duration: reduceMotion() ? 0 : 3500, essential: true });
+      // Une fois arrivé, le relief réel est chargé : on mesure la trace à l'écran et on corrige le cadrage
+      let fixes = 0;
+      const settle = () => {
+        if (phase !== 'outro') return;
+        const f = fixes++ < 3 && fitCorrection();
+        if (f) { map.easeTo({ ...f, duration: reduceMotion() ? 0 : 700, essential: true }); map.once('moveend', settle); }
+        else phase = 'done';
+      };
+      map.once('moveend', settle);
+    }
+    // Zone libre de la carte (entre le titre et les commandes) et points de la trace pour la mesurer
+    function freeArea() {
+      const box = dlg.getBoundingClientRect(), m = 14;
+      let bottom = $('.fo__bottom').getBoundingClientRect().top - box.top;
+      if (matchMedia('(max-width: 640px)').matches) bottom = Math.min(bottom, $('.fo__hud').getBoundingClientRect().top - box.top);
+      return { W: box.width, H: box.height, l: m, r: box.width - m, t: $('.fo__top').getBoundingClientRect().bottom - box.top + m, b: bottom - m };
+    }
+    let fitPts = null;
+    function measure(area) {
+      if (!fitPts) {
+        const every = Math.max(1, Math.floor(T.n / 400));
+        fitPts = [];
+        for (let i = 0; i < T.n; i += every) fitPts.push([T.lon[i], T.lat[i]]);
+        fitPts.push([T.lon[T.n - 1], T.lat[T.n - 1]]);
+      }
+      let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+      for (const p of fitPts) {
+        const q = map.project(p);
+        if (q.x < x0) x0 = q.x; if (q.x > x1) x1 = q.x; if (q.y < y0) y0 = q.y; if (q.y > y1) y1 = q.y;
+      }
+      return {
+        fill: Math.min((area.r - area.l) / Math.max(1, x1 - x0), (area.b - area.t) / Math.max(1, y1 - y0)),
+        dx: (area.l + area.r) / 2 - (x0 + x1) / 2, dy: (area.t + area.b) / 2 - (y0 + y1) / 2,
+      };
+    }
+    // Petit recadrage depuis la vue actuelle, ou null si la trace remplit déjà la zone
+    function fitCorrection() {
+      try {
+        const area = freeArea(), me = measure(area);
+        if (Math.abs(Math.log2(me.fill)) < 0.04 && Math.abs(me.dx) < 8 && Math.abs(me.dy) < 8) return null;
+        const pad = map.getPadding();
+        const mid = [(pad.left + area.W - pad.right) / 2, (pad.top + area.H - pad.bottom) / 2];
+        return { center: map.unproject([mid[0] - me.dx, mid[1] - me.dy]), zoom: clamp(map.getZoom() + Math.log2(me.fill) * 0.95, 3, 17) };
+      } catch (e) { return null; }
+    }
+    // Cadrage final : la trace remplit toute la zone visible de la carte (entre le titre et les commandes),
+    // mesurée à l'écran avec la perspective et le relief, puis ajustée en quelques passes
+    function endCamera() {
+      try {
+        const area = freeArea();
+        if (area.r - area.l < 80 || area.b - area.t < 80) return null;
+        const pad = map.getPadding();
+        const mid = [(pad.left + area.W - pad.right) / 2, (pad.top + area.H - pad.bottom) / 2];
+        const saved = { center: map.getCenter(), zoom: map.getZoom(), bearing: map.getBearing(), pitch: map.getPitch() };
+        const pitchEnd = 55, bearing = cam.b;
+        const start = map.cameraForBounds(bounds, { padding: 20, bearing, pitch: 0 });
+        let center = start ? start.center : saved.center, z = start ? start.zoom : saved.zoom;
+        for (let k = 0; k < 6; k++) {
+          map.jumpTo({ center, zoom: z, bearing, pitch: pitchEnd });
+          const me = measure(area);
+          if (Math.abs(Math.log2(me.fill)) < 0.01 && Math.abs(me.dx) < 2 && Math.abs(me.dy) < 2) break;
+          center = map.unproject([mid[0] - me.dx, mid[1] - me.dy]);
+          z = clamp(z + Math.log2(me.fill) * 0.9, 3, 17);
+        }
+        map.jumpTo(saved);
+        return { center, zoom: z, bearing, pitch: pitchEnd };
+      } catch (e) { return null; }
     }
     function startRun() {
       phase = 'run'; follow = true; followBtn.hidden = true; endView(false);

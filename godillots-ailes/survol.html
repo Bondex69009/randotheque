@@ -181,8 +181,8 @@
         if (!id) throw new Error('rando');
         await Promise.all([
           load(`https://unpkg.com/maplibre-gl@${ML_VER}/dist/maplibre-gl.css`, true),
-          load('assets/flyover.css?v=14', true),
-          load(`https://unpkg.com/maplibre-gl@${ML_VER}/dist/maplibre-gl.js`).then(() => load('assets/flyover.js?v=14')),
+          load('assets/flyover.css?v=15', true),
+          load(`https://unpkg.com/maplibre-gl@${ML_VER}/dist/maplibre-gl.js`).then(() => load('assets/flyover.js?v=15')),
           window.RTMeteo ? null : load('assets/meteo.js?v=3').catch(() => null),
           window.RANDOTHEQUE ? null : load(DATA),
         ]);
