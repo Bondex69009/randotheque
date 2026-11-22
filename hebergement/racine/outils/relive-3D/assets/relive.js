@@ -6,7 +6,6 @@
   const LIB = '../../godillots-ailes/assets/';
   const ML_VER = '4.7.1';
   const API = 'api.php';
-  const KEY = 'rt-stats-token'; // même connexion que les espaces stats (même sous-domaine)
   const $ = (s, el = document) => el.querySelector(s);
   const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const nf1 = new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
@@ -20,17 +19,13 @@
     ['', 'Couleur du site'], ['#4ade80', 'Vert'], ['#60a5fa', 'Bleu'], ['#facc15', 'Jaune'], ['#f87171', 'Rouge'], ['#f4f4f0', 'Blanc'],
   ];
 
-  let token = null;
-  try { token = localStorage.getItem(KEY); } catch { /* navigation privée */ }
-
   // ---------------------------------------------------------------- API
   async function api(action, { body, params = '' } = {}) {
     const res = await fetch(`${API}?a=${action}${params}`, {
       method: body ? 'POST' : 'GET',
-      headers: { ...(body ? { 'Content-Type': 'application/json' } : {}), ...(token ? { 'X-Stats-Token': token } : {}) },
+      headers: body ? { 'Content-Type': 'application/json' } : {},
       body: body ? JSON.stringify(body) : undefined,
     });
-    if (res.status === 401 && action !== 'login') { logout(true); throw new Error('Votre connexion a expiré : reconnectez-vous.'); }
     if (res.status === 204) return null;
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(data.error || `Erreur du serveur (${res.status}).`);
@@ -296,34 +291,6 @@
     toastTimer = setTimeout(() => { t.hidden = true; }, 4500);
   }
 
-  // ---- Connexion
-  function logout(expired) {
-    if (!expired && token) api('logout', { body: {} }).catch(() => {});
-    token = null;
-    try { localStorage.removeItem(KEY); } catch { /* rien */ }
-    show();
-  }
-  function show() {
-    $('#login').hidden = !!token;
-    $('#app').hidden = !token;
-    $('#logout').hidden = !token;
-    if (token) refresh(); else $('#password').focus();
-  }
-  $('#login-form').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const btn = $('#login-btn'), err = $('#login-err'), pw = $('#password');
-    btn.disabled = true; err.textContent = ''; pw.removeAttribute('aria-invalid');
-    try {
-      const r = await api('login', { body: { password: pw.value } });
-      token = r.token;
-      try { localStorage.setItem(KEY, token); } catch { /* rien */ }
-      pw.value = '';
-      show();
-    } catch (ex) {
-      err.textContent = ex.message; pw.setAttribute('aria-invalid', 'true'); pw.focus();
-    } finally { btn.disabled = false; }
-  });
-  $('#logout').addEventListener('click', () => logout(false));
 
   // ---- Import
   let draft = null; // { fileName, gpx, track, info }
@@ -419,7 +386,7 @@
       items = (await api('list')).items || [];
       renderHistory();
     } catch (ex) {
-      if (token) $('#history-empty').textContent = ex.message;
+      $('#history-empty').textContent = ex.message;
       $('#history-empty').hidden = false;
     } finally { list.removeAttribute('aria-busy'); }
   }
@@ -495,7 +462,7 @@
       panel(li, 'edit', false); $('[data-act="edit"]', li).focus();
     } else if (act === 'gpx') {
       try {
-        const res = await fetch(`${API}?a=gpx&id=${it.id}`, { headers: { 'X-Stats-Token': token } });
+        const res = await fetch(`${API}?a=gpx&id=${it.id}`);
         if (!res.ok) throw new Error('Le GPX n\'a pas pu être téléchargé.');
         const url = URL.createObjectURL(await res.blob());
         Object.assign(document.createElement('a'), { href: url, download: it.fileName || `${it.id}.gpx` }).click();
@@ -521,5 +488,5 @@
     } catch (ex) { toast(ex.message, true); sub.disabled = false; }
   });
 
-  show();
+  refresh();
 })();

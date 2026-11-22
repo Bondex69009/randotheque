@@ -73,8 +73,8 @@ reprend `survol.html` des sites (image d'attente, bouton de lecture) : à garder
 - **Historique** sur le serveur, commun à tous les appareils : voir, copier le code, ouvrir la page à intégrer,
   télécharger le GPX d'origine, modifier, supprimer. Un code déjà collé sur un blog reste valable après une
   modification (le nom affiché suit) ; après une suppression, le blog affiche « Ce survol 3D n'existe plus ».
-- **Accès** : même mot de passe que les espaces stats (et même connexion de 30 jours). Seule la lecture d'un survol
-  (`api.php?a=get`, utilisée par `survol.html`) est publique.
+- **Accès** : sans mot de passe, tout le monde peut importer, modifier ou supprimer un survol (`api.php` garde
+  seulement les fonctions utilitaires du moteur des stats). `survol.html` lit un survol avec `api.php?a=get`.
 - **Fichiers** : `hebergement/racine/outils/relive-3D/`, envoyé avec la page d'accueil. Son `api.php` range chaque import
   dans `data/` sur le serveur (`<id>.gpx` d'origine et `<id>.json` : infos et trace), dossier fermé au web, jamais
   envoyé ni effacé par le déploiement (absent du dépôt). Il s'appuie sur `/stats/lib/core.php`.

@@ -1,5 +1,5 @@
 # Outil « Relive 3D » (/outils/relive-3D/ du sous-domaine).
-#   index.html  outil (import d'un GPX, historique), protégé par le mot de passe des stats dans api.php
+#   index.html  outil (import d'un GPX, historique), sans mot de passe
 #   survol.html page publique à intégrer sur un blog (iframe), lit api.php?a=get
 #   data/       GPX importés et traces, créé par api.php : jamais accessible directement depuis le web
 Options -Indexes

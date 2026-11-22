@@ -7,7 +7,7 @@
   <meta name="robots" content="noindex, nofollow">
   <meta name="theme-color" content="#0b0f0a">
   <!-- Outil « Relive 3D » : importer un GPX, voir son survol 3D (le lecteur des Randothèques), obtenir le code
-       <iframe> à coller sur un blog. Historique des imports sur le serveur (api.php), même mot de passe que les stats. -->
+       <iframe> à coller sur un blog. Historique des imports sur le serveur (api.php), sans mot de passe. -->
   <script>(function(){var d=document.documentElement,k='rt-theme',m=null,q=window.matchMedia&&matchMedia('(prefers-color-scheme: light)');try{m=localStorage.getItem(k)}catch(e){}
 function a(){d.setAttribute('data-theme',m==='light'||m==='dark'?m:(q&&q.matches?'light':'dark'))}a();
 window.rtTheme={get:function(){return m==='light'||m==='dark'?m:'auto'},set:function(v){m=v==='auto'?null:v;try{m?localStorage.setItem(k,m):localStorage.removeItem(k)}catch(e){}a();document.dispatchEvent(new Event('rt-theme'))}};
@@ -26,6 +26,8 @@ if(q&&q.addEventListener)q.addEventListener('change',function(){if(!m){a();docum
     .rl-top__actions { display: flex; align-items: center; gap: var(--space-2); }
     @media (max-width: 40rem) { .rl-top__actions { order: -1; width: 100%; justify-content: flex-end; } }
     .rl-eyebrow { margin: 0; font-size: var(--fs-xs); font-weight: var(--fw-bold); letter-spacing: 0.12em; text-transform: uppercase; color: var(--c-accent); }
+    .rl-eyebrow a { color: inherit; text-decoration: none; }
+    .rl-eyebrow a:hover, .rl-eyebrow a:focus-visible { text-decoration: underline; }
     .rl-top h1 { font-size: var(--fs-2xl); font-weight: var(--fw-black); }
     .rl-lead { margin: var(--space-1) 0 0; max-width: 65ch; color: var(--c-text-muted); }
     .rl-card { padding: var(--space-5); border-radius: var(--radius-lg); background: var(--c-surface); border: var(--border-w) solid var(--c-border); box-shadow: var(--shadow-card); display: grid; gap: var(--space-4); }
@@ -35,7 +37,6 @@ if(q&&q.addEventListener)q.addEventListener('change',function(){if(!m){a();docum
     .rl-muted { margin: 0; color: var(--c-text-muted); font-size: var(--fs-sm); }
     .rl-err { margin: 0; min-height: 1.25em; color: var(--c-danger); font-size: var(--fs-sm); }
     .rl-err.is-info { color: var(--c-text-muted); }
-    .rl-login { max-width: 26rem; }
     /* Zone de dépôt du GPX */
     .rl-drop { position: relative; display: grid; justify-items: center; gap: var(--space-2); padding: var(--space-8) var(--space-4); text-align: center;
       border: 2px dashed var(--c-border-strong); border-radius: var(--radius-lg); background: var(--c-surface-2); cursor: pointer;
@@ -89,12 +90,12 @@ if(q&&q.addEventListener)q.addEventListener('change',function(){if(!m){a();docum
   <main class="rl">
     <header class="rl-top">
       <div class="rl-top__title">
-        <p class="rl-eyebrow">Outils des Randothèques</p>
+        <p class="rl-eyebrow"><a href="../">Outils des Randothèques</a></p>
         <h1>Relive 3D</h1>
         <p class="rl-lead">Importez un GPX : son survol 3D animé, le même que sur la Randothèque, est prêt à être intégré sur un blog.</p>
       </div>
       <div class="rl-top__actions">
-      <button type="button" class="btn btn--ghost btn--sm" id="logout" hidden><span class="btn__label">Se déconnecter</span></button>
+      <a class="btn btn--ghost btn--sm" href="../"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg><span class="btn__label">Tous les outils</span></a>
       <button type="button" class="theme-btn" id="theme-btn" aria-label="Changer de thème">
         <svg class="icon theme-btn__auto" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 4a8 8 0 0 1 0 16Z" fill="currentColor"/></svg>
         <svg class="icon theme-btn__light" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.2" fill="currentColor"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
@@ -103,21 +104,7 @@ if(q&&q.addEventListener)q.addEventListener('change',function(){if(!m){a();docum
       </div>
     </header>
 
-    <!-- Connexion : même mot de passe que les espaces stats -->
-    <section class="rl-card rl-login" id="login" aria-labelledby="login-title" hidden>
-      <h2 id="login-title">Connexion</h2>
-      <p class="rl-muted">Même mot de passe que les espaces stats des Randothèques.</p>
-      <form id="login-form" class="rl-grid">
-        <div class="rl-field rl-field--wide">
-          <label for="password">Mot de passe</label>
-          <input id="password" type="password" autocomplete="current-password" required aria-describedby="login-err">
-        </div>
-        <p class="rl-err rl-field--wide" id="login-err" role="alert"></p>
-        <div class="rl-form__actions rl-field--wide"><button type="submit" class="btn btn--primary" id="login-btn"><span class="btn__label">Se connecter</span></button></div>
-      </form>
-    </section>
-
-    <div id="app" hidden style="display: contents">
+    <div id="app" style="display: contents">
       <!-- 1. Import -->
       <section class="rl-card" aria-labelledby="import-title">
         <h2 id="import-title">Importer un GPX</h2>

@@ -2,11 +2,9 @@
 /**
  * Outil « Relive 3D » : enregistre les GPX importés et leur survol 3D (historique commun à tous les appareils).
  *
- * Même mot de passe que les espaces stats (moteur /stats/lib/core.php, jeton dans l'en-tête X-Stats-Token).
- * Seule la lecture d'un survol (a=get) est publique : c'est elle que charge survol.html, intégré sur les blogs.
+ * Sans mot de passe : toutes les actions sont ouvertes (fonctions utilitaires du moteur /stats/lib/core.php).
+ * survol.html, intégré sur les blogs, lit un survol avec a=get.
  *
- *   POST api.php?a=login   {password}            connexion -> jeton
- *   POST api.php?a=logout                        déconnexion
  *   GET  api.php?a=get&id=…                      survol (infos + trace), public
  *   GET  api.php?a=list                          historique (sans les traces)
  *   GET  api.php?a=gpx&id=…                      GPX d'origine (téléchargement)
@@ -155,22 +153,6 @@ if ( 'get' === $action ) {
 
 header( 'Cache-Control: no-store' );
 
-if ( 'login' === $action ) {
-	if ( ! $post ) {
-		sm_done( 405 );
-	}
-	$res = sm_login( (string) ( rl_body()['password'] ?? '' ) );
-	if ( isset( $res['error'] ) ) {
-		sm_json( array( 'error' => $res['error'] ), $res['code'] );
-	}
-	sm_json( $res );
-}
-if ( 'logout' === $action ) {
-	sm_logout();
-	sm_done();
-}
-
-sm_require_admin();
 
 switch ( $action ) {
 	case 'list':
