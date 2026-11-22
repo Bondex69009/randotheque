@@ -200,7 +200,10 @@ h1, h2, h3 { line-height: var(--lh-tight); margin: 0; }
   .site-header__inner > .search-wrap { flex: 1 1 auto; min-width: 0; }
   .site-header__inner > .brand { flex: none; }
   .brand__title { white-space: nowrap; }
-  .site-header .elsewhere__bar { padding-bottom: 0; }
+  /* PC : le bandeau passe à la ligne s'il manque de place (compteurs affichés) au lieu d'être coupé net */
+  .site-header .elsewhere__bar { padding-bottom: 0; flex-wrap: wrap; overflow: visible; }
+  .site-header .elsewhere__tabs { flex: 1 1 auto; min-width: 0; flex-wrap: wrap; white-space: normal; }
+  .site-header .elsewhere__tab { white-space: nowrap; }
 }
 .brand { display: flex; align-items: center; gap: var(--space-3); color: var(--c-text); text-decoration: none; }
 .brand:hover { color: var(--c-text); }
