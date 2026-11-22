@@ -190,7 +190,7 @@ h1, h2, h3 { line-height: var(--lh-tight); margin: 0; }
 .header-filters .badge-count { position: absolute; top: -0.25rem; right: -0.25rem; }
 @media (max-width: 1023px) {
   .site-header__inner > .search-wrap { order: 3; flex: 1 1 calc(100% - 2.75rem - var(--space-4)); max-width: none; padding-block: 0; margin-bottom: var(--space-3); }
-  .header-filters { display: inline-grid; order: 4; margin-bottom: var(--space-3); align-self: flex-start; }
+  .header-filters { display: inline-grid; order: 4; margin-bottom: calc(var(--space-3) + var(--space-2)); align-self: flex-end; }
   /* « Chercher aussi sur » : une seule ligne qui défile, pour garder l'en-tête figé compact */
   .site-header .elsewhere__bar { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
   .site-header .elsewhere__bar::-webkit-scrollbar { display: none; }
@@ -282,7 +282,7 @@ h1, h2, h3 { line-height: var(--lh-tight); margin: 0; }
 }
 
 .search { position: relative; min-width: 0; max-width: 40rem; }
-/* Recherche dans l'en-tête, avec « Chercher aussi sur » rattaché juste dessous */
+/* Recherche dans l'en-tête, avec « Chercher aussi sur » juste au-dessus (la liste de suggestions ne le cache plus) */
 .search-wrap { position: relative; display: flex; flex-direction: column; gap: var(--space-1); min-width: 0; max-width: 40rem; padding-block: var(--space-2); }
 .search-wrap > .search { max-width: none; }
 .site-header .elsewhere { margin-top: 0; max-width: none; }
