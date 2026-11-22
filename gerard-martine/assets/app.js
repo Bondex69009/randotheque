@@ -1590,8 +1590,8 @@
   };
   const loadFlyover = () => Promise.all([
     loadAsset(`https://unpkg.com/maplibre-gl@${ML_VER}/dist/maplibre-gl.css`, true),
-    loadAsset('assets/flyover.css?v=17', true),
-    loadAsset(`https://unpkg.com/maplibre-gl@${ML_VER}/dist/maplibre-gl.js`).then(() => loadAsset('assets/flyover.js?v=16')),
+    loadAsset('assets/flyover.css?v=18', true),
+    loadAsset(`https://unpkg.com/maplibre-gl@${ML_VER}/dist/maplibre-gl.js`).then(() => loadAsset('assets/flyover.js?v=17')),
   ]);
   // Duel en survol 3D : les deux randos du comparateur en même temps, chacune dans sa couleur
   async function openFlyoverDuel(ids, colors, btn) {
@@ -1632,7 +1632,7 @@
       const track = await loadTrack(id);
       stopAudio();
       window.RTFlyover.open({
-        embedCode: byId.has(id) ? flyEmbedCode(r) : null, onEmbed: () => stat('embed', `Survol 3D : ${r.name}`, r.id),
+        embedCode: byId.has(id) || (r.trackUrl && /^(rc|px)[0-9a-f]+$/.test(id)) ? flyEmbedCode(r) : null, onEmbed: () => stat('embed', `Survol 3D : ${r.name}`, r.id),
         track, title: r.name, place: [r.commune, r.deptName].filter(Boolean).join(', '),
         commune: r.commune, weather: window.RTMeteo && !r.external ? window.RTMeteo.summary(r) : null,
         color: r.level === 'noir' ? '#f4f4f0' : levelColor(r.level), inFrance: !!r.region,

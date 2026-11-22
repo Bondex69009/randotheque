@@ -282,9 +282,10 @@
   .fo__wx-ico { width: 1.75rem; height: 1.75rem; }
   .fo__wx b { font-size: var(--fs-md); }
 }
-/* Iframe peu haute : le bandeau de chiffres occupe le bas à gauche, la météo et la commune passent en haut à gauche */
-@media (max-height: 640px) {
-  .fo--embed .fo__info { bottom: auto; top: calc(var(--fo-top-h, 5rem) + var(--space-2)); padding: 0.375rem var(--space-3); max-width: calc(100% - 4.5rem); }
-  .fo--embed .fo__wx-ico { width: 1.75rem; height: 1.75rem; }
-  .fo--embed .fo__wx b { font-size: var(--fs-md); }
+/* Iframe : la météo et la commune sont dans la barre du haut, à droite, juste avant le bouton plein écran */
+.fo__top > .fo__info { position: static; margin-left: auto; flex: none; max-width: none; padding: 0.375rem var(--space-3); }
+.fo__top > .fo__info .fo__wx-ico { width: 1.75rem; height: 1.75rem; }
+.fo__top > .fo__info .fo__wx b { font-size: var(--fs-md); }
+@media (max-width: 640px) {
+  .fo__top > .fo__info .fo__loc { display: none; }
 }

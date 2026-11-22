@@ -121,10 +121,28 @@
       el.onerror = () => reject(new Error(`chargement impossible : ${url}`));
       document.head.appendChild(el);
     });
+    // Randos d'autres blogs (« Chercher aussi sur ») : reco (rc…) et Poulx (px…), rangées dans externes/
+    const EXT = { rc: 'reco', px: 'poulx' };
+    const ext = EXT[(id.match(/^(rc|px)[0-9a-f]+$/) || [])[1]] || null;
     const loadTrack = (rid) => new Promise((resolve, reject) => {
       window.__rtTrack = (got, pts) => { if (got === rid) resolve(pts); };
-      load(`data/tracks/${rid}.js`).catch(reject);
+      load(ext ? `externes/${ext}/tracks/${rid}.js` : `data/tracks/${rid}.js`).catch(reject);
     });
+    // Infos d'une rando externe, comme sa fiche sur le site (assets/ailleurs.js)
+    const FFR = { vert: 'vert', bleu: 'bleu', jaune: 'jaune', orange: 'jaune', rouge: 'rouge', noir: 'noir' };
+    const cap = (s) => (s ? s.charAt(0).toUpperCase() + s.slice(1).toLowerCase() : '');
+    async function extRando() {
+      const res = await fetch(`externes/${ext}/${ext}.json`, { cache: 'no-cache' });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const x = ((await res.json()).items || []).find((it) => it.id === id);
+      if (!x) return null;
+      const name = (ext === 'poulx' ? cap(x.place) : x.name) || x.commune || 'Rando';
+      return {
+        name: x.part ? `${name} (trace ${x.part})` : name, commune: x.commune, deptName: x.deptName,
+        region: x.deptCode ? 'France' : null, level: FFR[x.ffr] || null, external: true,
+        loop: x.loop, dplus: x.dplus, durationMin: x.durationMin || null,
+      };
+    }
     // Trace chargée une seule fois : pour l'image d'attente, puis pour le survol
     let trackP = null;
     const getTrack = () => (trackP = trackP || loadTrack(id).catch((e) => { trackP = null; throw e; }));
@@ -196,19 +214,19 @@
         if (!id) throw new Error('rando');
         await Promise.all([
           load(`https://unpkg.com/maplibre-gl@${ML_VER}/dist/maplibre-gl.css`, true),
-          load('assets/flyover.css?v=17', true),
-          load(`https://unpkg.com/maplibre-gl@${ML_VER}/dist/maplibre-gl.js`).then(() => load('assets/flyover.js?v=16')),
+          load('assets/flyover.css?v=18', true),
+          load(`https://unpkg.com/maplibre-gl@${ML_VER}/dist/maplibre-gl.js`).then(() => load('assets/flyover.js?v=17')),
           window.RTMeteo ? null : load('assets/meteo.js?v=3').catch(() => null),
-          window.RANDOTHEQUE ? null : load(DATA),
+          ext || window.RANDOTHEQUE ? null : load(DATA),
         ]);
-        const r = (window.RANDOTHEQUE && window.RANDOTHEQUE.randos || []).find((x) => x.id === id);
+        const r = ext ? await extRando() : (window.RANDOTHEQUE && window.RANDOTHEQUE.randos || []).find((x) => x.id === id);
         if (!r) throw new Error('rando');
         const track = await getTrack();
         $('#poster').hidden = true;
         window.RTFlyover.open({
           embed: true,
           track, title: r.name, place: [r.commune, r.deptName].filter(Boolean).join(', '),
-          commune: r.commune, weather: window.RTMeteo ? window.RTMeteo.summary(r) : null,
+          commune: r.commune, weather: window.RTMeteo && !r.external ? window.RTMeteo.summary(r) : null,
           color: levelColor(r.level), inFrance: !!r.region,
           loop: r.loop, dplus: r.dplus, durationMin: r.durationMin,
         });

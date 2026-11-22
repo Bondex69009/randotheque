@@ -529,6 +529,14 @@
       </section>`;
   }
 
+  // Météo du jour et commune ; en iframe elles vont dans la barre du haut, à gauche du bouton plein écran
+  function infoHtml(o) {
+    if (!o.commune && !o.weather) return '';
+    return `<div class="fo__card fo__info" id="fo-info"${o.commune ? '' : ' hidden'}>
+        <p class="fo__wx" id="fo-wx" hidden></p>
+        ${o.commune ? `<p class="fo__loc">${ICON.pin}<span>${esc(o.commune)}</span></p>` : ''}
+      </div>`;
+  }
   function shellHtml(o) {
     return `
       <div class="fo__map" id="fo-map" role="region" aria-label="Carte en relief du parcours"></div>
@@ -539,13 +547,11 @@
           <h2 class="fo__name" id="fo-title">${esc(o.title)}</h2>
           ${o.place ? `<p class="fo__place">${esc(o.place)}</p>` : ''}
         </div>
+        ${o.embed ? infoHtml(o) : ''}
         ${topActions(o)}
       </header>
       ${embedPanel(o)}
-      ${o.commune || o.weather ? `<div class="fo__card fo__info" id="fo-info"${o.commune ? '' : ' hidden'}>
-        <p class="fo__wx" id="fo-wx" hidden></p>
-        ${o.commune ? `<p class="fo__loc">${ICON.pin}<span>${esc(o.commune)}</span></p>` : ''}
-      </div>` : ''}
+      ${o.embed ? '' : infoHtml(o)}
       <dl class="fo__hud fo__card" aria-live="off">
         <div><dt>Distance</dt><dd><b id="fo-d">0,0</b> <small><span class="fo__of">/ ${nf1.format(o.total)}</span> km</small></dd></div>
         <div><dt>Altitude</dt><dd><b id="fo-e">–</b> <small>m</small></dd></div>
