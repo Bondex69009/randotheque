@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="fr" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Outils | Randothèques</title>
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#0b0f0a">
+  <!-- Page d'accueil des outils : une icône par outil, présentée comme un écran d'applis. -->
+  <script>(function(){var d=document.documentElement,k='rt-theme',m=null,q=window.matchMedia&&matchMedia('(prefers-color-scheme: light)');try{m=localStorage.getItem(k)}catch(e){}
+function a(){d.setAttribute('data-theme',m==='light'||m==='dark'?m:(q&&q.matches?'light':'dark'))}a();
+window.rtTheme={get:function(){return m==='light'||m==='dark'?m:'auto'},set:function(v){m=v==='auto'?null:v;try{m?localStorage.setItem(k,m):localStorage.removeItem(k)}catch(e){}a();document.dispatchEvent(new Event('rt-theme'))}};
+if(q&&q.addEventListener)q.addEventListener('change',function(){if(!m){a();document.dispatchEvent(new Event('rt-theme'))}})})();</script>
+  <link rel="icon" href="../godillots-ailes/assets/favicon.png" type="image/png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=IBM+Plex+Sans:wght@400;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+  <link rel="stylesheet" href="../godillots-ailes/assets/style.css?v=43">
+  <link rel="stylesheet" href="../godillots-ailes/assets/outils.css?v=1">
+  <style>
+    body { min-height: 100vh; background: var(--c-bg); }
+    .ot { width: 100%; max-width: 44rem; margin-inline: auto; padding: var(--space-6) var(--space-4) var(--space-16); display: grid; gap: var(--space-8); }
+    .ot-top { display: flex; align-items: flex-start; gap: var(--space-3); }
+    .ot-top__title { flex: 1; min-width: 0; }
+    .ot-eyebrow { margin: 0; font-size: var(--fs-xs); font-weight: var(--fw-bold); letter-spacing: 0.12em; text-transform: uppercase; color: var(--c-accent); }
+    .ot-eyebrow a { color: inherit; text-decoration: none; }
+    .ot-eyebrow a:hover, .ot-eyebrow a:focus-visible { text-decoration: underline; }
+    .ot-top h1 { font-size: var(--fs-2xl); font-weight: var(--fw-black); }
+    .ot-lead { margin: var(--space-1) 0 0; color: var(--c-text-muted); }
+
+    /* Écran d'applis : icône arrondie + nom dessous */
+    .ot-apps { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-6) var(--space-4);
+      grid-template-columns: repeat(auto-fill, minmax(7.5rem, 1fr)); justify-items: center; }
+    .ot-app { display: grid; justify-items: center; gap: var(--space-2); width: 100%; max-width: 9rem;
+      padding: var(--space-2); border-radius: var(--radius-lg); color: var(--c-text); text-decoration: none; text-align: center; }
+    .ot-app:focus-visible { outline: 2px solid var(--c-accent); outline-offset: 2px; }
+    .ot-app__icon { display: grid; place-items: center; width: 5.5rem; height: 5.5rem; border-radius: 1.375rem;
+      box-shadow: 0 6px 18px rgb(0 0 0 / .35), inset 0 1px 0 rgb(255 255 255 / .25);
+      transition: transform var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease); }
+    .ot-app__icon svg { width: 3rem; height: 3rem; }
+    .ot-app:hover .ot-app__icon, .ot-app:focus-visible .ot-app__icon { transform: translateY(-3px) scale(1.04);
+      box-shadow: 0 10px 24px rgb(0 0 0 / .4), inset 0 1px 0 rgb(255 255 255 / .25); }
+    .ot-app:active .ot-app__icon { transform: scale(.96); }
+    .ot-app__name { font-size: var(--fs-sm); font-weight: var(--fw-bold); line-height: 1.25; }
+    .ot-app__desc { font-size: var(--fs-xs); color: var(--c-text-muted); line-height: 1.35; }
+    .ot-app--ibp .ot-app__icon { background: linear-gradient(145deg, #a8ff3e, #3f9a00); color: #0b1a00; }
+    .ot-app--relive .ot-app__icon { background: linear-gradient(145deg, #3ff4ff, #0a62c9); color: #fff; }
+    @media (prefers-reduced-motion: reduce) { .ot-app__icon { transition: none; } .ot-app:hover .ot-app__icon { transform: none; } }
+  </style>
+</head>
+<body>
+  <main class="ot">
+    <header class="ot-top">
+      <div class="ot-top__title">
+        <p class="ot-eyebrow"><a href="../">Randothèques</a></p>
+        <h1>Outils</h1>
+        <p class="ot-lead">Les petites applis des Randothèques.</p>
+      </div>
+      <button type="button" class="theme-btn" id="theme-btn" aria-label="Changer de thème">
+        <svg class="icon theme-btn__auto" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 4a8 8 0 0 1 0 16Z" fill="currentColor"/></svg>
+        <svg class="icon theme-btn__light" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.2" fill="currentColor"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        <svg class="icon theme-btn__dark" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5Z" fill="currentColor"/></svg>
+      </button>
+    </header>
+
+    <ul class="ot-apps">
+      <li>
+        <a class="ot-app ot-app--ibp" href="ibp/">
+          <span class="ot-app__icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M4 20h16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><rect x="5" y="12" width="3" height="6" rx="1" fill="currentColor"/><rect x="10.5" y="8" width="3" height="10" rx="1" fill="currentColor"/><rect x="16" y="4" width="3" height="14" rx="1" fill="currentColor"/></svg>
+          </span>
+          <span class="ot-app__name">Tableau de bord GPX</span>
+          <span class="ot-app__desc">Rapport IBP index en visuel</span>
+        </a>
+      </li>
+      <li>
+        <a class="ot-app ot-app--relive" href="relive-3D/">
+          <span class="ot-app__icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M2.5 19.5 9 9l3.5 5.5L15 11l6.5 8.5Z" fill="currentColor" opacity=".9"/><path d="M14 3.5v6l5-3Z" fill="currentColor"/></svg>
+          </span>
+          <span class="ot-app__name">Relive 3D</span>
+          <span class="ot-app__desc">Survol 3D d'un GPX pour un blog</span>
+        </a>
+      </li>
+    </ul>
+  </main>
+  <script src="../godillots-ailes/assets/theme.js?v=1"></script>
+</body>
+</html>

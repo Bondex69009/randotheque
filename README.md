@@ -8,6 +8,7 @@ Les deux Randothèques, dans un seul dépôt, en ligne chez o2switch sur **https
 | `gerard-martine/` | `/gerard-martine/` | La Randothèque de Gérard & Martine, espace stats dans `stats/` |
 | `stats-serveur/` | `/stats/` | Moteur des statistiques (PHP + SQLite, avec cookies) ; son `admin/` est copié dans le `stats/` de chaque site |
 | `hebergement/racine/` | `/` | Page d'accueil, `robots.txt`, `.htaccess` (HTTPS forcé, pas d'indexation) |
+| `hebergement/racine/outils/` | `/outils/` | Page des outils : une icône façon appli par outil (Tableau de bord GPX, Relive 3D) |
 | `hebergement/racine/outils/ibp/` | `/outils/ibp/` | Tableau de bord GPX : lit un rapport PDF IBP index et en fait un visuel PNG à partager (page autonome, sans étape de construction) |
 
 Chaque Randothèque a son propre README (scripts, calculs, administration locale).
