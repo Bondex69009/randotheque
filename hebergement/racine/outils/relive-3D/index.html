@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="fr" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Relive 3D | Randothèques</title>
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#0b0f0a">
+  <!-- Outil « Relive 3D » : importer un GPX, voir son survol 3D (le lecteur des Randothèques), obtenir le code
+       <iframe> à coller sur un blog. Historique des imports sur le serveur (api.php), même mot de passe que les stats. -->
+  <script>(function(){var d=document.documentElement,k='rt-theme',m=null,q=window.matchMedia&&matchMedia('(prefers-color-scheme: light)');try{m=localStorage.getItem(k)}catch(e){}
+function a(){d.setAttribute('data-theme',m==='light'||m==='dark'?m:(q&&q.matches?'light':'dark'))}a();
+window.rtTheme={get:function(){return m==='light'||m==='dark'?m:'auto'},set:function(v){m=v==='auto'?null:v;try{m?localStorage.setItem(k,m):localStorage.removeItem(k)}catch(e){}a();document.dispatchEvent(new Event('rt-theme'))}};
+if(q&&q.addEventListener)q.addEventListener('change',function(){if(!m){a();document.dispatchEvent(new Event('rt-theme'))}})})();</script>
+  <link rel="icon" href="../../godillots-ailes/assets/favicon.png" type="image/png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=IBM+Plex+Sans:wght@400;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+  <link rel="stylesheet" href="../../godillots-ailes/assets/style.css?v=43">
+  <link rel="stylesheet" href="../../godillots-ailes/assets/outils.css?v=1">
+  <style>
+    body { min-height: 100vh; background: var(--c-bg); }
+    .rl { width: 100%; max-width: 60rem; margin-inline: auto; padding: var(--space-6) var(--space-4) var(--space-16); display: grid; gap: var(--space-6); }
+    .rl-top { display: flex; align-items: flex-start; gap: var(--space-3); flex-wrap: wrap; }
+    .rl-top__title { flex: 1; min-width: 12rem; }
+    .rl-top__actions { display: flex; align-items: center; gap: var(--space-2); }
+    @media (max-width: 40rem) { .rl-top__actions { order: -1; width: 100%; justify-content: flex-end; } }
+    .rl-eyebrow { margin: 0; font-size: var(--fs-xs); font-weight: var(--fw-bold); letter-spacing: 0.12em; text-transform: uppercase; color: var(--c-accent); }
+    .rl-top h1 { font-size: var(--fs-2xl); font-weight: var(--fw-black); }
+    .rl-lead { margin: var(--space-1) 0 0; max-width: 65ch; color: var(--c-text-muted); }
+    .rl-card { padding: var(--space-5); border-radius: var(--radius-lg); background: var(--c-surface); border: var(--border-w) solid var(--c-border); box-shadow: var(--shadow-card); display: grid; gap: var(--space-4); }
+    .rl-card h2 { font-size: var(--fs-xl); font-weight: var(--fw-bold); }
+    .rl-card__head { display: flex; align-items: baseline; gap: var(--space-3); flex-wrap: wrap; }
+    .rl-card__head h2 { flex: 1; }
+    .rl-muted { margin: 0; color: var(--c-text-muted); font-size: var(--fs-sm); }
+    .rl-err { margin: 0; min-height: 1.25em; color: var(--c-danger); font-size: var(--fs-sm); }
+    .rl-err.is-info { color: var(--c-text-muted); }
+    .rl-login { max-width: 26rem; }
+    /* Zone de dépôt du GPX */
+    .rl-drop { position: relative; display: grid; justify-items: center; gap: var(--space-2); padding: var(--space-8) var(--space-4); text-align: center;
+      border: 2px dashed var(--c-border-strong); border-radius: var(--radius-lg); background: var(--c-surface-2); cursor: pointer;
+      transition: border-color var(--dur-fast) var(--ease), background-color var(--dur-fast) var(--ease); }
+    .rl-drop:hover, .rl-drop.is-over { border-color: var(--c-accent); background: var(--c-accent-ghost); }
+    .rl-drop:focus-within { outline: 2px solid var(--c-accent); outline-offset: 2px; }
+    .rl-drop input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+    .rl-drop__icon { width: 2.5rem; height: 2.5rem; color: var(--c-accent); }
+    .rl-drop strong { font-size: var(--fs-lg); }
+    /* Formulaires */
+    .rl-grid { display: grid; gap: var(--space-3) var(--space-4); grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); }
+    .rl-field { display: grid; gap: var(--space-1); min-width: 0; }
+    .rl-field--wide { grid-column: 1 / -1; }
+    .rl-field label, .rl-label { font-size: var(--fs-sm); font-weight: var(--fw-semibold); color: var(--c-text-muted); }
+    .rl input:not([type="file"]), .rl select, .rl-code {
+      width: 100%; min-height: var(--tap); padding: var(--space-2) var(--space-3); border-radius: var(--radius-md);
+      border: var(--border-w) solid var(--c-border-strong); background: var(--c-bg-raised); color: var(--c-text); font: inherit;
+    }
+    .rl input:focus-visible, .rl select:focus-visible, .rl-code:focus-visible { outline: 2px solid var(--c-accent); outline-offset: 1px; border-color: var(--c-accent); }
+    .rl input[aria-invalid="true"] { border-color: var(--c-danger); }
+    .rl-code { font: var(--fs-xs) / 1.5 "IBM Plex Mono", ui-monospace, monospace; resize: vertical; }
+    .rl-form__actions, .rl-item__actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+    .rl-stats { display: flex; flex-wrap: wrap; gap: var(--space-2); margin: 0; padding: 0; list-style: none; }
+    .rl-stats li { padding: var(--space-1) var(--space-3); border-radius: var(--radius-pill); background: var(--c-surface-3); font-size: var(--fs-sm); font-weight: var(--fw-semibold); }
+    .rl-file { margin: 0; font-size: var(--fs-sm); color: var(--c-text-faint); overflow-wrap: anywhere; }
+    .rl-result { border-color: var(--c-accent-ring); }
+    /* Historique */
+    .rl-history { display: grid; gap: var(--space-3); margin: 0; padding: 0; list-style: none; }
+    .rl-history[aria-busy="true"] { opacity: 0.6; }
+    .rl-item { display: grid; gap: var(--space-3); padding: var(--space-4); border-radius: var(--radius-md); background: var(--c-surface-2); border: var(--border-w) solid var(--c-border); }
+    .rl-item__head { display: flex; gap: var(--space-3); align-items: flex-start; }
+    .rl-item__swatch { flex: none; width: 0.75rem; height: 2.5rem; border-radius: var(--radius-pill); background: var(--sw); }
+    .rl-item__title { min-width: 0; }
+    .rl-item h3 { font-size: var(--fs-lg); font-weight: var(--fw-bold); overflow-wrap: anywhere; }
+    .rl-item__meta { margin: var(--space-1) 0 0; color: var(--c-text-muted); font-size: var(--fs-sm); }
+    .rl-item__file { margin: 0; color: var(--c-text-faint); font-size: var(--fs-xs); overflow-wrap: anywhere; }
+    .rl-item__panel { display: grid; gap: var(--space-2); padding-top: var(--space-3); border-top: var(--border-w) solid var(--c-border); }
+    .rl-item__panel[hidden] { display: none; }
+    .rl-del:hover { color: var(--c-danger); }
+    .rl-search { max-width: 22rem; }
+    .btn .icon { width: var(--icon); height: var(--icon); flex: none; }
+    .rl-toast { position: fixed; left: 50%; bottom: var(--space-6); transform: translateX(-50%); z-index: 50; max-width: min(90vw, 32rem);
+      padding: var(--space-3) var(--space-5); border-radius: var(--radius-md); background: var(--c-surface-3); color: var(--c-text);
+      border: var(--border-w) solid var(--c-accent-ring); box-shadow: var(--shadow-pop); font-size: var(--fs-sm); }
+    .rl-toast.is-error { border-color: var(--c-danger); }
+    [hidden] { display: none !important; }
+    @media (max-width: 40rem) { .rl-item__actions .btn { flex: 1 1 auto; } }
+  </style>
+</head>
+<body>
+  <main class="rl">
+    <header class="rl-top">
+      <div class="rl-top__title">
+        <p class="rl-eyebrow">Outils des Randothèques</p>
+        <h1>Relive 3D</h1>
+        <p class="rl-lead">Importez un GPX : son survol 3D animé, le même que sur la Randothèque, est prêt à être intégré sur un blog.</p>
+      </div>
+      <div class="rl-top__actions">
+      <button type="button" class="btn btn--ghost btn--sm" id="logout" hidden><span class="btn__label">Se déconnecter</span></button>
+      <button type="button" class="theme-btn" id="theme-btn" aria-label="Changer de thème">
+        <svg class="icon theme-btn__auto" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 4a8 8 0 0 1 0 16Z" fill="currentColor"/></svg>
+        <svg class="icon theme-btn__light" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.2" fill="currentColor"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        <svg class="icon theme-btn__dark" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5Z" fill="currentColor"/></svg>
+      </button>
+      </div>
+    </header>
+
+    <!-- Connexion : même mot de passe que les espaces stats -->
+    <section class="rl-card rl-login" id="login" aria-labelledby="login-title" hidden>
+      <h2 id="login-title">Connexion</h2>
+      <p class="rl-muted">Même mot de passe que les espaces stats des Randothèques.</p>
+      <form id="login-form" class="rl-grid">
+        <div class="rl-field rl-field--wide">
+          <label for="password">Mot de passe</label>
+          <input id="password" type="password" autocomplete="current-password" required aria-describedby="login-err">
+        </div>
+        <p class="rl-err rl-field--wide" id="login-err" role="alert"></p>
+        <div class="rl-form__actions rl-field--wide"><button type="submit" class="btn btn--primary" id="login-btn"><span class="btn__label">Se connecter</span></button></div>
+      </form>
+    </section>
+
+    <div id="app" hidden style="display: contents">
+      <!-- 1. Import -->
+      <section class="rl-card" aria-labelledby="import-title">
+        <h2 id="import-title">Importer un GPX</h2>
+        <label class="rl-drop" id="drop">
+          <svg class="rl-drop__icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4m-5 5 5-5 5 5M5 20h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <strong>Choisir un fichier GPX</strong>
+          <span class="rl-muted">ou le glisser ici (15 Mo au plus)</span>
+          <input type="file" id="file" accept=".gpx,application/gpx+xml" aria-describedby="drop-err">
+        </label>
+        <p class="rl-err" id="drop-err" role="alert"></p>
+
+        <form id="draft-form" class="rl-grid" hidden novalidate>
+          <div class="rl-field--wide rl-grid" style="gap: var(--space-2)">
+            <p class="rl-file" id="draft-file"></p>
+            <ul class="rl-stats" id="draft-stats"></ul>
+          </div>
+          <div class="rl-field rl-field--wide"><label for="f-name">Nom du survol</label><input id="f-name" required maxlength="120" autocomplete="off"></div>
+          <div class="rl-field"><label for="f-commune">Commune (carte météo)</label><input id="f-commune" maxlength="120" autocomplete="off"></div>
+          <div class="rl-field"><label for="f-place">Lieu sous le titre</label><input id="f-place" maxlength="160" autocomplete="off"></div>
+          <div class="rl-field"><label for="f-date">Date de la rando (météo du jour)</label><input id="f-date" type="date"></div>
+          <div class="rl-field"><label for="f-color">Couleur de la trace</label><select id="f-color"></select></div>
+          <div class="rl-form__actions rl-field--wide">
+            <button type="submit" class="btn btn--primary" id="draft-save"><span class="btn__label">Enregistrer et obtenir le code</span></button>
+            <button type="button" class="btn btn--outline" id="draft-preview"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l10.5-6.5Z" fill="currentColor"/></svg><span class="btn__label">Aperçu du survol</span></button>
+            <button type="button" class="btn btn--ghost" id="draft-cancel"><span class="btn__label">Annuler</span></button>
+          </div>
+        </form>
+      </section>
+
+      <!-- 2. Code du survol qui vient d'être enregistré -->
+      <section class="rl-card rl-result" id="result" aria-labelledby="result-title" hidden>
+        <h2 id="result-title">Survol enregistré : <span id="result-name"></span></h2>
+        <label class="rl-label" for="result-code">Code à coller dans la vue HTML d'un message Blogger</label>
+        <textarea class="rl-code" id="result-code" rows="4" readonly spellcheck="false"></textarea>
+        <div class="rl-form__actions">
+          <button type="button" class="btn btn--primary" id="result-copy"><span class="btn__label">Copier le code</span></button>
+          <a class="btn btn--outline" id="result-open" href="#" target="_blank" rel="noopener"><span class="btn__label">Ouvrir la page à intégrer</span></a>
+        </div>
+      </section>
+
+      <!-- 3. Historique -->
+      <section class="rl-card" aria-labelledby="history-title">
+        <div class="rl-card__head">
+          <h2 id="history-title">Historique</h2>
+          <p class="rl-muted" id="history-count"></p>
+        </div>
+        <div class="rl-field rl-search" id="history-search" hidden>
+          <label for="history-q">Rechercher</label>
+          <input id="history-q" type="search" autocomplete="off" placeholder="Nom, commune, fichier…">
+        </div>
+        <p class="rl-muted" id="history-empty" hidden></p>
+        <ul class="rl-history" id="history-list"></ul>
+      </section>
+    </div>
+  </main>
+  <p class="rl-toast" id="toast" role="status" aria-live="polite" hidden></p>
+
+  <script>
+    // Randonneur du site, affiché par le lecteur 3D pendant le chargement du relief (lu par flyover.js)
+    window.rtHiker = () => '<svg class="hiker" viewBox="0 0 32 32" aria-hidden="true" focusable="false"><path class="hiker__ground" d="M-6 30.8H38"/><g class="hiker__body"><g class="hiker__arm hiker__arm--b"><path d="M15.7 10.8C15.8 12.6 16.1 14.2 16.3 15.3L17.6 15.1C17.7 13.6 17.6 12.2 17.5 10.8Z"/><path d="M16.3 14.6C17.1 15.4 18 16 19.1 16.7L19.8 15.8C18.8 15.2 18.1 14.6 17.5 14.1Z"/><circle cx="19.6" cy="16.3" r=".85"/></g><g class="hiker__leg hiker__leg--b"><path d="M13.5 17.4C13.6 19.8 13.9 21.9 14.1 23.7H15.9C16.3 21.9 16.9 19.7 17 17.4Z"/><g class="hiker__shin"><path d="M14.1 23.2C13.6 24.6 13.9 26.9 14.3 28.6H15.7C15.9 26.9 16.2 24.9 15.9 23.2Z"/><path d="M14.2 28.1H15.8C16.7 28.4 17.9 28.7 18.2 29.4 18.3 29.9 18 30.1 17.5 30.1H14.3C13.9 30.1 13.9 29.3 14.2 28.1Z"/></g></g><path class="hiker__pack" d="M11.2 11.6C11.1 9.9 13.9 9.3 15.1 10.4L15.6 16.3C15.7 17.6 11.9 17.9 11.5 16.7Z"/><path d="M11.6 9.8C12.3 9 13.9 8.9 14.6 9.6L14.4 10.4C13.6 10 12.6 10.1 11.9 10.6Z"/><path d="M14.8 10C16.2 9.3 18.1 9.6 18.5 11.2 18.6 12.9 18 15.4 17.6 17.4 17.3 18.8 13.4 18.9 13.5 17.4 13.6 15 14 12.2 14.8 10Z"/><path d="M16.6 8.2L17.8 8.3 17.7 9.9 16.4 9.8Z"/><circle cx="17.9" cy="6.6" r="2"/><path d="M14.9 5.6C16.4 5.1 19.5 5 21.1 5.5 21.4 5.7 21.2 6 20.9 6 19.2 5.9 16.6 6 15 6.3 14.6 6.3 14.5 5.8 14.9 5.6ZM16.2 5.3C16.2 3.7 19.6 3.6 19.7 5.2Z"/><g class="hiker__leg hiker__leg--a"><path d="M13.5 17.4C13.6 19.8 13.9 21.9 14.1 23.7H15.9C16.3 21.9 16.9 19.7 17 17.4Z"/><g class="hiker__shin"><path d="M14.1 23.2C13.6 24.6 13.9 26.9 14.3 28.6H15.7C15.9 26.9 16.2 24.9 15.9 23.2Z"/><path d="M14.2 28.1H15.8C16.7 28.4 17.9 28.7 18.2 29.4 18.3 29.9 18 30.1 17.5 30.1H14.3C13.9 30.1 13.9 29.3 14.2 28.1Z"/></g></g><g class="hiker__arm hiker__arm--a"><path d="M15.7 10.8C15.8 12.6 16.1 14.2 16.3 15.3L17.6 15.1C17.7 13.6 17.6 12.2 17.5 10.8Z"/><path d="M16.3 14.6C17.1 15.4 18 16 19.1 16.7L19.8 15.8C18.8 15.2 18.1 14.6 17.5 14.1Z"/><circle cx="19.6" cy="16.3" r=".85"/><path class="hiker__stick" d="M19.9 13.4L21.2 29.8"/></g></g></svg>';
+  </script>
+  <script src="../../godillots-ailes/assets/theme.js?v=1"></script>
+  <script src="assets/relive.js?v=1"></script>
+</body>
+</html>

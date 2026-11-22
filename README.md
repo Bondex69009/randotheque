@@ -57,6 +57,29 @@ Ces fichiers sont identiques dans `godillots-ailes/` et `gerard-martine/` (à mo
 | `scripts/lib/compact.mjs` | Écriture compacte de `data/randos.js` (formes et profils des cartes), décodée à la fin du fichier : environ 35 % de moins à télécharger. Leaflet n'est plus chargé avec la page mais à la demande. |
 | `scripts/controle.mjs` | Contrôle des données à chaque mise à jour horaire (GPX illisibles, liens GPX morts, traces coupées ou sans altitude, IBP à vérifier, doublons…) : rapport `data/controle.json`, affiché en bas de l'espace stats (« Contrôle des données »). |
 
+## Outil Relive 3D
+
+https://randotheque.anthony-bondon.fr/outils/relive-3D/ : importer un GPX (choisi ou glissé), voir son survol 3D, puis
+copier le code `<iframe>` à coller dans la vue HTML d'un message Blogger. Le lecteur est **celui des Randothèques**
+(`godillots-ailes/assets/flyover.js`, `flyover.css`, `style.css`, `meteo.js`, chargés directement depuis
+`/godillots-ailes/assets/`) : toute évolution du survol 3D du site s'applique aussi à l'outil. `hebergement/racine/outils/relive-3D/survol.html`
+reprend `survol.html` des sites (image d'attente, bouton de lecture) : à garder en phase.
+
+- **Calculs** faits dans le navigateur, comme la mise à jour des sites (`assets/relive.js`, d'après `scripts/lib/gpx.mjs`) :
+  distance, D+ / D-, temps de marche (enregistré si le GPX est horodaté, sinon norme DIN), boucle, trace simplifiée
+  à 1 500 points. Altitudes absentes ou fictives : relief IGN (Géoplateforme). Commune du départ proposée par
+  la Géoplateforme IGN (Nominatim hors de France), modifiable, comme le nom, la date (météo du jour) et la couleur.
+- **Historique** sur le serveur, commun à tous les appareils : voir, copier le code, ouvrir la page à intégrer,
+  télécharger le GPX d'origine, modifier, supprimer. Un code déjà collé sur un blog reste valable après une
+  modification (le nom affiché suit) ; après une suppression, le blog affiche « Ce survol 3D n'existe plus ».
+- **Accès** : même mot de passe que les espaces stats (et même connexion de 30 jours). Seule la lecture d'un survol
+  (`api.php?a=get`, utilisée par `survol.html`) est publique.
+- **Fichiers** : `hebergement/racine/outils/relive-3D/`, envoyé avec la page d'accueil. Son `api.php` range chaque import
+  dans `data/` sur le serveur (`<id>.gpx` d'origine et `<id>.json` : infos et trace), dossier fermé au web, jamais
+  envoyé ni effacé par le déploiement (absent du dépôt). Il s'appuie sur `/stats/lib/core.php`.
+- **En local** : comme pour les stats, servir un dossier qui reproduit le sous-domaine, avec en plus `hebergement/racine/outils` en `outils/`
+  (`godillots-ailes` peut y être le dossier source : il contient `assets/`).
+
 ## Statistiques de visite
 
 Un espace par site, qui ne montre que ses visites (petit cadenas en haut à droite de chaque site, puis mot de passe) :

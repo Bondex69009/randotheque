@@ -1,0 +1,18 @@
+# Outil « Relive 3D » (/outils/relive-3D/ du sous-domaine).
+#   index.html  outil (import d'un GPX, historique), protégé par le mot de passe des stats dans api.php
+#   survol.html page publique à intégrer sur un blog (iframe), lit api.php?a=get
+#   data/       GPX importés et traces, créé par api.php : jamais accessible directement depuis le web
+Options -Indexes
+DirectoryIndex index.html
+
+<IfModule mod_rewrite.c>
+	RewriteEngine On
+	RewriteRule ^data(/|$) - [F,L]
+</IfModule>
+
+# survol.html est fait pour être affiché dans une iframe sur un autre site (blog)
+<IfModule mod_headers.c>
+	<Files "survol.html">
+		Header unset X-Frame-Options
+	</Files>
+</IfModule>

@@ -210,7 +210,7 @@ jobs:
       # ---------------------------------------------------------------- Contrôle
       - name: Vérifier que le site répond
         run: |
-          for p in "" godillots-ailes/ gerard-martine/ godillots-ailes/stats/ gerard-martine/stats/; do
+          for p in "" godillots-ailes/ gerard-martine/ godillots-ailes/stats/ gerard-martine/stats/ outils/relive-3D/; do
             code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 20 "https://randotheque.anthony-bondon.fr/$p" || echo 000)
             echo "https://randotheque.anthony-bondon.fr/$p : $code"
             if [ "$code" != "200" ]; then echo "::warning::https://randotheque.anthony-bondon.fr/$p répond $code"; fi

@@ -6,3 +6,6 @@
 stats-serveur/data/*
 !stats-serveur/data/.gitkeep
 stats-serveur/secret.php
+
+# Outil Relive 3D : GPX importés et historique, créés sur le serveur
+hebergement/racine/outils/*/data/
