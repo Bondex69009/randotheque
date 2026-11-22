@@ -1,34 +1,119 @@
 <!doctype html>
-<html lang="fr">
+<html lang="fr" data-theme="dark">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="robots" content="noindex, nofollow">
   <title>Randothèques</title>
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#0b0f0a">
+  <!-- Accueil du sous-domaine : les deux Randothèques et les outils, présentés comme un écran d'applis. -->
+  <script>(function(){var d=document.documentElement,k='rt-theme',m=null,q=window.matchMedia&&matchMedia('(prefers-color-scheme: light)');try{m=localStorage.getItem(k)}catch(e){}
+function a(){d.setAttribute('data-theme',m==='light'||m==='dark'?m:(q&&q.matches?'light':'dark'))}a();
+window.rtTheme={get:function(){return m==='light'||m==='dark'?m:'auto'},set:function(v){m=v==='auto'?null:v;try{m?localStorage.setItem(k,m):localStorage.removeItem(k)}catch(e){}a();document.dispatchEvent(new Event('rt-theme'))}};
+if(q&&q.addEventListener)q.addEventListener('change',function(){if(!m){a();document.dispatchEvent(new Event('rt-theme'))}})})();</script>
+  <link rel="icon" href="godillots-ailes/assets/favicon.png" type="image/png">
+  <link rel="apple-touch-icon" href="godillots-ailes/assets/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=IBM+Plex+Sans:wght@400;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+  <link rel="stylesheet" href="godillots-ailes/assets/style.css?v=43">
+  <link rel="stylesheet" href="godillots-ailes/assets/outils.css?v=1">
   <style>
-    :root { color-scheme: dark; }
-    body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #0b0f0a; color: #eef5e6;
-      font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
-    main { width: min(100% - 2rem, 34rem); display: grid; gap: 1rem; }
-    h1 { margin: 0 0 .5rem; font-size: 1.75rem; }
-    a { display: block; padding: 1.25rem 1.5rem; border-radius: 1rem; text-decoration: none; color: inherit;
-      background: #151c13; border: 1px solid #2c3a27; }
-    a:hover, a:focus-visible { border-color: currentColor; }
-    a strong { display: block; font-size: 1.25rem; }
-    a span { color: #a5b39b; }
-    .ga strong { color: #87f700; }
-    .gm { background: #162139; border-color: #29375a; }
-    .gm strong { color: #ffa45c; }
-    .tool strong { color: #01ffff; }
+    body { min-height: 100vh; background: var(--c-bg); }
+    .ot { width: 100%; max-width: 44rem; margin-inline: auto; padding: var(--space-6) var(--space-4) var(--space-16); display: grid; gap: var(--space-8); }
+    .ot-top { display: flex; align-items: flex-start; gap: var(--space-3); }
+    .ot-top__title { flex: 1; min-width: 0; }
+    .ot-eyebrow { margin: 0; font-size: var(--fs-xs); font-weight: var(--fw-bold); letter-spacing: 0.12em; text-transform: uppercase; color: var(--c-accent); }
+    .ot-eyebrow a { color: inherit; text-decoration: none; }
+    .ot-eyebrow a:hover, .ot-eyebrow a:focus-visible { text-decoration: underline; }
+    .ot-top h1 { font-size: var(--fs-2xl); font-weight: var(--fw-black); }
+    .ot-lead { margin: var(--space-1) 0 0; color: var(--c-text-muted); }
+
+    /* Écran d'applis : icône arrondie + nom dessous */
+    .ot-apps { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-6) var(--space-4);
+      grid-template-columns: repeat(auto-fill, minmax(7.5rem, 1fr)); justify-items: center; }
+    .ot-app { display: grid; justify-items: center; gap: var(--space-2); width: 100%; max-width: 9rem;
+      padding: var(--space-2); border-radius: var(--radius-lg); color: var(--c-text); text-decoration: none; text-align: center; }
+    .ot-app:focus-visible { outline: 2px solid var(--c-accent); outline-offset: 2px; }
+    .ot-app__icon { display: grid; place-items: center; width: 5.5rem; height: 5.5rem; border-radius: 1.375rem;
+      box-shadow: 0 6px 18px rgb(0 0 0 / .35), inset 0 1px 0 rgb(255 255 255 / .25);
+      transition: transform var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease); }
+    .ot-app__icon svg { width: 3rem; height: 3rem; }
+    .ot-app:hover .ot-app__icon, .ot-app:focus-visible .ot-app__icon { transform: translateY(-3px) scale(1.04);
+      box-shadow: 0 10px 24px rgb(0 0 0 / .4), inset 0 1px 0 rgb(255 255 255 / .25); }
+    .ot-app:active .ot-app__icon { transform: scale(.96); }
+    .ot-app__name { font-size: var(--fs-sm); font-weight: var(--fw-bold); line-height: 1.25; }
+    .ot-app__desc { font-size: var(--fs-xs); color: var(--c-text-muted); line-height: 1.35; }
+    .ot-app__icon--img { overflow: hidden; background: #0b0f0a; outline: 1px solid rgb(255 255 255 / .12); outline-offset: -1px; }
+    .ot-app__icon--img img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .ot-group { display: grid; gap: var(--space-4); }
+    .ot-group h2 { font-size: var(--fs-sm); font-weight: var(--fw-bold); letter-spacing: 0.08em; text-transform: uppercase; color: var(--c-text-muted); }
+    .ot-group h2 a { color: inherit; text-decoration: none; }
+    .ot-group h2 a:hover, .ot-group h2 a:focus-visible { color: var(--c-accent); }
+    .ot-app--ibp .ot-app__icon { background: linear-gradient(145deg, #a8ff3e, #3f9a00); color: #0b1a00; }
+    .ot-app--relive .ot-app__icon { background: linear-gradient(145deg, #3ff4ff, #0a62c9); color: #fff; }
+    @media (prefers-reduced-motion: reduce) { .ot-app__icon { transition: none; } .ot-app:hover .ot-app__icon { transform: none; } }
   </style>
 </head>
 <body>
-  <main>
-    <h1>Randothèques</h1>
-    <a class="ga" href="godillots-ailes/"><strong>Les Godillots Ailés</strong><span>Historique des randos du club, A.C.R.P. Caissargues</span></a>
-    <a class="gm" href="gerard-martine/"><strong>Gérard &amp; Martine</strong><span>La Randothèque de Gérard et Martine</span></a>
-    <a class="ga" href="outils/ibp/"><strong>Tableau de bord GPX</strong><span>Transformer un rapport IBP index en visuel à partager</span></a>
-    <a class="tool" href="outils/relive-3D/"><strong>Relive 3D</strong><span>Survol 3D d'un GPX, à intégrer sur un blog</span></a>
+  <main class="ot">
+    <header class="ot-top">
+      <div class="ot-top__title">
+        <p class="ot-eyebrow">Accueil</p>
+        <h1>Randothèques</h1>
+        <p class="ot-lead">Les historiques de randos et leurs petites applis.</p>
+      </div>
+      <button type="button" class="theme-btn" id="theme-btn" aria-label="Changer de thème">
+        <svg class="icon theme-btn__auto" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 4a8 8 0 0 1 0 16Z" fill="currentColor"/></svg>
+        <svg class="icon theme-btn__light" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.2" fill="currentColor"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        <svg class="icon theme-btn__dark" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5Z" fill="currentColor"/></svg>
+      </button>
+    </header>
+
+    <section class="ot-group" aria-labelledby="g-rando">
+      <h2 id="g-rando">Randothèques</h2>
+      <ul class="ot-apps">
+        <li>
+          <a class="ot-app" href="godillots-ailes/">
+            <span class="ot-app__icon ot-app__icon--img" aria-hidden="true"><img src="godillots-ailes/assets/icon-192.png" width="192" height="192" alt=""></span>
+            <span class="ot-app__name">Les Godillots Ailés</span>
+            <span class="ot-app__desc">Randos du club, A.C.R.P. Caissargues</span>
+          </a>
+        </li>
+        <li>
+          <a class="ot-app" href="gerard-martine/">
+            <span class="ot-app__icon ot-app__icon--img" aria-hidden="true"><img src="gerard-martine/assets/icon-192.png" width="192" height="192" alt=""></span>
+            <span class="ot-app__name">Gérard &amp; Martine</span>
+            <span class="ot-app__desc">La Randothèque de Gérard et Martine</span>
+          </a>
+        </li>
+      </ul>
+    </section>
+
+    <section class="ot-group" aria-labelledby="g-outils">
+      <h2 id="g-outils"><a href="outils/">Outils</a></h2>
+      <ul class="ot-apps">
+        <li>
+          <a class="ot-app ot-app--ibp" href="outils/ibp/">
+            <span class="ot-app__icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M4 20h16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><rect x="5" y="12" width="3" height="6" rx="1" fill="currentColor"/><rect x="10.5" y="8" width="3" height="10" rx="1" fill="currentColor"/><rect x="16" y="4" width="3" height="14" rx="1" fill="currentColor"/></svg>
+            </span>
+            <span class="ot-app__name">Tableau de bord GPX</span>
+            <span class="ot-app__desc">Rapport IBP index en visuel</span>
+          </a>
+        </li>
+        <li>
+          <a class="ot-app ot-app--relive" href="outils/relive-3D/">
+            <span class="ot-app__icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M2.5 19.5 9 9l3.5 5.5L15 11l6.5 8.5Z" fill="currentColor" opacity=".9"/><path d="M14 3.5v6l5-3Z" fill="currentColor"/></svg>
+            </span>
+            <span class="ot-app__name">Relive 3D</span>
+            <span class="ot-app__desc">Survol 3D d'un GPX pour un blog</span>
+          </a>
+        </li>
+      </ul>
+    </section>
   </main>
+  <script src="godillots-ailes/assets/theme.js?v=1"></script>
 </body>
 </html>
