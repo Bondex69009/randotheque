@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#0b0f0a">
+<title>Tableau de bord GPX · Les Godillots Ailés</title>
+<meta name="description" content="Transformez un rapport IBP index en tableau de bord prêt à partager, pour les randonnées des Godillots Ailés de Caissargues.">
+<link rel="icon" href="assets/favicon.png" type="image/png">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<style>
+/* Couleurs et formes reprises de la Randothèque des Godillots Ailés */
+:root {
+  --c-lime: #87f700;
+  --c-lime-soft: #bff77c;
+  --c-cyan: #01ffff;
+
+  --c-bg: #0b0f0a;
+  --c-bg-raised: #10150e;
+  --c-surface: #151c13;
+  --c-surface-2: #1d2619;
+  --c-surface-3: #263222;
+  --c-border: #2c3a27;
+  --c-border-strong: #3f5237;
+  --c-text: #eef5e6;
+  --c-text-muted: #a5b39b;
+  --c-text-faint: #7f8f76;
+  --c-on-accent: #0b0f0a;
+
+  --c-accent: var(--c-lime);
+  --c-accent-hover: var(--c-lime-soft);
+  --c-accent-ghost: rgb(135 247 0 / 0.12);
+  --c-accent-ring: rgb(135 247 0 / 0.55);
+  --c-danger: #ff7a7a;
+  --c-blue: #60a5fa;
+
+  --font-sans: "Plus Jakarta Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+  --fs-xs: 0.75rem;
+  --fs-sm: 0.875rem;
+  --fs-md: 1rem;
+  --fs-lg: 1.125rem;
+  --fs-xl: 1.375rem;
+  --fs-hero: clamp(2rem, 1.2rem + 3.6vw, 3.5rem);
+
+  --space-1: 0.25rem; --space-2: 0.5rem; --space-3: 0.75rem; --space-4: 1rem;
+  --space-5: 1.25rem; --space-6: 1.5rem; --space-8: 2rem; --space-10: 2.5rem;
+  --space-12: 3rem; --space-16: 4rem;
+
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1.125rem;
+  --radius-pill: 999px;
+  --glow-accent: 0 0 0 1px var(--c-accent-ring), 0 12px 40px -12px rgb(135 247 0 / 0.35);
+
+  --container: 82rem;
+  --header-h: 4.25rem;
+  --tap: 2.75rem;
+
+  --ease: cubic-bezier(.2, .8, .2, 1);
+  --dur-fast: 150ms;
+  --dur: 220ms;
+
+  color-scheme: dark;
+}
+@media (prefers-reduced-motion: reduce) {
+  :root { --dur-fast: 0ms; --dur: 0ms; }
+  *, *::before, *::after { animation: none !important; }
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  font-family: var(--font-sans);
+  font-size: var(--fs-md);
+  line-height: 1.6;
+  color: var(--c-text);
+  background: var(--c-bg);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+img { display: block; max-width: 100%; height: auto; }
+:focus-visible { outline: 2px solid var(--c-accent); outline-offset: 2px; border-radius: var(--radius-sm); }
+.icon { width: 1.125rem; height: 1.125rem; flex-shrink: 0; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.container { width: 100%; max-width: var(--container); margin-inline: auto; padding-inline: var(--space-4); }
+@media (min-width: 768px) { .container { padding-inline: var(--space-6); } }
+
+/* ─── En-tête ─── */
+.site-header {
+  position: sticky; top: 0; z-index: 40;
+  background: rgb(11 15 10 / 0.82);
+  backdrop-filter: saturate(1.4) blur(12px);
+  -webkit-backdrop-filter: saturate(1.4) blur(12px);
+  border-bottom: 1px solid var(--c-border);
+}
+.site-header__inner { display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); min-height: var(--header-h); }
+.brand { display: flex; align-items: center; gap: var(--space-3); color: var(--c-text); text-decoration: none; min-width: 0; }
+.brand__logo { width: 3rem; height: 3rem; object-fit: contain; flex-shrink: 0; filter: drop-shadow(0 0 10px rgb(135 247 0 / 0.25)); }
+.brand__text { display: flex; flex-direction: column; line-height: 1.15; min-width: 0; }
+.brand__title { font-weight: 800; font-size: var(--fs-lg); letter-spacing: -0.01em; white-space: nowrap; }
+.brand__subtitle { white-space: nowrap; font-size: var(--fs-xs); color: var(--c-accent); font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; }
+.header-nav { display: flex; align-items: center; gap: var(--space-5); }
+.header-link {
+  display: inline-flex; align-items: center; gap: var(--space-2); min-height: var(--tap);
+  font-size: var(--fs-sm); font-weight: 600; color: var(--c-text-muted); text-decoration: none; white-space: nowrap;
+  transition: color var(--dur-fast) var(--ease);
+}
+.header-link:hover { color: var(--c-accent); }
+.header-link .icon { width: 1rem; height: 1rem; }
+@media (max-width: 599px) {
+  /* Téléphone : icônes seules, libellé gardé pour les lecteurs d'écran */
+  .header-nav { gap: var(--space-1); }
+  .header-link { justify-content: center; min-width: var(--tap); }
+  .header-link__label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .header-link .icon { width: 1.375rem; height: 1.375rem; }
+  .brand__title { font-size: var(--fs-md); }
+}
+
+/* ─── Hero / dépôt du PDF ─── */
+.hero {
+  position: relative; overflow: hidden;
+  min-height: calc(100vh - var(--header-h));
+  display: flex; align-items: center;
+  padding-block: var(--space-10) var(--space-12);
+  background:
+    radial-gradient(60rem 22rem at 85% -10%, rgb(135 247 0 / 0.16), transparent 60%),
+    radial-gradient(40rem 20rem at -10% 110%, rgb(1 255 255 / 0.08), transparent 60%),
+    linear-gradient(180deg, var(--c-bg-raised), var(--c-bg));
+}
+.hero::before {
+  /* motif de courbes de niveau */
+  content: ""; position: absolute; inset: 0; pointer-events: none; opacity: 0.22;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='200' viewBox='0 0 400 200'%3E%3Cg fill='none' stroke='%2387f700' stroke-width='0.7' opacity='0.5'%3E%3Cpath d='M0 150 C80 120 120 170 200 140 S320 90 400 120'/%3E%3Cpath d='M0 120 C80 90 130 140 210 110 S330 60 400 90'/%3E%3Cpath d='M0 90 C70 60 140 110 220 80 S330 30 400 60'/%3E%3Cpath d='M0 60 C60 30 150 80 230 50 S340 0 400 30'/%3E%3Cpath d='M0 180 C90 150 110 200 190 170 S310 120 400 150'/%3E%3C/g%3E%3C/svg%3E");
+  mask-image: linear-gradient(90deg, transparent, black 30%, black 70%, transparent);
+  -webkit-mask-image: linear-gradient(90deg, transparent, black 30%, black 70%, transparent);
+}
+.hero .container { position: relative; }
+.hero__logo { display: none; }
+.hero__kicker {
+  margin-bottom: var(--space-3); font-size: var(--fs-xs); font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.12em; color: var(--c-text-muted);
+}
+.hero__title { font-size: var(--fs-hero); font-weight: 800; letter-spacing: -0.03em; line-height: 1.15; max-width: 18ch; }
+.hl { color: var(--c-accent); }
+.hero__lead { margin-top: var(--space-4); max-width: 40rem; color: var(--c-text-muted); font-size: var(--fs-lg); }
+@media (min-width: 768px) { .hero { padding-block: var(--space-16) var(--space-16); } }
+@media (min-width: 900px) {
+  .hero__logo {
+    display: block; position: absolute; right: var(--space-6); top: 50%; transform: translateY(-50%);
+    width: clamp(12rem, 22vw, 17rem);
+    filter: drop-shadow(0 18px 40px rgb(0 0 0 / 0.6)) drop-shadow(0 0 40px rgb(135 247 0 / 0.18));
+  }
+  .drop-zone, .steps, .hero__lead { max-width: min(44rem, calc(100% - 19rem)); }
+}
+
+.drop-zone {
+  position: relative; margin-top: var(--space-8); max-width: 44rem;
+  display: flex; align-items: center; gap: var(--space-5);
+  padding: var(--space-6);
+  border: 1.5px dashed var(--c-border-strong); border-radius: var(--radius-lg);
+  background: rgb(21 28 19 / 0.85);
+  cursor: pointer;
+  transition: border-color var(--dur-fast) var(--ease), background var(--dur-fast) var(--ease), box-shadow var(--dur) var(--ease);
+}
+.drop-zone:hover { border-color: var(--c-accent-ring); }
+.drop-zone.drag, .drop-zone:focus-within { border-color: var(--c-accent); border-style: solid; background: rgb(29 38 25 / 0.95); box-shadow: var(--glow-accent); }
+.drop-zone input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+.drop-icon {
+  display: grid; place-items: center; flex-shrink: 0;
+  width: 3.5rem; height: 3.5rem; border-radius: var(--radius-md);
+  background: var(--c-accent-ghost); color: var(--c-accent);
+}
+.drop-icon .icon { width: 1.625rem; height: 1.625rem; }
+.drop-text { flex: 1; min-width: 0; }
+.drop-zone h2 { font-size: var(--fs-lg); font-weight: 700; line-height: 1.3; }
+.drop-zone p { color: var(--c-text-muted); font-size: var(--fs-sm); margin-top: var(--space-1); }
+.drop-cta {
+  display: inline-flex; align-items: center; gap: var(--space-2); flex-shrink: 0;
+  min-height: var(--tap); padding: var(--space-2) var(--space-5);
+  border-radius: var(--radius-pill); background: var(--c-accent); color: var(--c-on-accent);
+  font-size: var(--fs-sm); font-weight: 700; white-space: nowrap;
+  transition: background var(--dur-fast) var(--ease);
+}
+.drop-zone:hover .drop-cta { background: var(--c-accent-hover); }
+@media (max-width: 599px) {
+  .drop-zone { flex-direction: column; text-align: center; padding: var(--space-8) var(--space-5); }
+}
+
+.steps { list-style: none; display: flex; flex-wrap: wrap; gap: var(--space-3) var(--space-8); margin-top: var(--space-6); max-width: 44rem; }
+.steps li { display: flex; flex-direction: column; }
+.steps b { font-size: var(--fs-xl); font-weight: 800; color: var(--c-text); line-height: 1.3; }
+.steps span { font-size: var(--fs-xs); color: var(--c-text-muted); text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; }
+
+#errorMsg {
+  display: none; margin-top: var(--space-4); max-width: 44rem;
+  color: var(--c-danger); font-size: var(--fs-sm); font-weight: 600;
+  background: rgb(255 122 122 / 0.1); border: 1px solid rgb(255 122 122 / 0.3);
+  border-radius: var(--radius-md); padding: var(--space-3) var(--space-4);
+}
+#errorMsg.show { display: block; }
+
+/* ─── Chargement ─── */
+#loadingScreen { display: none; flex-direction: column; align-items: center; justify-content: center; min-height: calc(100vh - var(--header-h)); gap: var(--space-4); }
+#loadingScreen.show { display: flex; }
+.spinner { width: 2.75rem; height: 2.75rem; border: 3px solid var(--c-surface-3); border-top-color: var(--c-accent); border-radius: 50%; animation: spin 0.7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+#loadingScreen p { color: var(--c-text-muted); font-size: var(--fs-sm); font-weight: 600; }
+
+/* ─── Barre d'actions ─── */
+#actionBar { display: none; max-width: calc(900px + 2 * var(--space-4)); margin: var(--space-8) auto var(--space-4); padding-inline: var(--space-4); gap: var(--space-3); align-items: center; justify-content: space-between; flex-wrap: wrap; }
+#actionBar.show { display: flex; }
+.action-title { font-size: var(--fs-xl); font-weight: 800; letter-spacing: -0.01em; }
+.action-buttons { display: flex; gap: var(--space-3); flex-wrap: wrap; }
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2);
+  min-height: var(--tap); padding: var(--space-2) var(--space-5);
+  border-radius: var(--radius-pill); border: 1px solid transparent;
+  font: 600 var(--fs-sm) / 1 var(--font-sans); cursor: pointer; white-space: nowrap;
+  transition: background var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease);
+}
+.btn:active { transform: translateY(1px); }
+.btn:disabled { opacity: 0.6; cursor: wait; }
+.btn--primary { background: var(--c-accent); color: var(--c-on-accent); font-weight: 700; }
+.btn--primary:hover { background: var(--c-accent-hover); }
+.btn--outline { background: var(--c-surface); border-color: var(--c-border-strong); color: var(--c-text); }
+.btn--outline:hover { border-color: var(--c-accent); }
+
+/* ═══ TABLEAU DE BORD (exporté en PNG) ═══ */
+.dashboard-scroll { overflow-x: auto; padding: 0 var(--space-4) var(--space-16); }
+#dashboard {
+  display: none;
+  width: 900px;
+  margin: 0 auto;
+  background: var(--c-bg);
+  border-radius: 18px;
+  overflow: hidden;
+  border: 1px solid var(--c-border);
+}
+#dashboard.show { display: block; }
+
+.db-header {
+  background: linear-gradient(120deg, #172310 0%, var(--c-bg-raised) 55%);
+  border-bottom: 1px solid var(--c-border);
+  padding: 18px 28px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.db-left { display: flex; align-items: center; gap: 14px; min-width: 0; }
+.db-logo { width: 52px; height: 52px; flex-shrink: 0; }
+.db-title { min-width: 0; }
+.db-rando-name {
+  font-size: 20px; font-weight: 800; letter-spacing: -0.01em;
+  color: var(--c-text); line-height: 1.35;
+  max-width: 520px;
+}
+.db-rando-date { display: flex; align-items: center; gap: 6px; margin-top: 3px; font-family: var(--font-mono); font-size: 12px; color: var(--c-text-muted); }
+.db-rando-date[hidden] { display: none; }
+.db-club { text-align: right; flex-shrink: 0; line-height: 1.3; }
+.db-club-name { font-size: 11px; font-weight: 700; color: var(--c-accent); text-transform: uppercase; letter-spacing: 0.08em; }
+.db-club-sub { font-size: 12px; font-weight: 600; color: var(--c-text); margin-top: 2px; }
+.db-club-url { display: block; margin-top: 2px; font-family: var(--font-mono); font-size: 10px; color: var(--c-text-faint); text-decoration: none; }
+
+.ibp-bloc {
+  padding: 20px 28px;
+  border-bottom: 1px solid var(--c-border);
+  display: flex;
+  align-items: center;
+  gap: 28px;
+}
+.ibp-pill { display: flex; align-items: center; gap: 16px; border-radius: 16px; padding: 14px 24px; border: 1.5px solid; flex-shrink: 0; }
+.ibp-pill-num { font-size: 44px; font-weight: 800; line-height: 1.2; letter-spacing: -0.02em; }
+.ibp-pill-hkg { font-family: var(--font-mono); font-size: 11px; color: var(--c-text-muted); letter-spacing: 1px; }
+.ibp-pill-cat { font-size: 17px; font-weight: 800; margin-top: 2px; }
+.ibp-pill-label { font-size: 11px; color: var(--c-text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; margin-top: 2px; }
+.ibp-right { flex: 1; }
+.rel-row { display: flex; align-items: center; gap: 12px; }
+.rel-lbl { font-size: 11px; font-weight: 600; color: var(--c-text-muted); text-transform: uppercase; letter-spacing: 0.08em; white-space: nowrap; }
+.rel-track { width: 150px; height: 6px; background: var(--c-surface-3); border-radius: 999px; overflow: hidden; }
+.rel-fill { height: 100%; width: 0; border-radius: 999px; transition: width 1s ease; }
+.rel-val { font-family: var(--font-mono); font-size: 12px; font-weight: 600; }
+
+.db-body { padding: 18px 28px 22px; display: flex; flex-direction: column; gap: 10px; }
+.metrics-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
+.m-card { background: var(--c-surface); border: 1px solid var(--c-border); border-radius: 12px; padding: 14px; }
+.m-icon { display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 8px; background: rgba(135,247,0,0.12); margin-bottom: 10px; }
+.m-icon svg { width: 16px; height: 16px; }
+.m-lbl { font-size: 9.5px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--c-text-muted); margin-bottom: 4px; line-height: 1.3; }
+.m-val { font-size: 20px; font-weight: 800; color: var(--c-text); line-height: 1.35; letter-spacing: -0.01em; }
+.m-val .unit, .km-val .unit { font-size: 11px; color: var(--c-text-muted); font-weight: 600; margin-left: 3px; letter-spacing: 0; }
+
+.km-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.km-card { background: var(--c-surface); border: 1px solid var(--c-border); border-radius: 12px; padding: 14px 16px; }
+.km-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+.km-lbl { font-size: 9.5px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--c-text-muted); }
+.km-pct { font-size: 12px; font-family: var(--font-mono); font-weight: 600; color: var(--c-text-muted); }
+.km-val { font-size: 24px; font-weight: 800; line-height: 1.3; margin-bottom: 16px; letter-spacing: -0.01em; }
+.km-track { background: var(--c-surface-3); border-radius: 999px; height: 6px; overflow: hidden; }
+.km-fill { height: 100%; border-radius: 999px; transition: width 1.1s ease; }
+
+.db-footer {
+  background: var(--c-bg-raised);
+  border-top: 1px solid var(--c-border);
+  padding: 10px 28px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.db-footer p { font-family: var(--font-mono); font-size: 10.5px; color: var(--c-text-faint); }
+.db-footer strong { color: var(--c-accent); font-weight: 600; }
+.green-dot { width: 6px; height: 6px; background: var(--c-accent); border-radius: 50%; display: inline-block; margin-right: 6px; vertical-align: middle; }
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="container site-header__inner">
+    <a class="brand" href="./" aria-label="Tableau de bord GPX des Godillots Ailés, accueil">
+      <img class="brand__logo" src="assets/logo.png" width="48" height="48" alt="">
+      <span class="brand__text">
+        <span class="brand__title">Tableau de bord GPX</span>
+        <span class="brand__subtitle">Les Godillots Ailés</span>
+      </span>
+    </a>
+    <nav class="header-nav" aria-label="Liens utiles">
+      <a class="header-link" href="../../godillots-ailes/">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M14.1 5.55a2 2 0 0 0 1.8 0l3.65-1.83A1 1 0 0 1 21 4.62v12.76a1 1 0 0 1-.55.9l-4.55 2.27a2 2 0 0 1-1.8 0l-4.2-2.1a2 2 0 0 0-1.8 0l-3.65 1.83A1 1 0 0 1 3 19.38V6.62a1 1 0 0 1 .55-.9L8.1 3.45a2 2 0 0 1 1.8 0zM15 5.76v15M9 3.24v15"/></svg>
+        <span class="header-link__label">Historique des randos</span>
+      </a>
+      <a class="header-link" href="https://godillotsailes.blogspot.com" target="_blank" rel="noopener">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 5h5v5m0-5-8 8M18 14v4a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h4"/></svg>
+        <span class="header-link__label">Blog du club</span>
+      </a>
+    </nav>
+  </div>
+</header>
+
+<main>
+<!-- Dépôt du PDF -->
+<section class="hero" id="uploadScreen" aria-labelledby="hero-title">
+  <div class="container">
+    <img class="hero__logo" src="assets/logo.png" width="337" height="337" alt="Logo de l'A.C.R.P. Les Godillots Ailés, Caissargues">
+    <p class="hero__kicker">A.C.R.P. Caissargues · Indice IBP</p>
+    <h1 id="hero-title" class="hero__title">Votre rando en<br> <span class="hl">tableau de bord</span></h1>
+    <p class="hero__lead">Déposez le rapport PDF d'IBP index : vous obtenez un visuel clair de la sortie, prêt à partager en PNG.</p>
+
+    <div class="drop-zone" id="dropZone">
+      <input type="file" accept=".pdf,application/pdf" id="fileInput" aria-label="Choisir le rapport IBP au format PDF" onchange="handleFile(this.files[0])">
+      <div class="drop-icon">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M12 18v-6m-3 3 3-3 3 3"/></svg>
+      </div>
+      <div class="drop-text">
+        <h2>Déposez votre rapport IBP</h2>
+        <p>Glissez-déposez le PDF ici, ou cliquez pour le choisir.</p>
+      </div>
+      <span class="drop-cta" aria-hidden="true">Choisir le PDF</span>
+    </div>
+    <div id="errorMsg" role="alert"></div>
+
+    <ol class="steps" aria-label="Comment ça marche">
+      <li><b>01</b><span>Calculez l'IBP de la trace</span></li>
+      <li><b>02</b><span>Déposez le PDF ici</span></li>
+      <li><b>03</b><span>Téléchargez le PNG</span></li>
+    </ol>
+  </div>
+</section>
+
+<!-- Chargement -->
+<div id="loadingScreen" role="status">
+  <div class="spinner"></div>
+  <p>Lecture du PDF…</p>
+</div>
+
+<!-- Barre d'actions -->
+<div id="actionBar">
+  <h2 class="action-title">Tableau de bord de la sortie</h2>
+  <div class="action-buttons">
+    <button class="btn btn--outline" type="button" onclick="resetApp()">
+      <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>
+      Nouvelle trace
+    </button>
+    <button class="btn btn--primary" type="button" id="btnPng" onclick="exportPNG()">
+      <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M5 21h14"/></svg>
+      Télécharger le PNG HD
+    </button>
+  </div>
+</div>
+
+<!-- ═══ TABLEAU DE BORD ═══ -->
+<div class="dashboard-scroll">
+<div id="dashboard">
+
+  <div class="db-header">
+    <div class="db-left">
+      <img class="db-logo" src="assets/logo.png" width="52" height="52" alt="">
+      <div class="db-title">
+        <div class="db-rando-name" id="dRandoName">—</div>
+        <div class="db-rando-date" id="dDateRow">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#a5b39b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+          <span id="dDate">—</span>
+        </div>
+      </div>
+    </div>
+    <div class="db-club">
+      <div class="db-club-name">Les Godillots Ailés</div>
+      <div class="db-club-sub">A.C.R.P. Caissargues</div>
+      <a class="db-club-url" href="https://godillotsailes.blogspot.com" target="_blank" rel="noopener">godillotsailes.blogspot.com</a>
+    </div>
+  </div>
+
+  <div class="ibp-bloc">
+    <div class="ibp-pill" id="ibpPill">
+      <div class="ibp-pill-num" id="ibpNum">—</div>
+      <div class="ibp-pill-info">
+        <div class="ibp-pill-hkg">HKG</div>
+        <div class="ibp-pill-cat" id="ibpCat">—</div>
+        <div class="ibp-pill-label">Indice IBP</div>
+      </div>
+    </div>
+    <div class="ibp-right">
+      <div class="rel-row">
+        <span class="rel-lbl">Fiabilité de l'indice</span>
+        <div class="rel-track"><div class="rel-fill" id="relFill"></div></div>
+        <span class="rel-val" id="relVal">—</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="db-body">
+    <!-- Icônes avec couleur en dur : html2canvas ne lit pas currentColor -->
+    <div class="metrics-grid">
+      <div class="m-card"><div class="m-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#87f700" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m18 8 4 4-4 4M6 8l-4 4 4 4M2 12h20"/></svg></div><div class="m-lbl">Distance totale</div><div class="m-val" id="mTotalDist">—<span class="unit">km</span></div></div>
+      <div class="m-card"><div class="m-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#87f700" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 7 13.5 15.5l-5-5L2 17"/><path d="M16 7h6v6"/></svg></div><div class="m-lbl">Dénivelée positive</div><div class="m-val" id="mDenivPos">—<span class="unit">m</span></div></div>
+      <div class="m-card"><div class="m-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#87f700" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 17 13.5 8.5l-5 5L2 7"/><path d="M16 17h6v-6"/></svg></div><div class="m-lbl">Dénivelée négative</div><div class="m-val" id="mDenivNeg">—<span class="unit">m</span></div></div>
+      <div class="m-card"><div class="m-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#87f700" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3h14M18 13l-6-6-6 6M12 7v14"/></svg></div><div class="m-lbl">Altitude maximale</div><div class="m-val" id="mAltMax">—<span class="unit">m</span></div></div>
+      <div class="m-card"><div class="m-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#87f700" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 17V3M6 11l6 6 6-6M19 21H5"/></svg></div><div class="m-lbl">Altitude minimale</div><div class="m-val" id="mAltMin">—<span class="unit">m</span></div></div>
+      <div class="m-card"><div class="m-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#87f700" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></div><div class="m-lbl">Temps total</div><div class="m-val" id="mTimeTotal">—</div></div>
+      <div class="m-card"><div class="m-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#87f700" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></div><div class="m-lbl">Temps en mouvement</div><div class="m-val" id="mTimeMove">—</div></div>
+      <div class="m-card"><div class="m-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#87f700" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 8h1a4 4 0 0 1 0 8h-1"/><path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4z"/><path d="M6 2v2M10 2v2M14 2v2"/></svg></div><div class="m-lbl">Temps de pause</div><div class="m-val" id="mTimePause">—</div></div>
+      <div class="m-card"><div class="m-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#87f700" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 14 4-4"/><path d="M3.34 19a10 10 0 1 1 17.32 0"/></svg></div><div class="m-lbl">Vitesse moy. totale</div><div class="m-val" id="mSpeedAvg">—<span class="unit">km/h</span></div></div>
+      <div class="m-card"><div class="m-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#87f700" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h9l-1 8 10-12h-9z"/></svg></div><div class="m-lbl">Vitesse moy. en mvt</div><div class="m-val" id="mSpeedMove">—<span class="unit">km/h</span></div></div>
+    </div>
+
+    <div class="km-row">
+      <div class="km-card">
+        <div class="km-header"><span class="km-lbl">Montée</span><span class="km-pct" id="kUpPct">—%</span></div>
+        <div class="km-val" id="kUpKm" style="color:#E30613">—<span class="unit">km</span></div>
+        <div class="km-track"><div class="km-fill" id="kUpBar" style="background:#E30613;width:0%"></div></div>
+      </div>
+      <div class="km-card">
+        <div class="km-header"><span class="km-lbl">Plat</span><span class="km-pct" id="kFlatPct">—%</span></div>
+        <div class="km-val" id="kFlatKm" style="color:var(--c-lime)">—<span class="unit">km</span></div>
+        <div class="km-track"><div class="km-fill" id="kFlatBar" style="background:var(--c-lime);width:0%"></div></div>
+      </div>
+      <div class="km-card">
+        <div class="km-header"><span class="km-lbl">Descente</span><span class="km-pct" id="kDownPct">—%</span></div>
+        <div class="km-val" id="kDownKm" style="color:var(--c-blue)">—<span class="unit">km</span></div>
+        <div class="km-track"><div class="km-fill" id="kDownBar" style="background:var(--c-blue);width:0%"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="db-footer">
+    <p><span class="green-dot"></span><strong>Les Godillots Ailés</strong> · Caissargues</p>
+    <p id="footerDate">—</p>
+    <p>godillotsailes.blogspot.com</p>
+  </div>
+
+</div>
+</div>
+</main>
+
+<script>
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+/* ── IBP color scale ── */
+function ibpColor(v) {
+  if (v <= 25)  return { color:'#75B729', bg:'rgba(117,183,41,0.12)',   border:'rgba(117,183,41,0.45)',   cat:'Facile' };
+  if (v <= 50)  return { color:'#0080C9', bg:'rgba(0,128,201,0.12)',   border:'rgba(0,128,201,0.45)',   cat:'Assez Facile' };
+  if (v <= 75)  return { color:'#F6A600', bg:'rgba(246,166,0,0.12)',   border:'rgba(246,166,0,0.45)',   cat:'Peu Difficile' };
+  if (v <= 100) return { color:'#E30613', bg:'rgba(227,6,19,0.12)',    border:'rgba(227,6,19,0.45)',    cat:'Assez Difficile' };
+  return               { color:'#8B85A8', bg:'rgba(34,29,68,0.35)',    border:'rgba(34,29,68,0.80)',    cat:'Difficile' };
+}
+
+const relMap = { A:98, B:90, C:80, D:65, E:50, F:30 };
+
+/* ── Drag & Drop ── */
+const dz = document.getElementById('dropZone');
+dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('drag'); });
+dz.addEventListener('dragleave', () => dz.classList.remove('drag'));
+dz.addEventListener('drop', e => { e.preventDefault(); dz.classList.remove('drag'); const f = e.dataTransfer.files[0]; if(f) handleFile(f); });
+
+function showError(msg) {
+  const el = document.getElementById('errorMsg');
+  el.textContent = '⚠ ' + msg; el.classList.add('show');
+  document.getElementById('loadingScreen').classList.remove('show');
+  document.getElementById('uploadScreen').style.display = '';
+}
+
+/* ── File handler ── */
+async function handleFile(file) {
+  document.getElementById('errorMsg').classList.remove('show');
+  document.getElementById('uploadScreen').style.display = 'none';
+  document.getElementById('loadingScreen').classList.add('show');
+  try {
+    const ab = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: ab }).promise;
+    let text = '';
+    for (let i = 1; i <= Math.min(pdf.numPages, 2); i++) {
+      const pg = await pdf.getPage(i);
+      const ct = await pg.getTextContent();
+      text += ct.items.map(it => it.str).join(' ') + '\n';
+    }
+    renderDashboard(parseIBP(text));
+  } catch(err) {
+    showError('Impossible de lire ce PDF IBP. (' + err.message + ')');
+  }
+}
+
+/* ── Parser ── */
+function parseIBP(text) {
+  const g = (re, def='—') => { const m = text.match(re); return m ? m[1].trim() : def; };
+
+  // Parse km from the "Résumé des dénivelées" table
+  // Montées total, Terrain plat (Dénivelées de 1%), Descentes total
+  const kmUp   = g(/Total\s*:\s*([\d.]+)\s+[\d.]+\s+[\d.]+\s+[\d:]+[\s\S]*?Terrain plat/i);
+  const kmFlat = g(/Dénivelées de 1 %\s+([\d.]+)/i);
+  const kmDown = g(/Descentes[\s\S]*?Total\s*:\s*([\d.]+)\s+[\d.]+\s+[\d.]+\s+[\d:]+[\s\S]*?Total trace/i);
+
+  // pct from table: "au total en %"
+  // montées total pct
+  const pctUpRaw   = g(/Total\s*:\s*[\d.]+\s+([\d.]+)\s+[\d.]+\s+[\d:]+[\s\S]*?Terrain plat/i);
+  const pctFlatRaw = g(/Dénivelées de 1 %\s+[\d.]+\s+([\d.]+)/i);
+  const pctDownRaw = g(/Descentes[\s\S]*?Total\s*:\s*[\d.]+\s+([\d.]+)\s+[\d.]+\s+[\d:]+[\s\S]*?Total trace/i);
+
+  return {
+    traceName: g(/Trace:\s*([^\n]+?)\s*(?:Date:|Ces vitesses)/i).replace(/\.gpx$/i,'').replace(/_/g,' '),
+    traceDate: g(/Date:\s*([\d\/]+)/i),
+    ibpValue:  g(/IBP\s*=\s*(\d+)\s*HKG/i),
+    relLetter: g(/Fiabilité du Indice IBP index=\s*([A-F])/i),
+    totalDist: g(/Distance totale\s+([\d.]+)\s*Km/i),
+    denivPos:  g(/Dénivelée positive accumulée\s+([\d.]+)\s*m/i),
+    denivNeg:  g(/Dénivelée négative accumulée\s+([\d.]+)\s*m/i),
+    altMax:    g(/Altitude maximale\s+([\d.]+)\s*m/i),
+    altMin:    g(/Altitude minimale\s+([\d.]+)\s*m/i),
+    timeTotal: g(/Temps total\s+([\d:]+\s*h)/i),
+    timeMove:  g(/Temps en mouvement\s+([\d:]+\s*h)/i),
+    timePause: g(/Temps de pause\s+([\d:]+\s*h)/i),
+    speedAvg:  g(/Vitesse moyenne totale\s+([\d.]+)\s*Km\/h/i),
+    speedMove: g(/Vitesse moyenne en mouvement\s+([\d.]+)\s*Km\/h/i),
+    kmUp, pctUpRaw,
+    kmFlat, pctFlatRaw,
+    kmDown, pctDownRaw,
+  };
+}
+
+/* ── Render ── */
+function renderDashboard(d) {
+  const ibpN = parseInt(d.ibpValue) || 0;
+  const clr  = ibpColor(ibpN);
+  const relP = relMap[d.relLetter] || 0;
+
+  // Header: nom de la rando comme titre
+  document.getElementById('dRandoName').textContent = d.traceName || '—';
+  document.getElementById('dDate').textContent = d.traceDate !== '—' ? d.traceDate : '';
+  document.getElementById('dDateRow').hidden = d.traceDate === '—';
+  document.getElementById('footerDate').textContent = 'Généré le ' + new Date().toLocaleDateString('fr-FR');
+
+  // IBP pill — unique
+  const pill = document.getElementById('ibpPill');
+  pill.style.background   = clr.bg;
+  pill.style.borderColor  = clr.border;
+  document.getElementById('ibpNum').style.color  = clr.color;
+  countUpText('ibpNum', d.ibpValue, 0);
+  document.getElementById('ibpCat').textContent  = clr.cat;
+  document.getElementById('ibpCat').style.color  = clr.color;
+
+  // Reliability
+  document.getElementById('relFill').style.background = clr.color;
+  document.getElementById('relVal').textContent = d.relLetter + ' · ' + relP + '%';
+  document.getElementById('relVal').style.color = clr.color;
+  setTimeout(() => { document.getElementById('relFill').style.width = relP + '%'; }, 80);
+
+  // Main metrics
+  countUp('mTotalDist', d.totalDist, 2, 'km',   0);
+  countUp('mDenivPos',  d.denivPos,  0, 'm',   80);
+  countUp('mDenivNeg',  d.denivNeg,  0, 'm',  160);
+  countUp('mAltMax',    d.altMax,    0, 'm',  240);
+  countUp('mAltMin',    d.altMin,    0, 'm',  320);
+  st('mTimeTotal', d.timeTotal);
+  st('mTimeMove',  d.timeMove);
+  st('mTimePause', d.timePause);
+  countUp('mSpeedAvg',  d.speedAvg,  1, 'km/h', 400);
+  countUp('mSpeedMove', d.speedMove, 1, 'km/h', 480);
+
+  // Km montée / plat / descente
+  const totalKm = parseFloat(d.totalDist) || 1;
+
+  const upKm   = parseFloat(d.kmUp)   || 0;
+  const flatKm = parseFloat(d.kmFlat) || 0;
+  const downKm = parseFloat(d.kmDown) || 0;
+
+  // Prefer table pct, fallback to calculated
+  const upPct   = d.pctUpRaw   !== '—' ? parseFloat(d.pctUpRaw)   : Math.round(upKm/totalKm*100);
+  const flatPct = d.pctFlatRaw !== '—' ? parseFloat(d.pctFlatRaw) : Math.round(flatKm/totalKm*100);
+  const downPct = d.pctDownRaw !== '—' ? parseFloat(d.pctDownRaw) : Math.round(downKm/totalKm*100);
+
+  countUp('kUpKm',   upKm   > 0 ? upKm   : '—', 2, 'km',  80);
+  countUp('kFlatKm', flatKm > 0 ? flatKm : '—', 2, 'km', 160);
+  countUp('kDownKm', downKm > 0 ? downKm : '—', 2, 'km', 240);
+
+  document.getElementById('kUpPct').textContent   = upPct   > 0 ? upPct.toFixed(1)   + '%' : '—';
+  document.getElementById('kFlatPct').textContent = flatPct > 0 ? flatPct.toFixed(1) + '%' : '—';
+  document.getElementById('kDownPct').textContent = downPct > 0 ? downPct.toFixed(1) + '%' : '—';
+
+  // Show
+  document.getElementById('loadingScreen').classList.remove('show');
+  document.getElementById('dashboard').classList.add('show');
+  document.getElementById('actionBar').classList.add('show');
+  window.scrollTo(0, 0);
+
+  // Barres après affichage pour que la transition CSS soit visible
+  setTimeout(() => {
+    document.getElementById('kUpBar').style.width   = Math.min(upPct,   100) + '%';
+  }, 120);
+  setTimeout(() => {
+    document.getElementById('kFlatBar').style.width = Math.min(flatPct, 100) + '%';
+  }, 280);
+  setTimeout(() => {
+    document.getElementById('kDownBar').style.width = Math.min(downPct, 100) + '%';
+  }, 440);
+}
+
+function sv(id, val, unit) { document.getElementById(id).innerHTML = (val || '—') + `<span class="unit">${unit}</span>`; }
+function st(id, val)       { document.getElementById(id).textContent = val || '—'; }
+
+function countUp(id, target, decimals, unit, delay) {
+  const el = document.getElementById(id);
+  if (!el || target === '—' || isNaN(parseFloat(target))) {
+    el.innerHTML = (target || '—') + `<span class="unit">${unit}</span>`;
+    return;
+  }
+  const end = parseFloat(target);
+  const duration = 900;
+  const start = performance.now() + (delay || 0);
+  function frame(now) {
+    if (now < start) { requestAnimationFrame(frame); return; }
+    const elapsed = now - start;
+    const progress = Math.min(elapsed / duration, 1);
+    const ease = 1 - Math.pow(1 - progress, 3);
+    const current = end * ease;
+    el.innerHTML = current.toFixed(decimals) + `<span class="unit">${unit}</span>`;
+    if (progress < 1) requestAnimationFrame(frame);
+    else el.innerHTML = end.toFixed(decimals) + `<span class="unit">${unit}</span>`;
+  }
+  requestAnimationFrame(frame);
+}
+
+function countUpText(id, target, delay) {
+  const el = document.getElementById(id);
+  if (!el || !target || isNaN(parseFloat(target))) { el.textContent = target || '—'; return; }
+  const end = parseFloat(target);
+  const duration = 900;
+  const start = performance.now() + (delay || 0);
+  function frame(now) {
+    if (now < start) { requestAnimationFrame(frame); return; }
+    const elapsed = now - start;
+    const progress = Math.min(elapsed / duration, 1);
+    const ease = 1 - Math.pow(1 - progress, 3);
+    el.textContent = Math.round(end * ease);
+    if (progress < 1) requestAnimationFrame(frame);
+    else el.textContent = end;
+  }
+  requestAnimationFrame(frame);
+}
+
+/* ── Export PNG HD ── */
+async function exportPNG() {
+  const btn = document.getElementById('btnPng');
+  const orig = btn.innerHTML;
+  btn.textContent = '⏳ Génération…';
+  btn.disabled = true;
+  try {
+    const canvas = await html2canvas(document.getElementById('dashboard'), {
+      scale: 3,
+      backgroundColor: '#0b0f0a',
+      useCORS: true,
+      logging: false,
+      width: 900,
+      windowWidth: 1000,
+    });
+    const link = document.createElement('a');
+    link.download = (document.getElementById('dRandoName').textContent || 'ibp').replace(/[^a-z0-9]/gi,'_').toLowerCase() + '_ibp.png';
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+  } catch(err) { alert('Erreur export PNG : ' + err.message); }
+  btn.innerHTML = orig;
+  btn.disabled = false;
+}
+
+/* ── Reset ── */
+function resetApp() {
+  document.getElementById('dashboard').classList.remove('show');
+  document.getElementById('actionBar').classList.remove('show');
+  document.getElementById('uploadScreen').style.display = '';
+  document.getElementById('fileInput').value = '';
+  window.scrollTo(0, 0);
+}
+</script>
+</body>
+</html>

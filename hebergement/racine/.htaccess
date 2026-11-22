@@ -1,5 +1,6 @@
 # randotheque.anthony-bondon.fr : racine du sous-domaine (envoyée par le workflow « Serveur de statistiques »).
-# Sous-dossiers : /godillots-ailes/ et /gerard-martine/ (les deux sites), /stats/ (serveur de statistiques).
+# Sous-dossiers : /godillots-ailes/ et /gerard-martine/ (les deux sites), /stats/ (serveur de statistiques),
+# /outils/ibp/ (tableau de bord GPX à partir d'un rapport IBP index).
 Options -Indexes
 DirectoryIndex index.html index.php
 
