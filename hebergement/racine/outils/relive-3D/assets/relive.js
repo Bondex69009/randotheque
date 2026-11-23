@@ -1,4 +1,4 @@
-/* Outil « Relive 3D » : import d'un GPX, survol 3D (lecteur de la Randothèque), code d'intégration, historique.
+/* Outil « Relive 3D » : import d'un GPX, survol 3D (lecteur de la Randothèque), code d'intégration.
    Les calculs (distance, dénivelé, temps, simplification de la trace) reprennent ceux de scripts/lib/gpx.mjs
    des Randothèques, pour que le survol soit identique à celui d'une fiche. */
 (() => {
@@ -11,8 +11,6 @@
   const nf1 = new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
   const nf0 = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 });
   const fmtDur = (min) => { const m = Math.round(min || 0); const h = Math.floor(m / 60); return h ? `${h} h ${String(m % 60).padStart(2, '0')}` : `${m} min`; };
-  const fmtDate = (iso) => (iso ? new Date(`${iso.slice(0, 10)}T12:00:00`).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }) : '');
-  const fmtStamp = (iso) => new Date(iso).toLocaleString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 
   // Couleurs de trace proposées : celles des niveaux de la Randothèque
   const COLORS = [
@@ -266,14 +264,7 @@
   }
 
   // ---------------------------------------------------------------- Interface
-  const ICON = {
-    play: '<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l10.5-6.5Z" fill="currentColor"/></svg>',
-    code: '<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 7-5 5 5 5M15 7l5 5-5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
-    open: '<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
-    dl: '<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11m-5-5 5 5 5-5M5 20h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
-    edit: '<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>',
-    del: '<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
-  };
+
   const stats = (it) => [
     it.distanceKm != null ? `${nf1.format(it.distanceKm)} km` : '',
     it.dplus != null ? `${nf0.format(it.dplus)} m D+` : '',
@@ -350,11 +341,9 @@
     btn.disabled = true; $('.btn__label', btn).textContent = 'Enregistrement…';
     try {
       const { item } = await api('save', { body: { gpx: draft.gpx, fileName: draft.fileName, track: draft.track, info: { ...draft.info, ...formInfo() } } });
-      tracks.set(item.id, draft.track);
       draft = null;
       $('#draft-form').hidden = true;
       showResult(item);
-      await refresh();
     } catch (ex) { toast(ex.message, true); } finally {
       btn.disabled = false; $('.btn__label', btn).textContent = 'Enregistrer et obtenir le code';
     }
@@ -370,123 +359,4 @@
     $('#result-copy').focus();
   }
   $('#result-copy').addEventListener('click', (e) => copy($('#result-code').value, e.currentTarget));
-
-  // ---- Historique
-  let items = [];
-  const tracks = new Map(); // traces déjà chargées (aperçu)
-  const getTrack = async (id) => {
-    if (!tracks.has(id)) tracks.set(id, (await api('get', { params: `&id=${id}` })).track);
-    return tracks.get(id);
-  };
-
-  async function refresh() {
-    const list = $('#history-list');
-    list.setAttribute('aria-busy', 'true');
-    try {
-      items = (await api('list')).items || [];
-      renderHistory();
-    } catch (ex) {
-      $('#history-empty').textContent = ex.message;
-      $('#history-empty').hidden = false;
-    } finally { list.removeAttribute('aria-busy'); }
-  }
-
-  function renderHistory() {
-    const q = $('#history-q').value.trim().toLowerCase();
-    const shown = items.filter((it) => !q || `${it.name} ${it.commune} ${it.place} ${it.fileName}`.toLowerCase().includes(q));
-    $('#history-count').textContent = items.length ? `${items.length} survol${items.length > 1 ? 's' : ''}` : '';
-    $('#history-search').hidden = items.length < 4;
-    const empty = $('#history-empty');
-    empty.hidden = shown.length > 0;
-    empty.textContent = items.length ? 'Aucun survol ne correspond à cette recherche.' : 'Aucun GPX importé pour l\'instant. Le premier apparaîtra ici.';
-    $('#history-list').innerHTML = shown.map((it) => `
-      <li class="rl-item" data-id="${esc(it.id)}">
-        <div class="rl-item__head">
-          <span class="rl-item__swatch" style="--sw:${esc(it.color || 'var(--c-accent)')}" aria-hidden="true"></span>
-          <div class="rl-item__title">
-            <h3>${esc(it.name)}</h3>
-            <p class="rl-item__meta">${esc([it.place || it.commune, fmtDate(it.date)].filter(Boolean).join(' · ') || 'Lieu et date non renseignés')}</p>
-          </div>
-        </div>
-        <ul class="rl-stats">${stats(it).map((s) => `<li>${esc(s)}</li>`).join('')}</ul>
-        <p class="rl-item__file">${esc(it.fileName || '')} · importé le ${esc(fmtStamp(it.created))}</p>
-        <div class="rl-item__actions">
-          <button type="button" class="btn btn--primary btn--sm" data-act="play">${ICON.play}<span class="btn__label">Voir le survol</span></button>
-          <button type="button" class="btn btn--outline btn--sm" data-act="code" aria-expanded="false">${ICON.code}<span class="btn__label">Code d'intégration</span></button>
-          <a class="btn btn--ghost btn--sm" href="${esc(pageUrl(it))}" target="_blank" rel="noopener">${ICON.open}<span class="btn__label">Page à intégrer</span></a>
-          <button type="button" class="btn btn--ghost btn--sm" data-act="gpx">${ICON.dl}<span class="btn__label">GPX</span></button>
-          <button type="button" class="btn btn--ghost btn--sm" data-act="edit" aria-expanded="false">${ICON.edit}<span class="btn__label">Modifier</span></button>
-          <button type="button" class="btn btn--ghost btn--sm rl-del" data-act="del">${ICON.del}<span class="btn__label">Supprimer</span></button>
-        </div>
-        <div class="rl-item__panel" data-panel="code" hidden>
-          <label class="rl-label" for="code-${esc(it.id)}">À coller dans la vue HTML d'un message Blogger</label>
-          <textarea class="rl-code" id="code-${esc(it.id)}" rows="4" readonly spellcheck="false">${esc(embedCode(it))}</textarea>
-          <button type="button" class="btn btn--outline btn--sm" data-act="copy">${ICON.code}<span class="btn__label">Copier le code</span></button>
-        </div>
-        <form class="rl-item__panel rl-grid" data-panel="edit" hidden>
-          <div class="rl-field rl-field--wide"><label for="e-name-${esc(it.id)}">Nom</label><input id="e-name-${esc(it.id)}" name="name" required maxlength="120" value="${esc(it.name)}"></div>
-          <div class="rl-field"><label for="e-commune-${esc(it.id)}">Commune (carte météo)</label><input id="e-commune-${esc(it.id)}" name="commune" maxlength="120" value="${esc(it.commune || '')}"></div>
-          <div class="rl-field"><label for="e-place-${esc(it.id)}">Lieu sous le titre</label><input id="e-place-${esc(it.id)}" name="place" maxlength="160" value="${esc(it.place || '')}"></div>
-          <div class="rl-field"><label for="e-date-${esc(it.id)}">Date de la rando</label><input id="e-date-${esc(it.id)}" name="date" type="date" value="${esc(it.date || '')}"></div>
-          <div class="rl-field"><label for="e-color-${esc(it.id)}">Couleur de la trace</label><select id="e-color-${esc(it.id)}" name="color">${COLORS.map(([v, l]) => `<option value="${v}"${v === (it.color || '') ? ' selected' : ''}>${l}</option>`).join('')}</select></div>
-          <div class="rl-form__actions rl-field--wide">
-            <button type="submit" class="btn btn--primary btn--sm"><span class="btn__label">Enregistrer</span></button>
-            <button type="button" class="btn btn--ghost btn--sm" data-act="edit-cancel"><span class="btn__label">Annuler</span></button>
-          </div>
-        </form>
-      </li>`).join('');
-  }
-  $('#history-q').addEventListener('input', renderHistory);
-
-  const panel = (li, name, open) => {
-    const p = $(`[data-panel="${name}"]`, li), b = $(`[data-act="${name}"]`, li);
-    const on = open ?? p.hidden;
-    p.hidden = !on; b.setAttribute('aria-expanded', String(on));
-    return on;
-  };
-  $('#history-list').addEventListener('click', async (e) => {
-    const btn = e.target.closest('[data-act]');
-    if (!btn) return;
-    const li = btn.closest('.rl-item'), it = items.find((x) => x.id === li.dataset.id);
-    if (!it) return;
-    const act = btn.dataset.act;
-    if (act === 'play') {
-      try { await preview(it, await getTrack(it.id), btn); } catch (ex) { toast(ex.message, true); }
-    } else if (act === 'code') {
-      if (panel(li, 'code')) { panel(li, 'edit', false); $('textarea', li).select(); }
-    } else if (act === 'copy') {
-      copy(embedCode(it), btn);
-    } else if (act === 'edit') {
-      if (panel(li, 'edit')) { panel(li, 'code', false); $('[name="name"]', li).focus(); }
-    } else if (act === 'edit-cancel') {
-      panel(li, 'edit', false); $('[data-act="edit"]', li).focus();
-    } else if (act === 'gpx') {
-      try {
-        const res = await fetch(`${API}?a=gpx&id=${it.id}`);
-        if (!res.ok) throw new Error('Le GPX n\'a pas pu être téléchargé.');
-        const url = URL.createObjectURL(await res.blob());
-        Object.assign(document.createElement('a'), { href: url, download: it.fileName || `${it.id}.gpx` }).click();
-        setTimeout(() => URL.revokeObjectURL(url), 5000);
-      } catch (ex) { toast(ex.message, true); }
-    } else if (act === 'del') {
-      if (!confirm(`Supprimer « ${it.name} » et son GPX ?\n\nLe survol intégré sur un blog ne s'affichera plus. Cette action est définitive.`)) return;
-      btn.disabled = true;
-      try { await api('delete', { body: { id: it.id } }); tracks.delete(it.id); toast(`« ${it.name} » a été supprimé.`); await refresh(); } catch (ex) { toast(ex.message, true); btn.disabled = false; }
-    }
-  });
-  $('#history-list').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const form = e.target, li = form.closest('.rl-item');
-    const info = Object.fromEntries(new FormData(form));
-    if (!info.name.trim()) { form.elements.name.setAttribute('aria-invalid', 'true'); form.elements.name.focus(); return; }
-    const sub = $('[type="submit"]', form);
-    sub.disabled = true;
-    try {
-      await api('update', { body: { id: li.dataset.id, info } });
-      toast('Modifications enregistrées. Le code d\'intégration déjà collé reste valable.');
-      await refresh();
-    } catch (ex) { toast(ex.message, true); sub.disabled = false; }
-  });
-
-  refresh();
 })();
