@@ -1,239 +1,79 @@
-<!DOCTYPE html>
-<html lang="fr">
+<!doctype html>
+<html lang="fr" data-theme="dark">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="robots" content="noindex, nofollow">
-<meta name="theme-color" content="#0b0f0a">
-<title>Tableau de bord GPX · Les Godillots Ailés</title>
-<meta name="description" content="Transformez un rapport IBP index en tableau de bord prêt à partager, pour les randonnées des Godillots Ailés de Caissargues.">
-<link rel="icon" href="assets/favicon.png" type="image/png">
-<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-<style>
-/* Couleurs et formes reprises de la Randothèque des Godillots Ailés */
-:root {
-  --c-lime: #87f700;
-  --c-lime-soft: #bff77c;
-  --c-cyan: #01ffff;
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tableau de bord GPX | Randothèques</title>
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#0b0f0a">
+  <meta name="description" content="Transformez un rapport IBP index en tableau de bord prêt à partager.">
+  <!-- Outil « Tableau de bord GPX » : déposer le rapport PDF d'IBP index, obtenir un visuel de la sortie en PNG.
+       Même habillage que les autres outils (style.css + outils.css, thème clair / sombre) ; le visuel exporté
+       garde ses propres couleurs sombres, quel que soit le thème choisi. -->
+  <script>(function(){var d=document.documentElement,k='rt-theme',m=null,q=window.matchMedia&&matchMedia('(prefers-color-scheme: light)');try{m=localStorage.getItem(k)}catch(e){}
+function a(){d.setAttribute('data-theme',m==='light'||m==='dark'?m:(q&&q.matches?'light':'dark'))}a();
+window.rtTheme={get:function(){return m==='light'||m==='dark'?m:'auto'},set:function(v){m=v==='auto'?null:v;try{m?localStorage.setItem(k,m):localStorage.removeItem(k)}catch(e){}a();document.dispatchEvent(new Event('rt-theme'))}};
+if(q&&q.addEventListener)q.addEventListener('change',function(){if(!m){a();document.dispatchEvent(new Event('rt-theme'))}})})();</script>
+  <link rel="icon" href="../../godillots-ailes/assets/favicon.png" type="image/png">
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=IBM+Plex+Sans:wght@400;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+  <link rel="stylesheet" href="../../godillots-ailes/assets/style.css?v=43">
+  <link rel="stylesheet" href="../../godillots-ailes/assets/outils.css?v=1">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <style>
+    /* Habillage commun aux outils (repris de Relive 3D) */
+    body { min-height: 100vh; background: var(--c-bg); }
+    .rl { width: 100%; max-width: 60rem; margin-inline: auto; padding: var(--space-6) var(--space-4) var(--space-16); display: grid; gap: var(--space-6); }
+    .rl-top { display: flex; align-items: flex-start; gap: var(--space-3); flex-wrap: wrap; }
+    .rl-top__title { flex: 1; min-width: 12rem; }
+    .rl-top__actions { display: flex; align-items: center; gap: var(--space-2); }
+    @media (max-width: 40rem) { .rl-top__actions { order: -1; width: 100%; justify-content: flex-end; } }
+    .rl-eyebrow { margin: 0; font-size: var(--fs-xs); font-weight: var(--fw-bold); letter-spacing: 0.12em; text-transform: uppercase; color: var(--c-accent); }
+    .rl-eyebrow a { color: inherit; text-decoration: none; }
+    .rl-eyebrow a:hover, .rl-eyebrow a:focus-visible { text-decoration: underline; }
+    .rl-top h1 { font-size: var(--fs-2xl); font-weight: var(--fw-black); }
+    .rl-lead { margin: var(--space-1) 0 0; max-width: 65ch; color: var(--c-text-muted); }
+    .rl-card { padding: var(--space-5); border-radius: var(--radius-lg); background: var(--c-surface); border: var(--border-w) solid var(--c-border); box-shadow: var(--shadow-card); display: grid; gap: var(--space-4); }
+    .rl-card h2 { font-size: var(--fs-xl); font-weight: var(--fw-bold); }
+    .rl-muted { margin: 0; color: var(--c-text-muted); font-size: var(--fs-sm); }
+    .rl-drop { position: relative; display: grid; justify-items: center; gap: var(--space-2); padding: var(--space-8) var(--space-4); text-align: center;
+      border: 2px dashed var(--c-border-strong); border-radius: var(--radius-lg); background: var(--c-surface-2); cursor: pointer;
+      transition: border-color var(--dur-fast) var(--ease), background-color var(--dur-fast) var(--ease); }
+    .rl-drop:hover, .rl-drop.drag { border-color: var(--c-accent); background: var(--c-accent-ghost); }
+    .rl-drop:focus-within { outline: 2px solid var(--c-accent); outline-offset: 2px; }
+    .rl-drop input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+    .rl-drop__icon { width: 2.5rem; height: 2.5rem; color: var(--c-accent); }
+    .rl-drop strong { font-size: var(--fs-lg); }
+    .rl-steps { display: flex; flex-wrap: wrap; gap: var(--space-2); margin: 0; padding: 0; list-style: none; counter-reset: step; }
+    .rl-steps li { counter-increment: step; padding: var(--space-1) var(--space-3); border-radius: var(--radius-pill); background: var(--c-surface-3); font-size: var(--fs-sm); font-weight: var(--fw-semibold); }
+    .rl-steps li::before { content: counter(step) ". "; color: var(--c-accent); }
+    .btn .icon { width: var(--icon); height: var(--icon); flex: none; }
+    [hidden] { display: none !important; }
 
-  --c-bg: #0b0f0a;
-  --c-bg-raised: #10150e;
-  --c-surface: #151c13;
-  --c-surface-2: #1d2619;
-  --c-surface-3: #263222;
-  --c-border: #2c3a27;
-  --c-border-strong: #3f5237;
-  --c-text: #eef5e6;
-  --c-text-muted: #a5b39b;
-  --c-text-faint: #7f8f76;
-  --c-on-accent: #0b0f0a;
+    #errorMsg { display: none; margin: 0; color: var(--c-danger); font-size: var(--fs-sm); font-weight: var(--fw-semibold);
+      background: var(--c-danger-ghost); border: var(--border-w) solid var(--c-danger); border-radius: var(--radius-md); padding: var(--space-3) var(--space-4); }
+    #errorMsg.show { display: block; }
+    #loadingScreen { display: none; }
+    #loadingScreen.show { display: grid; justify-items: center; gap: var(--space-4); padding-block: var(--space-12); }
+    .spinner { width: 2.75rem; height: 2.75rem; border: 3px solid var(--c-surface-3); border-top-color: var(--c-accent); border-radius: 50%; animation: spin 0.7s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    #actionBar { display: none; }
+    #actionBar.show { display: flex; gap: var(--space-3); align-items: center; justify-content: space-between; flex-wrap: wrap; }
+    .action-buttons { display: flex; gap: var(--space-2); flex-wrap: wrap; }
 
-  --c-accent: var(--c-lime);
-  --c-accent-hover: var(--c-lime-soft);
-  --c-accent-ghost: rgb(135 247 0 / 0.12);
-  --c-accent-ring: rgb(135 247 0 / 0.55);
-  --c-danger: #ff7a7a;
-  --c-blue: #60a5fa;
-
-  --font-sans: "Plus Jakarta Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
-  --fs-xs: 0.75rem;
-  --fs-sm: 0.875rem;
-  --fs-md: 1rem;
-  --fs-lg: 1.125rem;
-  --fs-xl: 1.375rem;
-  --fs-hero: clamp(2rem, 1.2rem + 3.6vw, 3.5rem);
-
-  --space-1: 0.25rem; --space-2: 0.5rem; --space-3: 0.75rem; --space-4: 1rem;
-  --space-5: 1.25rem; --space-6: 1.5rem; --space-8: 2rem; --space-10: 2.5rem;
-  --space-12: 3rem; --space-16: 4rem;
-
-  --radius-sm: 0.5rem;
-  --radius-md: 0.75rem;
-  --radius-lg: 1.125rem;
-  --radius-pill: 999px;
-  --glow-accent: 0 0 0 1px var(--c-accent-ring), 0 12px 40px -12px rgb(135 247 0 / 0.35);
-
-  --container: 82rem;
-  --header-h: 4.25rem;
-  --tap: 2.75rem;
-
-  --ease: cubic-bezier(.2, .8, .2, 1);
-  --dur-fast: 150ms;
-  --dur: 220ms;
-
-  color-scheme: dark;
-}
-@media (prefers-reduced-motion: reduce) {
-  :root { --dur-fast: 0ms; --dur: 0ms; }
-  *, *::before, *::after { animation: none !important; }
-}
-
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html { -webkit-text-size-adjust: 100%; }
-body {
-  font-family: var(--font-sans);
-  font-size: var(--fs-md);
-  line-height: 1.6;
-  color: var(--c-text);
-  background: var(--c-bg);
-  min-height: 100vh;
-  -webkit-font-smoothing: antialiased;
-  overflow-x: hidden;
-}
-img { display: block; max-width: 100%; height: auto; }
-:focus-visible { outline: 2px solid var(--c-accent); outline-offset: 2px; border-radius: var(--radius-sm); }
-.icon { width: 1.125rem; height: 1.125rem; flex-shrink: 0; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-.container { width: 100%; max-width: var(--container); margin-inline: auto; padding-inline: var(--space-4); }
-@media (min-width: 768px) { .container { padding-inline: var(--space-6); } }
-
-/* ─── En-tête ─── */
-.site-header {
-  position: sticky; top: 0; z-index: 40;
-  background: rgb(11 15 10 / 0.82);
-  backdrop-filter: saturate(1.4) blur(12px);
-  -webkit-backdrop-filter: saturate(1.4) blur(12px);
-  border-bottom: 1px solid var(--c-border);
-}
-.site-header__inner { display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); min-height: var(--header-h); }
-.brand { display: flex; align-items: center; gap: var(--space-3); color: var(--c-text); text-decoration: none; min-width: 0; }
-.brand__logo { width: 3rem; height: 3rem; object-fit: contain; flex-shrink: 0; filter: drop-shadow(0 0 10px rgb(135 247 0 / 0.25)); }
-.brand__text { display: flex; flex-direction: column; line-height: 1.15; min-width: 0; }
-.brand__title { font-weight: 800; font-size: var(--fs-lg); letter-spacing: -0.01em; white-space: nowrap; }
-.brand__subtitle { white-space: nowrap; font-size: var(--fs-xs); color: var(--c-accent); font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; }
-.header-nav { display: flex; align-items: center; gap: var(--space-5); }
-.header-link {
-  display: inline-flex; align-items: center; gap: var(--space-2); min-height: var(--tap);
-  font-size: var(--fs-sm); font-weight: 600; color: var(--c-text-muted); text-decoration: none; white-space: nowrap;
-  transition: color var(--dur-fast) var(--ease);
-}
-.header-link:hover { color: var(--c-accent); }
-.header-link .icon { width: 1rem; height: 1rem; }
-@media (max-width: 599px) {
-  /* Téléphone : icônes seules, libellé gardé pour les lecteurs d'écran */
-  .header-nav { gap: var(--space-1); }
-  .header-link { justify-content: center; min-width: var(--tap); }
-  .header-link__label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
-  .header-link .icon { width: 1.375rem; height: 1.375rem; }
-  .brand__title { font-size: var(--fs-md); }
-}
-
-/* ─── Hero / dépôt du PDF ─── */
-.hero {
-  position: relative; overflow: hidden;
-  min-height: calc(100vh - var(--header-h));
-  display: flex; align-items: center;
-  padding-block: var(--space-10) var(--space-12);
-  background:
-    radial-gradient(60rem 22rem at 85% -10%, rgb(135 247 0 / 0.16), transparent 60%),
-    radial-gradient(40rem 20rem at -10% 110%, rgb(1 255 255 / 0.08), transparent 60%),
-    linear-gradient(180deg, var(--c-bg-raised), var(--c-bg));
-}
-.hero::before {
-  /* motif de courbes de niveau */
-  content: ""; position: absolute; inset: 0; pointer-events: none; opacity: 0.22;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='200' viewBox='0 0 400 200'%3E%3Cg fill='none' stroke='%2387f700' stroke-width='0.7' opacity='0.5'%3E%3Cpath d='M0 150 C80 120 120 170 200 140 S320 90 400 120'/%3E%3Cpath d='M0 120 C80 90 130 140 210 110 S330 60 400 90'/%3E%3Cpath d='M0 90 C70 60 140 110 220 80 S330 30 400 60'/%3E%3Cpath d='M0 60 C60 30 150 80 230 50 S340 0 400 30'/%3E%3Cpath d='M0 180 C90 150 110 200 190 170 S310 120 400 150'/%3E%3C/g%3E%3C/svg%3E");
-  mask-image: linear-gradient(90deg, transparent, black 30%, black 70%, transparent);
-  -webkit-mask-image: linear-gradient(90deg, transparent, black 30%, black 70%, transparent);
-}
-.hero .container { position: relative; }
-.hero__logo { display: none; }
-.hero__kicker {
-  margin-bottom: var(--space-3); font-size: var(--fs-xs); font-weight: 700;
-  text-transform: uppercase; letter-spacing: 0.12em; color: var(--c-text-muted);
-}
-.hero__title { font-size: var(--fs-hero); font-weight: 800; letter-spacing: -0.03em; line-height: 1.15; max-width: 18ch; }
-.hl { color: var(--c-accent); }
-.hero__lead { margin-top: var(--space-4); max-width: 40rem; color: var(--c-text-muted); font-size: var(--fs-lg); }
-@media (min-width: 768px) { .hero { padding-block: var(--space-16) var(--space-16); } }
-@media (min-width: 900px) {
-  .hero__logo {
-    display: block; position: absolute; right: var(--space-6); top: 50%; transform: translateY(-50%);
-    width: clamp(12rem, 22vw, 17rem);
-    filter: drop-shadow(0 18px 40px rgb(0 0 0 / 0.6)) drop-shadow(0 0 40px rgb(135 247 0 / 0.18));
-  }
-  .drop-zone, .steps, .hero__lead { max-width: min(44rem, calc(100% - 19rem)); }
-}
-
-.drop-zone {
-  position: relative; margin-top: var(--space-8); max-width: 44rem;
-  display: flex; align-items: center; gap: var(--space-5);
-  padding: var(--space-6);
-  border: 1.5px dashed var(--c-border-strong); border-radius: var(--radius-lg);
-  background: rgb(21 28 19 / 0.85);
-  cursor: pointer;
-  transition: border-color var(--dur-fast) var(--ease), background var(--dur-fast) var(--ease), box-shadow var(--dur) var(--ease);
-}
-.drop-zone:hover { border-color: var(--c-accent-ring); }
-.drop-zone.drag, .drop-zone:focus-within { border-color: var(--c-accent); border-style: solid; background: rgb(29 38 25 / 0.95); box-shadow: var(--glow-accent); }
-.drop-zone input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
-.drop-icon {
-  display: grid; place-items: center; flex-shrink: 0;
-  width: 3.5rem; height: 3.5rem; border-radius: var(--radius-md);
-  background: var(--c-accent-ghost); color: var(--c-accent);
-}
-.drop-icon .icon { width: 1.625rem; height: 1.625rem; }
-.drop-text { flex: 1; min-width: 0; }
-.drop-zone h2 { font-size: var(--fs-lg); font-weight: 700; line-height: 1.3; }
-.drop-zone p { color: var(--c-text-muted); font-size: var(--fs-sm); margin-top: var(--space-1); }
-.drop-cta {
-  display: inline-flex; align-items: center; gap: var(--space-2); flex-shrink: 0;
-  min-height: var(--tap); padding: var(--space-2) var(--space-5);
-  border-radius: var(--radius-pill); background: var(--c-accent); color: var(--c-on-accent);
-  font-size: var(--fs-sm); font-weight: 700; white-space: nowrap;
-  transition: background var(--dur-fast) var(--ease);
-}
-.drop-zone:hover .drop-cta { background: var(--c-accent-hover); }
-@media (max-width: 599px) {
-  .drop-zone { flex-direction: column; text-align: center; padding: var(--space-8) var(--space-5); }
-}
-
-.steps { list-style: none; display: flex; flex-wrap: wrap; gap: var(--space-3) var(--space-8); margin-top: var(--space-6); max-width: 44rem; }
-.steps li { display: flex; flex-direction: column; }
-.steps b { font-size: var(--fs-xl); font-weight: 800; color: var(--c-text); line-height: 1.3; }
-.steps span { font-size: var(--fs-xs); color: var(--c-text-muted); text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; }
-
-#errorMsg {
-  display: none; margin-top: var(--space-4); max-width: 44rem;
-  color: var(--c-danger); font-size: var(--fs-sm); font-weight: 600;
-  background: rgb(255 122 122 / 0.1); border: 1px solid rgb(255 122 122 / 0.3);
-  border-radius: var(--radius-md); padding: var(--space-3) var(--space-4);
-}
-#errorMsg.show { display: block; }
-
-/* ─── Chargement ─── */
-#loadingScreen { display: none; flex-direction: column; align-items: center; justify-content: center; min-height: calc(100vh - var(--header-h)); gap: var(--space-4); }
-#loadingScreen.show { display: flex; }
-.spinner { width: 2.75rem; height: 2.75rem; border: 3px solid var(--c-surface-3); border-top-color: var(--c-accent); border-radius: 50%; animation: spin 0.7s linear infinite; }
-@keyframes spin { to { transform: rotate(360deg); } }
-#loadingScreen p { color: var(--c-text-muted); font-size: var(--fs-sm); font-weight: 600; }
-
-/* ─── Barre d'actions ─── */
-#actionBar { display: none; max-width: calc(900px + 2 * var(--space-4)); margin: var(--space-8) auto var(--space-4); padding-inline: var(--space-4); gap: var(--space-3); align-items: center; justify-content: space-between; flex-wrap: wrap; }
-#actionBar.show { display: flex; }
-.action-title { font-size: var(--fs-xl); font-weight: 800; letter-spacing: -0.01em; }
-.action-buttons { display: flex; gap: var(--space-3); flex-wrap: wrap; }
-.btn {
-  display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2);
-  min-height: var(--tap); padding: var(--space-2) var(--space-5);
-  border-radius: var(--radius-pill); border: 1px solid transparent;
-  font: 600 var(--fs-sm) / 1 var(--font-sans); cursor: pointer; white-space: nowrap;
-  transition: background var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease);
-}
-.btn:active { transform: translateY(1px); }
-.btn:disabled { opacity: 0.6; cursor: wait; }
-.btn--primary { background: var(--c-accent); color: var(--c-on-accent); font-weight: 700; }
-.btn--primary:hover { background: var(--c-accent-hover); }
-.btn--outline { background: var(--c-surface); border-color: var(--c-border-strong); color: var(--c-text); }
-.btn--outline:hover { border-color: var(--c-accent); }
-
+    /* Le visuel exporté garde les couleurs sombres d'origine, quel que soit le thème de la page */
+    .dashboard-scroll { overflow-x: auto; margin-inline: calc(-1 * var(--space-4)); padding: 0 var(--space-4) var(--space-2); }
+    #dashboard {
+      --c-lime: #87f700; --c-blue: #60a5fa;
+      --c-bg: #0b0f0a; --c-bg-raised: #10150e; --c-surface: #151c13; --c-surface-2: #1d2619; --c-surface-3: #263222;
+      --c-border: #2c3a27; --c-border-strong: #3f5237; --c-text: #eef5e6; --c-text-muted: #a5b39b; --c-text-faint: #7f8f76;
+      --c-accent: var(--c-lime); --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+      color: var(--c-text); font-family: var(--font-sans); line-height: 1.6; color-scheme: dark;
+    }
 /* ═══ TABLEAU DE BORD (exporté en PNG) ═══ */
-.dashboard-scroll { overflow-x: auto; padding: 0 var(--space-4) var(--space-16); }
 #dashboard {
   display: none;
   width: 900px;
@@ -320,84 +160,61 @@ img { display: block; max-width: 100%; height: auto; }
 </style>
 </head>
 <body>
-
-<header class="site-header">
-  <div class="container site-header__inner">
-    <a class="brand" href="./" aria-label="Tableau de bord GPX des Godillots Ailés, accueil">
-      <img class="brand__logo" src="assets/logo.png" width="48" height="48" alt="">
-      <span class="brand__text">
-        <span class="brand__title">Tableau de bord GPX</span>
-        <span class="brand__subtitle">Les Godillots Ailés</span>
-      </span>
-    </a>
-    <nav class="header-nav" aria-label="Liens utiles">
-      <a class="header-link" href="../">
-        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z"/></svg>
-        <span class="header-link__label">Tous les outils</span>
-      </a>
-      <a class="header-link" href="../../godillots-ailes/">
-        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M14.1 5.55a2 2 0 0 0 1.8 0l3.65-1.83A1 1 0 0 1 21 4.62v12.76a1 1 0 0 1-.55.9l-4.55 2.27a2 2 0 0 1-1.8 0l-4.2-2.1a2 2 0 0 0-1.8 0l-3.65 1.83A1 1 0 0 1 3 19.38V6.62a1 1 0 0 1 .55-.9L8.1 3.45a2 2 0 0 1 1.8 0zM15 5.76v15M9 3.24v15"/></svg>
-        <span class="header-link__label">Historique des randos</span>
-      </a>
-      <a class="header-link" href="https://godillotsailes.blogspot.com" target="_blank" rel="noopener">
-        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 5h5v5m0-5-8 8M18 14v4a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h4"/></svg>
-        <span class="header-link__label">Blog du club</span>
-      </a>
-    </nav>
-  </div>
-</header>
-
-<main>
-<!-- Dépôt du PDF -->
-<section class="hero" id="uploadScreen" aria-labelledby="hero-title">
-  <div class="container">
-    <img class="hero__logo" src="assets/logo.png" width="337" height="337" alt="Logo de l'A.C.R.P. Les Godillots Ailés, Caissargues">
-    <p class="hero__kicker">A.C.R.P. Caissargues · Indice IBP</p>
-    <h1 id="hero-title" class="hero__title">Votre rando en<br> <span class="hl">tableau de bord</span></h1>
-    <p class="hero__lead">Déposez le rapport PDF d'IBP index : vous obtenez un visuel clair de la sortie, prêt à partager en PNG.</p>
-
-    <div class="drop-zone" id="dropZone">
-      <input type="file" accept=".pdf,application/pdf" id="fileInput" aria-label="Choisir le rapport IBP au format PDF" onchange="handleFile(this.files[0])">
-      <div class="drop-icon">
-        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M12 18v-6m-3 3 3-3 3 3"/></svg>
+  <main class="rl">
+    <header class="rl-top">
+      <div class="rl-top__title">
+        <p class="rl-eyebrow"><a href="../">Outils des Randothèques</a></p>
+        <h1>Tableau de bord GPX</h1>
+        <p class="rl-lead">Déposez le rapport PDF d'IBP index : vous obtenez un visuel clair de la sortie, prêt à partager en PNG.</p>
       </div>
-      <div class="drop-text">
-        <h2>Déposez votre rapport IBP</h2>
-        <p>Glissez-déposez le PDF ici, ou cliquez pour le choisir.</p>
+      <div class="rl-top__actions">
+      <a class="btn btn--ghost btn--sm" href="../"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg><span class="btn__label">Tous les outils</span></a>
+      <button type="button" class="theme-btn" id="theme-btn" aria-label="Changer de thème">
+        <svg class="icon theme-btn__auto" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 4a8 8 0 0 1 0 16Z" fill="currentColor"/></svg>
+        <svg class="icon theme-btn__light" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.2" fill="currentColor"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        <svg class="icon theme-btn__dark" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5Z" fill="currentColor"/></svg>
+      </button>
       </div>
-      <span class="drop-cta" aria-hidden="true">Choisir le PDF</span>
+    </header>
+
+    <!-- 1. Dépôt du PDF -->
+    <section class="rl-card" id="uploadScreen" aria-labelledby="import-title">
+      <h2 id="import-title">Importer un rapport IBP</h2>
+      <label class="rl-drop" id="dropZone">
+        <svg class="rl-drop__icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z M14 3v5h5M12 18v-6m-3 3 3-3 3 3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <strong>Choisir le PDF</strong>
+        <span class="rl-muted">ou le glisser ici</span>
+        <input type="file" accept=".pdf,application/pdf" id="fileInput" aria-describedby="errorMsg" onchange="handleFile(this.files[0])">
+      </label>
+      <div id="errorMsg" role="alert"></div>
+      <ol class="rl-steps" aria-label="Comment ça marche">
+        <li>Calculez l'IBP de la trace</li>
+        <li>Déposez le PDF ici</li>
+        <li>Téléchargez le PNG</li>
+      </ol>
+    </section>
+
+    <!-- Chargement -->
+    <div class="rl-card" id="loadingScreen" role="status">
+      <div class="spinner"></div>
+      <p class="rl-muted">Lecture du PDF…</p>
     </div>
-    <div id="errorMsg" role="alert"></div>
 
-    <ol class="steps" aria-label="Comment ça marche">
-      <li><b>01</b><span>Calculez l'IBP de la trace</span></li>
-      <li><b>02</b><span>Déposez le PDF ici</span></li>
-      <li><b>03</b><span>Téléchargez le PNG</span></li>
-    </ol>
-  </div>
-</section>
-
-<!-- Chargement -->
-<div id="loadingScreen" role="status">
-  <div class="spinner"></div>
-  <p>Lecture du PDF…</p>
-</div>
-
-<!-- Barre d'actions -->
-<div id="actionBar">
-  <h2 class="action-title">Tableau de bord de la sortie</h2>
-  <div class="action-buttons">
-    <button class="btn btn--outline" type="button" onclick="resetApp()">
-      <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>
-      Nouvelle trace
-    </button>
-    <button class="btn btn--primary" type="button" id="btnPng" onclick="exportPNG()">
-      <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M5 21h14"/></svg>
-      Télécharger le PNG HD
-    </button>
-  </div>
-</div>
-
+    <!-- 2. Tableau de bord -->
+    <section class="rl-card" aria-labelledby="result-title" id="resultCard" hidden>
+      <div id="actionBar">
+        <h2 id="result-title">Tableau de bord de la sortie</h2>
+        <div class="action-buttons">
+          <button class="btn btn--outline" type="button" onclick="resetApp()">
+            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8M3 3v5h5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span class="btn__label">Nouvelle trace</span>
+          </button>
+          <button class="btn btn--primary" type="button" id="btnPng" onclick="exportPNG()">
+            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M5 21h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span class="btn__label">Télécharger le PNG HD</span>
+          </button>
+        </div>
+      </div>
 <!-- ═══ TABLEAU DE BORD ═══ -->
 <div class="dashboard-scroll">
 <div id="dashboard">
@@ -480,7 +297,8 @@ img { display: block; max-width: 100%; height: auto; }
 
 </div>
 </div>
-</main>
+    </section>
+  </main>
 
 <script>
 pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
@@ -629,6 +447,7 @@ function renderDashboard(d) {
   document.getElementById('loadingScreen').classList.remove('show');
   document.getElementById('dashboard').classList.add('show');
   document.getElementById('actionBar').classList.add('show');
+  document.getElementById('resultCard').hidden = false;
   window.scrollTo(0, 0);
 
   // Barres après affichage pour que la transition CSS soit visible
@@ -714,10 +533,12 @@ async function exportPNG() {
 function resetApp() {
   document.getElementById('dashboard').classList.remove('show');
   document.getElementById('actionBar').classList.remove('show');
+  document.getElementById('resultCard').hidden = true;
   document.getElementById('uploadScreen').style.display = '';
   document.getElementById('fileInput').value = '';
   window.scrollTo(0, 0);
 }
 </script>
+<script src="../../godillots-ailes/assets/theme.js?v=1"></script>
 </body>
 </html>
