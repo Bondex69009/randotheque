@@ -192,11 +192,17 @@ function splitAnimateurs(randos) {
 
 // ---------------------------------------------------------------- Programme principal
 async function main() {
-  const files = listGpxFiles(GPX_DIR);
-  console.log(`🥾 ${files.length} fichiers GPX trouvés dans gpx/`);
-
   const catalog = readJSON(path.join(DATA_DIR, 'blog-catalog.json'), { items: [] });
   const blogByFile = new Map(catalog.items.map((it) => [it.file.toLowerCase(), it]));
+
+  // gpx/blog/ ne contient que ce que publie le blog : un fichier absent du catalogue (ancien lien
+  // remplacé sur l'article) est ignoré, sinon il réapparaîtrait comme une rando en double.
+  const files = listGpxFiles(GPX_DIR).filter((f) => {
+    if (path.dirname(f) !== BLOG_GPX_DIR || blogByFile.has(path.basename(f).toLowerCase())) return true;
+    console.log(`   ↷ ignoré (absent du catalogue du blog) : gpx/blog/${path.basename(f)}`);
+    return false;
+  });
+  console.log(`🥾 ${files.length} fichiers GPX trouvés dans gpx/`);
 
   const randos = [];
   const tracks = new Map();

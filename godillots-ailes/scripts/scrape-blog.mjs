@@ -625,6 +625,18 @@ async function main() {
   }
   items.sort((a, b) => b.date.localeCompare(a.date) || a.key.localeCompare(b.key)); // ordre stable : pas de commit inutile
 
+  // GPX orphelins : tout fichier de gpx/blog/ qui ne correspond plus à aucun lien du blog est supprimé
+  // (lien remplacé sur un article sorti de la première page, article relu en erreur…). Garde-fou : on ne
+  // fait rien si le catalogue a fondu (blog injoignable), pour ne pas tout effacer.
+  if (items.length >= catalog.items.length * 0.9) {
+    const keep = new Set(items.map((it) => it.file.toLowerCase()));
+    for (const f of fs.existsSync(BLOG_GPX_DIR) ? fs.readdirSync(BLOG_GPX_DIR) : []) {
+      if (!/\.gpx$/i.test(f) || keep.has(f.toLowerCase())) continue;
+      fs.rmSync(gpxPath(f)); removed++;
+      console.log(`   🗑️  GPX orphelin supprimé : ${f}`);
+    }
+  }
+
   // La date du catalogue ne bouge que s'il y a du nouveau : pas de commit inutile toutes les heures.
   const changed = updated || aNew || aUpd || removed || JSON.stringify(items) !== JSON.stringify(catalog.items);
   const now = new Date().toISOString();
