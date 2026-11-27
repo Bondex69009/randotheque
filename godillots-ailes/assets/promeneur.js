@@ -24,6 +24,20 @@
   const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)');
   if (reduce && reduce.matches) return;
 
+  // Couvre-chef : casquette de rando, ou bonnet de Père Noël du 25 novembre au 5 janvier (comme assets/saisons.js ;
+  // ?saison=noel pour le voir, ?saison=aucune pour la casquette). (cx, cy) : centre de la tête, a : inclinaison.
+  const NOEL = (() => {
+    const q = new URLSearchParams(location.search).get('saison');
+    if (q) return q === 'noel';
+    const d = new Date(), md = (d.getMonth() + 1) * 100 + d.getDate();
+    return md >= 1125 || md <= 105;
+  })();
+  const CHAPEAU = (cx, cy, a) => `<g transform="translate(${cx} ${cy}) rotate(${a})">` + (NOEL
+    ? '<path fill="#d42b2b" d="M-2.2-1.9H2.2C1.9-3.9 1-5.4-.5-5.7-1.8-5.8-2.7-5.1-3.2-4.2-2.4-4.3-1.7-4.1-1.5-3.6-2-3.1-2.2-2.5-2.2-1.9Z"/>'
+      + '<rect fill="#fbfbf7" x="-2.6" y="-2.6" width="5.2" height="1.4" rx=".7"/><circle fill="#fbfbf7" cx="-3.3" cy="-4.1" r=".9"/>'
+    : '<path d="M-3-1C-1.5-1.5 1.6-1.6 3.2-1.1 3.5-.9 3.3-.6 3-.6 1.3-.7-1.3-.6-2.9-.3-3.3-.3-3.4-.8-3-1ZM-1.7-1.3C-1.7-2.9 1.7-3 1.8-1.4Z"/>')
+    + '</g>';
+
   const SIZE = 46;            // taille du randonneur (px)
   const SPEED = 48;           // vitesse de marche (px/s)
   const HOP_MS = 650;         // durée d'un saut vers un bloc voisin
@@ -40,7 +54,7 @@
   ]).join(',');
 
   // Dessin du randonneur (le même que celui des chargements du site)
-  const HIKER = '<svg class="hiker" viewBox="0 0 32 32" aria-hidden="true" focusable="false"><path class="hiker__ground" d="M-6 30.8H38"/><g class="hiker__body"><g class="hiker__arm hiker__arm--b"><path d="M15.7 10.8C15.8 12.6 16.1 14.2 16.3 15.3L17.6 15.1C17.7 13.6 17.6 12.2 17.5 10.8Z"/><path d="M16.3 14.6C17.1 15.4 18 16 19.1 16.7L19.8 15.8C18.8 15.2 18.1 14.6 17.5 14.1Z"/><circle cx="19.6" cy="16.3" r=".85"/></g><g class="hiker__leg hiker__leg--b"><path d="M13.5 17.4C13.6 19.8 13.9 21.9 14.1 23.7H15.9C16.3 21.9 16.9 19.7 17 17.4Z"/><g class="hiker__shin"><path d="M14.1 23.2C13.6 24.6 13.9 26.9 14.3 28.6H15.7C15.9 26.9 16.2 24.9 15.9 23.2Z"/><path d="M14.2 28.1H15.8C16.7 28.4 17.9 28.7 18.2 29.4 18.3 29.9 18 30.1 17.5 30.1H14.3C13.9 30.1 13.9 29.3 14.2 28.1Z"/></g></g><path class="hiker__pack" d="M11.2 11.6C11.1 9.9 13.9 9.3 15.1 10.4L15.6 16.3C15.7 17.6 11.9 17.9 11.5 16.7Z"/><path d="M11.6 9.8C12.3 9 13.9 8.9 14.6 9.6L14.4 10.4C13.6 10 12.6 10.1 11.9 10.6Z"/><path d="M14.8 10C16.2 9.3 18.1 9.6 18.5 11.2 18.6 12.9 18 15.4 17.6 17.4 17.3 18.8 13.4 18.9 13.5 17.4 13.6 15 14 12.2 14.8 10Z"/><path d="M16.6 8.2L17.8 8.3 17.7 9.9 16.4 9.8Z"/><circle cx="17.9" cy="6.6" r="2"/><path d="M14.9 5.6C16.4 5.1 19.5 5 21.1 5.5 21.4 5.7 21.2 6 20.9 6 19.2 5.9 16.6 6 15 6.3 14.6 6.3 14.5 5.8 14.9 5.6ZM16.2 5.3C16.2 3.7 19.6 3.6 19.7 5.2Z"/><g class="hiker__leg hiker__leg--a"><path d="M13.5 17.4C13.6 19.8 13.9 21.9 14.1 23.7H15.9C16.3 21.9 16.9 19.7 17 17.4Z"/><g class="hiker__shin"><path d="M14.1 23.2C13.6 24.6 13.9 26.9 14.3 28.6H15.7C15.9 26.9 16.2 24.9 15.9 23.2Z"/><path d="M14.2 28.1H15.8C16.7 28.4 17.9 28.7 18.2 29.4 18.3 29.9 18 30.1 17.5 30.1H14.3C13.9 30.1 13.9 29.3 14.2 28.1Z"/></g></g><g class="hiker__arm hiker__arm--a"><path d="M15.7 10.8C15.8 12.6 16.1 14.2 16.3 15.3L17.6 15.1C17.7 13.6 17.6 12.2 17.5 10.8Z"/><path d="M16.3 14.6C17.1 15.4 18 16 19.1 16.7L19.8 15.8C18.8 15.2 18.1 14.6 17.5 14.1Z"/><circle cx="19.6" cy="16.3" r=".85"/><path class="hiker__stick" d="M19.9 13.4L21.2 29.8"/></g></g></svg>';
+  const HIKER = '<svg class="hiker" viewBox="0 0 32 32" aria-hidden="true" focusable="false"><path class="hiker__ground" d="M-6 30.8H38"/><g class="hiker__body"><g class="hiker__arm hiker__arm--b"><path d="M15.7 10.8C15.8 12.6 16.1 14.2 16.3 15.3L17.6 15.1C17.7 13.6 17.6 12.2 17.5 10.8Z"/><path d="M16.3 14.6C17.1 15.4 18 16 19.1 16.7L19.8 15.8C18.8 15.2 18.1 14.6 17.5 14.1Z"/><circle cx="19.6" cy="16.3" r=".85"/></g><g class="hiker__leg hiker__leg--b"><path d="M13.5 17.4C13.6 19.8 13.9 21.9 14.1 23.7H15.9C16.3 21.9 16.9 19.7 17 17.4Z"/><g class="hiker__shin"><path d="M14.1 23.2C13.6 24.6 13.9 26.9 14.3 28.6H15.7C15.9 26.9 16.2 24.9 15.9 23.2Z"/><path d="M14.2 28.1H15.8C16.7 28.4 17.9 28.7 18.2 29.4 18.3 29.9 18 30.1 17.5 30.1H14.3C13.9 30.1 13.9 29.3 14.2 28.1Z"/></g></g><path class="hiker__pack" d="M11.2 11.6C11.1 9.9 13.9 9.3 15.1 10.4L15.6 16.3C15.7 17.6 11.9 17.9 11.5 16.7Z"/><path d="M11.6 9.8C12.3 9 13.9 8.9 14.6 9.6L14.4 10.4C13.6 10 12.6 10.1 11.9 10.6Z"/><path d="M14.8 10C16.2 9.3 18.1 9.6 18.5 11.2 18.6 12.9 18 15.4 17.6 17.4 17.3 18.8 13.4 18.9 13.5 17.4 13.6 15 14 12.2 14.8 10Z"/><path d="M16.6 8.2L17.8 8.3 17.7 9.9 16.4 9.8Z"/><circle cx="17.9" cy="6.6" r="2"/>' + CHAPEAU(17.9, 6.6, 0) + '<g class="hiker__leg hiker__leg--a"><path d="M13.5 17.4C13.6 19.8 13.9 21.9 14.1 23.7H15.9C16.3 21.9 16.9 19.7 17 17.4Z"/><g class="hiker__shin"><path d="M14.1 23.2C13.6 24.6 13.9 26.9 14.3 28.6H15.7C15.9 26.9 16.2 24.9 15.9 23.2Z"/><path d="M14.2 28.1H15.8C16.7 28.4 17.9 28.7 18.2 29.4 18.3 29.9 18 30.1 17.5 30.1H14.3C13.9 30.1 13.9 29.3 14.2 28.1Z"/></g></g><g class="hiker__arm hiker__arm--a"><path d="M15.7 10.8C15.8 12.6 16.1 14.2 16.3 15.3L17.6 15.1C17.7 13.6 17.6 12.2 17.5 10.8Z"/><path d="M16.3 14.6C17.1 15.4 18 16 19.1 16.7L19.8 15.8C18.8 15.2 18.1 14.6 17.5 14.1Z"/><circle cx="19.6" cy="16.3" r=".85"/><path class="hiker__stick" d="M19.9 13.4L21.2 29.8"/></g></g></svg>';
   // Styles, tous limités à .rt-promeneur (rien ne déborde sur la page qui l'accueille)
   const CSS = `
 .rt-promeneur { position: fixed; left: 0; top: 0; z-index: ${BLOG ? 9999 : 50}; width: 46px; height: 46px; pointer-events: none;
@@ -106,7 +120,7 @@
     lacets: '<path class="limb" d="M14.2 20.6L15 29.4L10.6 29.6"/><path d="M8.6 29.1H11.2V30.3H8.6C8.2 30.3 8.2 29.4 8.6 29.1Z"/>'
       + '<path class="limb" d="M14.2 20.6L20 21.8L20.4 28.8"/><path d="M19.2 28.6H21.6C22.6 28.9 23.6 29.2 23.8 29.8 23.8 30.2 23.5 30.3 23 30.3H19.3C19 30.3 18.9 29.4 19.2 28.6Z"/>'
       + '<path class="torso" d="M14.2 20.6L19.6 15"/><path class="pack" d="M12.4 16.2C12.6 13.6 15.6 12.2 17.2 13.4L17 14.6 13.8 19.4C12.8 19.6 12.3 18 12.4 16.2Z"/>'
-      + '<circle cx="21.4" cy="12.6" r="2"/><path d="M18.6 11.4C20 10.2 23 9.6 24.4 9.8 24.8 10 24.6 10.3 24.3 10.4 22.6 10.7 20.2 11.4 19 12 18.6 12.1 18.3 11.7 18.6 11.4ZM19.6 10.9C19.3 9.4 22.4 8.4 22.9 9.9Z"/>'
+      + '<circle cx="21.4" cy="12.6" r="2"/>' + (NOEL ? CHAPEAU(21.4, 12.6, -12) : '<path d="M18.6 11.4C20 10.2 23 9.6 24.4 9.8 24.8 10 24.6 10.3 24.3 10.4 22.6 10.7 20.2 11.4 19 12 18.6 12.1 18.3 11.7 18.6 11.4ZM19.6 10.9C19.3 9.4 22.4 8.4 22.9 9.9Z"/>')
       + '<g class="lace"><path class="arm" d="M19.4 15.4L20.8 22.2L21.4 28.2"/><path class="arm" d="M19.6 15.2L22.4 21.6L22.2 28.1"/></g>',
   };
   const POSE_NAMES = Object.keys(POSES);
