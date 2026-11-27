@@ -17,7 +17,7 @@
   // le code déjà collé dans Blogger n'a pas à changer.
   if (BLOG && script.src && !document.querySelector('script[src*="saisons.js"]')) {
     const s = document.createElement('script');
-    s.src = new URL('saisons.js?v=1', script.src).href;
+    s.src = new URL('saisons.js?v=2', script.src).href;
     s.dataset.chute = '14';
     document.head.appendChild(s);
   }

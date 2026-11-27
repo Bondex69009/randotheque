@@ -155,18 +155,30 @@
       el.replaceWith(hote);
       hote.appendChild(el);
     } else if (getComputedStyle(el).position === 'static') el.style.position = 'relative';
-    const h = el.getBoundingClientRect().height || 40;
+    const r = el.getBoundingClientRect(), h = r.height || 40;
     const fleur = saison === 'printemps';
-    const larg = Math.round(Math.max(fleur ? 14 : 18, Math.min(fleur ? 30 : 46, h * (fleur ? 0.48 : 0.72))));
+    // Élément rond (bouton lecture, bouton de thème) : le coin de sa boîte est vide, la déco se pose sur le bord du cercle
+    const rond = r.width && Math.abs(r.width - h) < 4 && parseFloat(getComputedStyle(el).borderTopRightRadius) >= h * 0.45;
+    const larg = rond
+      ? Math.round(Math.max(fleur ? 14 : 20, Math.min(fleur ? 40 : 72, h * (fleur ? 0.3 : 0.46))))
+      : Math.round(Math.max(fleur ? 14 : 18, Math.min(fleur ? 30 : 46, h * (fleur ? 0.48 : 0.72))));
     const b = document.createElement('span');
     b.className = `sa-deco${fleur ? ' sa-deco--fleur' : ''}`;
     b.setAttribute('aria-hidden', 'true');
     b.innerHTML = fleur ? FLEUR : BONNET;
     b.style.width = `${larg}px`;
-    b.style.top = `${-Math.round(larg * (fleur ? 0.9 : 0.5))}px`;
     const cote = gauche ? 'left' : 'right';
-    b.style[cote] = `${-Math.round(larg * (fleur ? 0.15 : 0.3))}px`;
-    b.style.setProperty('--a', `${(gauche ? -1 : 1) * (fleur ? 12 : 16)}deg`);
+    if (rond) {
+      // Point du cercle à 45° : à 0,29 rayon du coin ; le bord en fourrure (bonnet) ou le pied de la tige (fleur) s'y pose
+      const c = (h / 2) * (1 - Math.SQRT1_2);
+      b.style.top = `${Math.round(c - larg * (fleur ? 1.2 : 0.6))}px`;
+      b.style[cote] = `${Math.round(c - larg * (fleur ? 0.5 : 0.5))}px`;
+      b.style.setProperty('--a', `${(gauche ? -1 : 1) * (fleur ? 20 : 34)}deg`);
+    } else {
+      b.style.top = `${-Math.round(larg * (fleur ? 0.9 : 0.5))}px`;
+      b.style[cote] = `${-Math.round(larg * (fleur ? 0.15 : 0.3))}px`;
+      b.style.setProperty('--a', `${(gauche ? -1 : 1) * (fleur ? 12 : 16)}deg`);
+    }
     if (gauche && !fleur) b.firstChild.style.transform = 'scaleX(-1)';
     hote.appendChild(b);
   }
