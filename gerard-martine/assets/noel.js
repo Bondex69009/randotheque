@@ -2,6 +2,7 @@
    Actif du 25 novembre au 6 janvier (?noel=1 pour le forcer, ?noel=0 pour le couper). Tout est sur la balise :
      data-neige="14"            nombre de flocons (0 = pas de neige)
      data-neige-dans="#poster"  flocons limités à ce bloc (sinon toute la fenêtre)
+     data-neige-dialogues="#detail"  fenêtres modales au-dessus desquelles la neige reste visible
      data-bonnet=".a, .b@g"     éléments coiffés d'un bonnet (@g : posé à gauche) ; ajoutés plus tard par la page aussi
    Fichier identique dans godillots-ailes/ et gerard-martine/ (à modifier dans les deux). */
 (() => {
@@ -70,6 +71,16 @@
     }
     if (bloc && getComputedStyle(bloc).position === 'static') bloc.style.position = 'relative';
     (bloc || document.body).appendChild(ciel);
+    // Une fenêtre modale (fiche d'une rando) passe au-dessus de tout : la neige la suit tant qu'elle est ouverte
+    const dlgs = !bloc && me.dataset.neigeDialogues ? [...document.querySelectorAll(me.dataset.neigeDialogues)] : [];
+    if (!dlgs.length) return;
+    const suit = () => {
+      const ouverte = dlgs.find((dl) => dl.open);
+      const parent = ouverte || document.body;
+      if (ciel.parentNode !== parent) parent.appendChild(ciel);
+    };
+    const obs = new MutationObserver(suit);
+    dlgs.forEach((dl) => obs.observe(dl, { attributes: true, attributeFilter: ['open'] }));
   }
 
   // Bonnet posé sur le coin haut de l'élément (une image est d'abord enveloppée, elle ne peut rien contenir)
