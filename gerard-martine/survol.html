@@ -215,7 +215,7 @@
         await Promise.all([
           load(`https://unpkg.com/maplibre-gl@${ML_VER}/dist/maplibre-gl.css`, true),
           load('assets/flyover.css?v=18', true),
-          load(`https://unpkg.com/maplibre-gl@${ML_VER}/dist/maplibre-gl.js`).then(() => load('assets/flyover.js?v=17')),
+          load(`https://unpkg.com/maplibre-gl@${ML_VER}/dist/maplibre-gl.js`).then(() => load('assets/flyover.js?v=18')),
           window.RTMeteo ? null : load('assets/meteo.js?v=3').catch(() => null),
           ext || window.RANDOTHEQUE ? null : load(DATA),
         ]);

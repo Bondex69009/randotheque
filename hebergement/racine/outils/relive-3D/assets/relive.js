@@ -224,7 +224,7 @@
   const loadPlayer = () => (playerP = playerP || Promise.all([
     load(`https://unpkg.com/maplibre-gl@${ML_VER}/dist/maplibre-gl.css`, true),
     load(`${LIB}flyover.css?v=18`, true),
-    load(`https://unpkg.com/maplibre-gl@${ML_VER}/dist/maplibre-gl.js`).then(() => load(`${LIB}flyover.js?v=17`)),
+    load(`https://unpkg.com/maplibre-gl@${ML_VER}/dist/maplibre-gl.js`).then(() => load(`${LIB}flyover.js?v=18`)),
     window.RTMeteo ? null : load(`${LIB}meteo.js?v=3`).catch(() => null),
   ]).catch((e) => { playerP = null; throw e; }));
 

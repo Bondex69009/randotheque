@@ -200,6 +200,13 @@
       return v;
     },
   };
+  // Période de Noël, comme assets/saisons.js (?saison=noel pour le voir, ?saison=aucune pour le chapeau)
+  const NOEL = (() => {
+    const q = new URLSearchParams(location.search).get('saison');
+    if (q) return q === 'noel';
+    const d = new Date(), md = (d.getMonth() + 1) * 100 + d.getDate();
+    return md >= 1125 || md <= 105;
+  })();
   const HIKER_PARTS = {
     thigh: { c: 'pants', g: () => GEO.tube(0.062, 0.066, 0.08, 0.085, -0.47, 0) },
     shin: { c: 'pants', g: () => GEO.tube(0.05, 0.055, 0.064, 0.068, -0.45, 0) },
@@ -208,6 +215,11 @@
     torso: { c: 'shirt', g: () => [...GEO.tube(0.175, 0.11, 0.205, 0.12, 0.06, 0.52), ...GEO.ball(0.205, 0.12, 0.07, 0.52)] },
     skin: { c: 'skin', g: () => [...GEO.tube(0.05, 0.05, 0.05, 0.05, 0.55, 0.66), ...GEO.ball(0.095, 0.105, 0.12, 0.76, 0.01)] },
     hat: { c: 'hat', g: () => [...GEO.tube(0.19, 0.19, 0.18, 0.18, 0.835, 0.85), ...GEO.tube(0.11, 0.115, 0.095, 0.1, 0.845, 0.95)] },
+    // Bonnet de Père Noël (25 novembre au 5 janvier) : bord en fourrure, cône rouge dont la pointe retombe en arrière, pompon
+    noelFur: { c: 'fur', g: () => GEO.tube(0.118, 0.128, 0.118, 0.128, 0.79, 0.85, 14, 0.01) },
+    noelCone: { c: 'santa', g: () => [...GEO.tube(0.108, 0.118, 0.055, 0.058, 0.84, 0.99, 14, 0.005),
+      ...GEO.xf(GEO.tube(0.055, 0.058, 0.014, 0.014, 0, 0.17, 10), M4.mul(M4.t(0, 0.005, 0.985), M4.rx(1.15)))] },
+    noelPompon: { c: 'fur', g: () => GEO.ball(0.038, 0.038, 0.038, 1.055, -0.15) },
     pack: { c: 'pack', g: () => [...GEO.box(0.32, 0.2, 0.48, -0.2, 0.06), ...GEO.box(0.26, 0.06, 0.24, -0.32, 0.12)] },
     roll: { c: 'roll', g: () => GEO.tube(0.065, 0.065, 0.065, 0.065, -0.2, 0.2) },
     arm: { c: 'shirt', g: () => GEO.tube(0.044, 0.046, 0.056, 0.058, -0.29, 0.02) },
@@ -281,7 +293,7 @@
     const palette = (shirt) => ({
       shirt: [...hexRgb(shirt), 1], pants: [0.24, 0.28, 0.33, 1], boot: [0.3, 0.2, 0.13, 1], skin: [0.88, 0.67, 0.52, 1],
       hat: [0.78, 0.69, 0.5, 1], pack: [0.85, 0.36, 0.16, 1], roll: [0.17, 0.32, 0.44, 1], pole: [0.72, 0.74, 0.76, 1], shadow: [0, 0, 0, 0.32],
-      leather: [0.62, 0.4, 0.22, 1], cap: [0.38, 0.23, 0.12, 1], sole: [0.13, 0.11, 0.1, 1], lace: [...hexRgb(shirt), 1], wing: [0.97, 0.96, 0.93, 1],
+      santa: [0.8, 0.12, 0.12, 1], fur: [0.97, 0.97, 0.95, 1], leather: [0.62, 0.4, 0.22, 1], cap: [0.38, 0.23, 0.12, 1], sole: [0.13, 0.11, 0.1, 1], lace: [...hexRgb(shirt), 1], wing: [0.97, 0.96, 0.93, 1],
     });
     const cols = hikers.map((h) => palette(h.color));
 
@@ -416,7 +428,8 @@
           const torso = M4.mul(pelvis, M4.rx(-s.lean), M4.rz(0.06 * a * sw));
           draw(gl, W, 'torso', col, torso);
           draw(gl, W, 'skin', col, torso);
-          draw(gl, W, 'hat', col, M4.mul(torso, M4.t(0, 0.01, 0), M4.rx(-0.06)));
+          const coiffe = M4.mul(torso, M4.t(0, 0.01, 0), M4.rx(-0.06));
+          (NOEL ? ['noelFur', 'noelCone', 'noelPompon'] : ['hat']).forEach((pt) => draw(gl, W, pt, col, coiffe));
           draw(gl, W, 'pack', col, torso);
           draw(gl, W, 'roll', col, M4.mul(torso, ROLL_AT));
           [[-1, -1], [1, 1]].forEach(([side, sg]) => {
