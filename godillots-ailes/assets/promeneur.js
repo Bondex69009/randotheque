@@ -13,6 +13,14 @@
   if (!window.requestAnimationFrame || document.querySelector('.rt-promeneur')) return;
   const script = document.currentScript;
   const BLOG = !!(script && script.hasAttribute('data-blog'));
+  // Sur le blog, ce fichier amène aussi l'habillage des saisons (neige, printemps…) sur toute la page :
+  // le code déjà collé dans Blogger n'a pas à changer.
+  if (BLOG && script.src && !document.querySelector('script[src*="saisons.js"]')) {
+    const s = document.createElement('script');
+    s.src = new URL('saisons.js?v=1', script.src).href;
+    s.dataset.chute = '14';
+    document.head.appendChild(s);
+  }
   const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)');
   if (reduce && reduce.matches) return;
 
