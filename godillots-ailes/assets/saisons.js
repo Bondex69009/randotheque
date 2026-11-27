@@ -7,7 +7,8 @@
      data-chute="14"                nombre de flocons ou de pétales (0 = aucun)
      data-chute-dans="#poster"      limités à ce bloc (sinon toute la fenêtre)
      data-chute-dialogues="#detail" fenêtres modales au-dessus desquelles l'habillage reste visible
-     data-deco=".a, .b@g"           éléments coiffés d'un bonnet ou d'une fleur (@g : à gauche) ; ajoutés plus tard aussi
+     data-deco=".a, .b@g, .c@rond"  éléments coiffés d'un bonnet ou d'une fleur (@g : à gauche ; @rond : image ronde,
+                                    déco posée sur le bord du cercle) ; éléments ajoutés plus tard aussi
    Fichier identique dans godillots-ailes/ et gerard-martine/ (à modifier dans les deux). */
 (() => {
   const me = document.currentScript;
@@ -145,7 +146,7 @@
   }
 
   // Bonnet (Noël) ou fleur (printemps) sur le coin haut de l'élément ; une image est d'abord enveloppée
-  function pose(el, gauche) {
+  function pose(el, gauche, forceRond) {
     if (el.dataset.saison) return;
     el.dataset.saison = saison;
     let hote = el;
@@ -158,9 +159,10 @@
     const r = el.getBoundingClientRect(), h = r.height || 40;
     const fleur = saison === 'printemps';
     // Élément rond (bouton lecture, bouton de thème) : le coin de sa boîte est vide, la déco se pose sur le bord du cercle
-    const rond = r.width && Math.abs(r.width - h) < 4 && parseFloat(getComputedStyle(el).borderTopRightRadius) >= h * 0.45;
+    // (@rond dans data-deco : image ronde dans une boîte carrée, comme un logo)
+    const rond = forceRond || (r.width && Math.abs(r.width - h) < 4 && parseFloat(getComputedStyle(el).borderTopRightRadius) >= h * 0.45);
     const larg = rond
-      ? Math.round(Math.max(fleur ? 14 : 20, Math.min(fleur ? 40 : 72, h * (fleur ? 0.3 : 0.46))))
+      ? Math.round(Math.max(fleur ? 14 : 20, Math.min(fleur ? 40 : 72, h * (fleur ? 0.3 : h < 80 ? 0.6 : 0.46))))
       : Math.round(Math.max(fleur ? 14 : 18, Math.min(fleur ? 30 : 46, h * (fleur ? 0.48 : 0.72))));
     const b = document.createElement('span');
     b.className = `sa-deco${fleur ? ' sa-deco--fleur' : ''}`;
@@ -186,9 +188,9 @@
   function decos() {
     if (saison === 'hiver') return;
     const cibles = (me.dataset.deco || '').split(',').map((s) => s.trim()).filter(Boolean)
-      .map((s) => ({ sel: s.replace(/@g$/, ''), gauche: /@g$/.test(s) }));
+      .map((s) => ({ sel: s.replace(/(@g|@rond)+$/, ''), gauche: /@g\b/.test(s), rond: /@rond\b/.test(s) }));
     if (!cibles.length) return;
-    const tout = () => cibles.forEach(({ sel, gauche }) => document.querySelectorAll(sel).forEach((el) => pose(el, gauche)));
+    const tout = () => cibles.forEach(({ sel, gauche, rond }) => document.querySelectorAll(sel).forEach((el) => pose(el, gauche, rond)));
     tout();
     // Éléments créés plus tard par la page (compteur du site affiché après lecture des données)
     const obs = new MutationObserver(tout);
